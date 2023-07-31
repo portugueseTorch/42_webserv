@@ -5,31 +5,36 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "utils.hpp"
+
+#define log(x) std::cout << x << std::endl
 
 enum TokenType {
-	Directive,
+	Name,
 	Parameter,
 	OpenBrack,
 	CloseBrack,
 	Semicolon,
+	SBlock,
 	End
 };
 
-typedef struct Token {
+typedef struct Tok {
 	std::string content;
 	TokenType type;
-} Token;
+} Tok;
 
 class Lexer {
 	public:
 		~Lexer();
-		void tokenize(std::string src);
+		int tokenize(std::string src);
 		void displayTokenList();
+		std::vector<Tok*> getTokens();
 		static std::vector<std::string> directives;
 
 	private:
-		Token *token(std::string content, TokenType type);
-		std::vector<Token*> _tokens;
+		Tok *token(std::string content, TokenType type);
+		std::vector<Tok*> _tokens;
 };
 
 #endif

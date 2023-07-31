@@ -6,7 +6,7 @@
 #    By: gda_cruz <gda_cruz@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/28 15:46:49 by gda_cruz          #+#    #+#              #
-#    Updated: 2023/07/31 01:32:34 by gda_cruz         ###   ########.fr        #
+#    Updated: 2023/07/31 12:34:56 by gda_cruz         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,7 +18,7 @@ RESET	=	\033[0m
 
 ####### COMPILER #######
 CC		=	c++
-FLAGS	=	-Wall -Wextra -Werror #-std=c++98
+FLAGS	=	-Wall -Wextra -Werror -g #-std=c++98
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj

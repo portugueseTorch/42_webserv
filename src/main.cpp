@@ -1,4 +1,5 @@
 #include "../inc/Lexer.hpp"
+#include "../inc/Parser.hpp"
 #include <fstream>
 
 int main() {
@@ -14,8 +15,11 @@ int main() {
 
 	Lexer lex;
 	lex.tokenize(content);
-	std::cout << "\n\n" << std::endl;
 	lex.displayTokenList();
+	std::cout << std::endl;
+	
+	Parser parser;
+	parser.buildAST(lex.getTokens());
 
 	in_file.close();
 	return 0;

@@ -1,0 +1,24 @@
+The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
+
+<configuration>	: <server_block> <configuration>
+				| <server_block>
+				;
+
+<server_block>	: [server] '{' <directives> '}' 
+				;
+
+<directives>	: <block_dir> <directives>
+				| <simple_dir> <directives>
+				| (null)
+				;
+
+<block_dir>		: <simple_dir> '{' <simple_dir> '}'
+				;
+
+<simple_dir>	: [Name] <simple_dir>
+				| [Parameter] <simple_dir>
+				| [Parameter] ';'
+				| (null)
+				;
+
+
