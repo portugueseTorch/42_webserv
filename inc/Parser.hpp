@@ -2,7 +2,7 @@
 #ifndef PARSER_HPP
 # define PARSER_HPP
 
-#include "Lexer.hpp"
+# include "Lexer.hpp"
 
 /*************************************/
 /*********** DECLARE NODES ***********/
@@ -36,12 +36,11 @@ class ParameterToken: public Token {
 
 class PreblockToken: public Token {
 	public:
-		PreblockToken(std::string n, std::string p1, std::string p2) { _n = n, _p1 = p1, _p2 = p2; };
+		PreblockToken(std::string n, std::string p) { _n = n, _p = p; };
 		~PreblockToken() {};
-		void display() { std::cout << "{ \"[" << _n << ", " << _p1 << ", " << _p2 << "]\", " << type << " }" << std::endl; }
+		void display() { std::cout << "{ \"[" << _n << ", " << _p << "]\", " << type << " }" << std::endl; }
 		std::string _n;
-		std::string _p1;
-		std::string _p2;
+		std::string _p;
 		TokenType type = TokenType::Preblock;
 };
 
@@ -85,10 +84,10 @@ class Parser {
 
 		void buildAST(std::vector<Tok*> lex);
 		void displayAST();
+		void parseAST();
 
 		bool validConfiguration();
 		bool conf_case1();
-		bool conf_case2();
 
 		bool validServerBlock();
 		bool server_block_case1();

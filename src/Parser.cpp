@@ -25,6 +25,10 @@ void Parser::displayAST() {
 		(*tmp)->display();
 }
 
+void Parser::parseAST() {
+	return ;
+}
+
 void Parser::resetTokens(std::vector<Token*>::iterator start) {
 	if (_tokens.empty() || start == _tokens.end())
 		return ;
@@ -39,9 +43,6 @@ void Parser::resetTokens(std::vector<Token*>::iterator start) {
 bool Parser::validConfiguration() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return true;
 
@@ -72,9 +73,6 @@ bool Parser::conf_case1() {
 bool Parser::validServerBlock() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -108,9 +106,6 @@ bool Parser::server_block_case1() {
 bool Parser::validBlock() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -131,12 +126,14 @@ bool Parser::block_case1() {
 
 	if ((*it)->type != TokenType::OpenBrack)
 		return false;
+	_tokens.push_back(new OpenBracketToken);
 	it++;
 	if (!validDirectives())
 		return false;
 	std::cout << "\tRe-entered block_case1 at: " << (*it)->content << std::endl;
 	if ((*it)->type != TokenType::CloseBrack)
 		return false;
+	_tokens.push_back(new CloseBracketToken);
 	it++;
 	return true;
 }
@@ -146,9 +143,6 @@ bool Parser::block_case1() {
 bool Parser::validDirectives() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -228,9 +222,6 @@ bool Parser::directives_case4() {
 bool Parser::validBlockDirectives() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -277,9 +268,6 @@ bool Parser::block_directives_case2() {
 bool Parser::validSimpleBlock() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -294,7 +282,7 @@ bool Parser::validSimpleBlock() {
 	return false;
 }
 
-// [name] [parameter] [parameter] '{' <simple_dir_lst> '}'
+// [name] [parameter] '{' <simple_dir_lst> '}'
 bool Parser::simple_block_case1() {
 	std::cout << "\tEntered simple_block_case1 with: " << (*it)->content << std::endl;
 
@@ -304,21 +292,19 @@ bool Parser::simple_block_case1() {
 	it++;
 	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
 		return false;
-	std::string p1 = (*it)->content;
+	std::string p = (*it)->content;
 	it++;
-	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
-		return false;
-	std::string p2 = (*it)->content;
-	it++;
-	_tokens.push_back(new PreblockToken(n, p1, p2));
+	_tokens.push_back(new PreblockToken(n, p));
 	if ((*it)->type != TokenType::OpenBrack)
 		return false;
+	_tokens.push_back(new OpenBracketToken);
 	it++;
 	if (!validSimpleDirectiveList())
 		return false;
 	std::cout << "\tRe-entered simple_block_case1 with: " << (*it)->content << std::endl;
 	if ((*it)->type != TokenType::CloseBrack)
 		return false;
+	_tokens.push_back(new CloseBracketToken);
 	it++;
 	return true;
 }
@@ -328,9 +314,6 @@ bool Parser::simple_block_case1() {
 bool Parser::validSimpleDirectiveList() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -377,9 +360,6 @@ bool Parser::simple_directive_list_case2() {
 bool Parser::validSimpleDirective() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -398,12 +378,9 @@ bool Parser::validSimpleDirective() {
 bool Parser::simple_directive_case1() {
 	std::cout << "\tEntered simple_directive_case1 with: " << (*it)->content << std::endl;
 
-	// if (name_flag)
-	// 	return false;
 	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
 		return false;
 	_tokens.push_back(new NameToken((*it)->content));
-	// name_flag = true;
 	it++;
 
 	if (!validParameterList())
@@ -417,9 +394,6 @@ bool Parser::simple_directive_case1() {
 bool Parser::validParameterList() {
 	std::vector<Tok*>::iterator tmp = it;
 	std::vector<Token*> backup = _tokens;
-	// std::vector<Token*>::iterator start = _tokens.end();
-	// if (_tokens.size() != 0)
-	// 	start--;
 	if ((*it)->type == TokenType::End)
 		return false;
 
@@ -451,7 +425,6 @@ bool Parser::parameter_list_case1() {
 	if ((*it)->type != TokenType::Semicolon)
 		return false;
 	it++;
-	// name_flag = false;
 	std::cout << "\t\tSuccess: [Parameter] ';'" << std::endl;
 	return true;
 }

@@ -1,13 +1,14 @@
+#pragma once
 #ifndef LEXER_HPP
 # define LEXER_HPP
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <algorithm>
-#include "utils.hpp"
+# include <iostream>
+# include <string>
+# include <vector>
+# include <algorithm>
+# include "utils.hpp"
 
-#define log(x) std::cout << x << std::endl
+# define log(x) std::cout << x << std::endl
 
 enum TokenType {
 	Name,

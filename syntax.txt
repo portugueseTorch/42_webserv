@@ -20,7 +20,7 @@ The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.or
 					| <simple_block>
 					;
 
-<simple_block>		: [name] [parameter] [parameter] '{' <simple_dir_lst> '}'
+<simple_block>		: [name] [parameter] '{' <simple_dir_lst> '}'
 					;
 
 <simple_dir_lst>	: <simple_dir> <simple_dir_lst>
