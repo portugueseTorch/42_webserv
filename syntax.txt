@@ -1,24 +1,35 @@
 The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
 
-<configuration>	: <server_block> <configuration>
-				| <server_block>
-				;
+<configuration>		: <server_block> <configuration>
+					| (null)
+					;
 
-<server_block>	: [server] '{' <directives> '}' 
-				;
+<server_block>		: [server] <block>
+					;
 
-<directives>	: <block_dir> <directives>
-				| <simple_dir> <directives>
-				| (null)
-				;
+<block>				: '{' <directives> '}'
+					;
 
-<block_dir>		: <simple_dir> '{' <simple_dir> '}'
-				;
+<directives>		: <block_dirs> <directives>
+					| <simple_dir_lst> <directives>
+					| <block_dirs>
+					| <simple_dir_lst>
+					;
 
-<simple_dir>	: [Name] <simple_dir>
-				| [Parameter] <simple_dir>
-				| [Parameter] ';'
-				| (null)
-				;
+<block_dirs>		: <simple_block> <block_dirs>
+					| <simple_block>
+					;
 
+<simple_block>		: [name] [parameter] [parameter] '{' <simple_dir_lst> '}'
+					;
 
+<simple_dir_lst>	: <simple_dir> <simple_dir_lst>
+					| <simple_dir>
+					;
+
+<simple_dir>		: [name] <parameter_lst>
+					;
+
+<parameter_lst>		: [parameter] ';'
+					| [parameter] <parameter_lst>
+					;

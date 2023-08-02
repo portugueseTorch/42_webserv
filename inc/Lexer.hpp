@@ -16,6 +16,7 @@ enum TokenType {
 	CloseBrack,
 	Semicolon,
 	SBlock,
+	Preblock,
 	End
 };
 
