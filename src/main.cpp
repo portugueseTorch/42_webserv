@@ -15,11 +15,11 @@ int main() {
 
 	Lexer lex;
 	lex.tokenize(content);
-	lex.displayTokenList();
+	// lex.displayTokenList();
 	std::cout << std::endl;
 	
-	Parser parser;
-	parser.buildAST(lex.getTokens());
+	Parser parser(lex.getTokens());
+	parser.buildAST();
 
 	in_file.close();
 	return 0;

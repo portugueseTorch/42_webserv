@@ -1,15 +1,51 @@
 #include "../inc/Parser.hpp"
 
+Token::Token(std::string content, TokenType type): _content(content), _type(type) {}
+
+Token::~Token() {}
+
+void Token::display() {
+	std::cout << "[ \"" << _content << "\", " << _type << " ]" << std::endl;
+}
+
+//////////////////////////////////////////////////
+
+Parser::Parser(std::list<Tok> lex) {
+	_lex = lex;
+	this->it = _lex.begin();
+}
+
 Parser::~Parser() {
-	std::vector<Token*>::iterator tmp = _tokens.begin();
-	for (; tmp != _tokens.end(); tmp++)
-		delete (*tmp);
+	_lex.clear();
 	_tokens.clear();
 }
 
-void Parser::buildAST(std::vector<Tok*> lex) {
-	_lex = lex;
-	this->it = _lex.begin();
+bool Parser::validSemicolon() {
+	for (; it != _lex.end(); it++) {
+		if (it->type == TokenType::NL) {
+			std::list<Tok>::iterator i = it;
+			if (i != _lex.begin()) {
+				i--;
+				if (i->type != TokenType::Semicolon && i->type != TokenType::OpenBrack && i->type != TokenType::CloseBrack)
+					return false;
+			}
+			_lex.erase(it++);
+			it--;
+		}
+	}
+	return true;
+}
+
+void Parser::buildAST() {
+
+	if (!validSemicolon()) {
+		std::cerr << "ERROR: syntax error in .conf" << std::endl;
+		return ;
+	}
+	std::list<Tok>::iterator it = _lex.begin();
+	for (; it != _lex.end(); it++)
+		std::cout << "[ \"" << it->content << "\", " << it->type << " ]" << std::endl;
+	this->it = _lex.begin();	
 	if (validConfiguration()) {
 		displayAST();
 		std::cout << "\nSUCCESS: .conf file successfully parsed\n" << std::endl;
@@ -20,33 +56,24 @@ void Parser::buildAST(std::vector<Tok*> lex) {
 
 void Parser::displayAST() {
 	std::cout << "##### PARSER OUTPUT #####" << std::endl;
-	std::vector<Token*>::iterator tmp = _tokens.begin();
+	std::list<Token>::iterator tmp = _tokens.begin();
 	for (; tmp != _tokens.end(); tmp++)
-		(*tmp)->display();
+		tmp->display();
 }
 
 void Parser::parseAST() {
 	return ;
 }
 
-void Parser::resetTokens(std::vector<Token*>::iterator start) {
-	if (_tokens.empty() || start == _tokens.end())
-		return ;
-	start++;
-	for (; start != _tokens.end(); start++)
-		delete (*start);
-	_tokens.clear();
-}
-
 //////////////////////////////////////////////////
 
 bool Parser::validConfiguration() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return true;
 
-	std::cout << "\nTesting validConfiguration at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validConfiguration at: " << it->content << std::endl;
 	if (conf_case1())
 		return true;
 	log("\t!!! NOT CONF_CASE1");
@@ -59,10 +86,10 @@ bool Parser::validConfiguration() {
 
 // <server_block> <configuration>
 bool Parser::conf_case1() {
-	std::cout << "\tEntered conf_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered conf_case1 with: " << it->content << std::endl;
 	if (!validServerBlock())
 		return false;
-	std::cout << "\t\tSUCCESSFULLY EXITED FIRST SERVER BLOCK with: " << (*it)->content << "\n\n" << std::endl;
+	std::cout << "\t\tSUCCESSFULLY EXITED FIRST SERVER BLOCK with: " << it->content << "\n\n" << std::endl;
 	if (!validConfiguration())
 		return false;
 	return true;
@@ -71,12 +98,12 @@ bool Parser::conf_case1() {
 /***************************************/
 
 bool Parser::validServerBlock() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validServerBlock at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validServerBlock at: " << it->content << std::endl;
 	if (server_block_case1())
 		return true;
 	log("\t!!! NOT SERVER_BLOCK_CASE1");
@@ -89,27 +116,28 @@ bool Parser::validServerBlock() {
 
 // [server] <block>
 bool Parser::server_block_case1() {
-	std::cout << "\tEntered server_block_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered server_block_case1 with: " << it->content << std::endl;
 
-	if ((*it)->content != "server")
+	if (it->content != "server")
 		return false;
-	_tokens.push_back(new ServerToken);
+	Token server_token("server", TokenType::SBlock);
+	_tokens.push_back(server_token);
 	it++;
 	if (!validBlock())
 		return false;
-	std::cout << "\tRe-entered server_block_case1 at: " << (*it)->content << std::endl;
+	std::cout << "\tRe-entered server_block_case1 at: " << it->content << std::endl;
 	return true;
 }
 
 /***************************************/
 
 bool Parser::validBlock() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validBlock at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validBlock at: " << it->content << std::endl;
 	if (block_case1())
 		return true;
 	log("\t!!! NOT BLOCK_CASE1");
@@ -122,18 +150,20 @@ bool Parser::validBlock() {
 
 // '{' <directives> '}'
 bool Parser::block_case1() {
-	std::cout << "\tEntered block_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered block_case1 with: " << it->content << std::endl;
 
-	if ((*it)->type != TokenType::OpenBrack)
+	if (it->type != TokenType::OpenBrack)
 		return false;
-	_tokens.push_back(new OpenBracketToken);
+	Token open_brack_token("{", TokenType::OpenBrack);
+	_tokens.push_back(open_brack_token);
 	it++;
 	if (!validDirectives())
 		return false;
-	std::cout << "\tRe-entered block_case1 at: " << (*it)->content << std::endl;
-	if ((*it)->type != TokenType::CloseBrack)
+	std::cout << "\tRe-entered block_case1 at: " << it->content << std::endl;
+	if (it->type != TokenType::CloseBrack)
 		return false;
-	_tokens.push_back(new CloseBracketToken);
+	Token close_brack_token("}", TokenType::CloseBrack);
+	_tokens.push_back(close_brack_token);
 	it++;
 	return true;
 }
@@ -141,12 +171,12 @@ bool Parser::block_case1() {
 /***************************************/
 
 bool Parser::validDirectives() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validDirectives at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validDirectives at: " << it->content << std::endl;
 	if (directives_case1())
 		return true;
 	log("\t!!! NOT DIRECTIVES_CASE1");
@@ -177,11 +207,11 @@ bool Parser::validDirectives() {
 
 // <block_dirs> <directives>
 bool Parser::directives_case1() {
-	std::cout << "\tEntered directives_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered directives_case1 with: " << it->content << std::endl;
 
 	if (!validBlockDirectives())
 		return false;
-	std::cout << "\tRe-entered directives_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tRe-entered directives_case1 with: " << it->content << std::endl;
 	if (!validDirectives())
 		return false;
 	return true;
@@ -189,11 +219,11 @@ bool Parser::directives_case1() {
 
 // <simple_dir_lst> <directives>
 bool Parser::directives_case2() {
-	std::cout << "\tEntered directives_case2 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered directives_case2 with: " << it->content << std::endl;
 
 	if (!validSimpleDirectiveList())
 		return false;
-	std::cout << "\tRe-entered directives_case2 with: " << (*it)->content << std::endl;
+	std::cout << "\tRe-entered directives_case2 with: " << it->content << std::endl;
 	if (!validDirectives())
 		return false;
 	return true;
@@ -201,7 +231,7 @@ bool Parser::directives_case2() {
 
 // <block_dirs>
 bool Parser::directives_case3() {
-	std::cout << "\tEntered directives_case3 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered directives_case3 with: " << it->content << std::endl;
 
 	if (!validBlockDirectives())
 		return false;
@@ -210,7 +240,7 @@ bool Parser::directives_case3() {
 
 // <simple_dir_lst>
 bool Parser::directives_case4() {
-	std::cout << "\tEntered directives_case4 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered directives_case4 with: " << it->content << std::endl;
 
 	if (!validSimpleDirectiveList())
 		return false;
@@ -220,12 +250,12 @@ bool Parser::directives_case4() {
 /***************************************/
 
 bool Parser::validBlockDirectives() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validBlockDirectives at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validBlockDirectives at: " << it->content << std::endl;
 	if (block_directives_case1())
 		return true;
 	log("\t!!! NOT BLOCK_DIRECTIVES_CASE1");
@@ -244,11 +274,11 @@ bool Parser::validBlockDirectives() {
 
 // <simple_block> <block_dirs>
 bool Parser::block_directives_case1() {
-	std::cout << "\tEntered block_directives_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered block_directives_case1 with: " << it->content << std::endl;
 
 	if (!validSimpleBlock())
 		return false;
-	std::cout << "\tRe-entered block_directives_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tRe-entered block_directives_case1 with: " << it->content << std::endl;
 	if (!validBlockDirectives())
 		return false;
 	return true;
@@ -256,7 +286,7 @@ bool Parser::block_directives_case1() {
 
 // <simple_block>
 bool Parser::block_directives_case2() {
-	std::cout << "\tEntered block_directives_case2 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered block_directives_case2 with: " << it->content << std::endl;
 
 	if (!validSimpleBlock())
 		return false;
@@ -266,12 +296,12 @@ bool Parser::block_directives_case2() {
 /***************************************/
 
 bool Parser::validSimpleBlock() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validSimpleBlock at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validSimpleBlock at: " << it->content << std::endl;
 	if (simple_block_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_BLOCK_CASE1");
@@ -284,27 +314,30 @@ bool Parser::validSimpleBlock() {
 
 // [name] [parameter] '{' <simple_dir_lst> '}'
 bool Parser::simple_block_case1() {
-	std::cout << "\tEntered simple_block_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered simple_block_case1 with: " << it->content << std::endl;
 
-	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
+	if (it->type != TokenType::Name && it->type != TokenType::Parameter)
 		return false;
-	std::string n = (*it)->content;
+	std::string n = it->content;
 	it++;
-	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
+	if (it->type != TokenType::Name && it->type != TokenType::Parameter)
 		return false;
-	std::string p = (*it)->content;
+	std::string content = n + " " + it->content;
 	it++;
-	_tokens.push_back(new PreblockToken(n, p));
-	if ((*it)->type != TokenType::OpenBrack)
+	Token pre_block_token(content, TokenType::Preblock);
+	_tokens.push_back(pre_block_token);
+	if (it->type != TokenType::OpenBrack)
 		return false;
-	_tokens.push_back(new OpenBracketToken);
+	Token open_brack_token("{", TokenType::OpenBrack);
+	_tokens.push_back(open_brack_token);
 	it++;
 	if (!validSimpleDirectiveList())
 		return false;
-	std::cout << "\tRe-entered simple_block_case1 with: " << (*it)->content << std::endl;
-	if ((*it)->type != TokenType::CloseBrack)
+	std::cout << "\tRe-entered simple_block_case1 with: " << it->content << std::endl;
+	if (it->type != TokenType::CloseBrack)
 		return false;
-	_tokens.push_back(new CloseBracketToken);
+	Token close_brack_token("}", TokenType::CloseBrack);
+	_tokens.push_back(close_brack_token);
 	it++;
 	return true;
 }
@@ -312,12 +345,12 @@ bool Parser::simple_block_case1() {
 /***************************************/
 
 bool Parser::validSimpleDirectiveList() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validSimpleDirectiveList at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validSimpleDirectiveList at: " << it->content << std::endl;
 	if (simple_directive_list_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_DIRECTIVE_LIST_CASE1");
@@ -336,11 +369,11 @@ bool Parser::validSimpleDirectiveList() {
 
 // <simple_dir> <simple_dir_lst>
 bool Parser::simple_directive_list_case1() {
-	std::cout << "\tEntered simple_directive_list_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered simple_directive_list_case1 with: " << it->content << std::endl;
 
 	if (!validSimpleDirective())
 		return false;
-	std::cout << "\tRe-entered simple_directive_list_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tRe-entered simple_directive_list_case1 with: " << it->content << std::endl;
 	if (!validSimpleDirectiveList())
 		return false;
 	return true;
@@ -348,7 +381,7 @@ bool Parser::simple_directive_list_case1() {
 
 // <simple_dir>
 bool Parser::simple_directive_list_case2() {
-	std::cout << "\tEntered simple_directive_list_case2 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered simple_directive_list_case2 with: " << it->content << std::endl;
 
 	if (!validSimpleDirective())
 		return false;
@@ -358,12 +391,12 @@ bool Parser::simple_directive_list_case2() {
 /***************************************/
 
 bool Parser::validSimpleDirective() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validSimpleDirective at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validSimpleDirective at: " << it->content << std::endl;
 	if (simple_directive_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_DIRECTIVE_CASE1");
@@ -376,11 +409,12 @@ bool Parser::validSimpleDirective() {
 
 // [name] <parameter_lst>
 bool Parser::simple_directive_case1() {
-	std::cout << "\tEntered simple_directive_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered simple_directive_case1 with: " << it->content << std::endl;
 
-	if ((*it)->type != TokenType::Name && (*it)->type != TokenType::Parameter)
+	if (it->type != TokenType::Name && it->type != TokenType::Parameter)
 		return false;
-	_tokens.push_back(new NameToken((*it)->content));
+	Token name_token(it->content, TokenType::Name);
+	_tokens.push_back(name_token);
 	it++;
 
 	if (!validParameterList())
@@ -392,12 +426,12 @@ bool Parser::simple_directive_case1() {
 /***************************************/
 
 bool Parser::validParameterList() {
-	std::vector<Tok*>::iterator tmp = it;
-	std::vector<Token*> backup = _tokens;
-	if ((*it)->type == TokenType::End)
+	std::list<Tok>::iterator tmp = it;
+	std::list<Token> backup = _tokens;
+	if (it->type == TokenType::End)
 		return false;
 
-	std::cout << "\nTesting validParameterList at: " << (*it)->content << std::endl;
+	std::cout << "\nTesting validParameterList at: " << it->content << std::endl;
 	if (parameter_list_case1())
 		return true;
 	log("\t!!! NOT PARAMETER_LIST_CASE1");
@@ -416,13 +450,14 @@ bool Parser::validParameterList() {
 
 // [parameter] ';'
 bool Parser::parameter_list_case1() {
-	std::cout << "\tEntered parameter_list_case1 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered parameter_list_case1 with: " << it->content << std::endl;
 
-	if ((*it)->type != TokenType::Parameter)
+	if (it->type != TokenType::Parameter)
 		return false;
-	_tokens.push_back(new ParameterToken((*it)->content));
+	Token parameter_token(it->content, TokenType::Parameter);
+	_tokens.push_back(parameter_token);
 	it++;
-	if ((*it)->type != TokenType::Semicolon)
+	if (it->type != TokenType::Semicolon)
 		return false;
 	it++;
 	std::cout << "\t\tSuccess: [Parameter] ';'" << std::endl;
@@ -431,11 +466,12 @@ bool Parser::parameter_list_case1() {
 
 // [parameter] <parameter_lst>
 bool Parser::parameter_list_case2() {
-	std::cout << "\tEntered parameter_list_case2 with: " << (*it)->content << std::endl;
+	std::cout << "\tEntered parameter_list_case2 with: " << it->content << std::endl;
 
-	if ((*it)->type != TokenType::Parameter)
+	if (it->type != TokenType::Parameter)
 		return false;
-	_tokens.push_back(new ParameterToken((*it)->content));
+	Token parameter_token(it->content, TokenType::Parameter);
+	_tokens.push_back(parameter_token);
 	it++;
 	if (!validParameterList())
 		return false;

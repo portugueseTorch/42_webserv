@@ -4,13 +4,14 @@
 
 # include <iostream>
 # include <string>
-# include <vector>
+# include <list>
 # include <algorithm>
 # include "utils.hpp"
 
 # define log(x) std::cout << x << std::endl
 
 enum TokenType {
+	Start,
 	Name,
 	Parameter,
 	OpenBrack,
@@ -18,6 +19,7 @@ enum TokenType {
 	Semicolon,
 	SBlock,
 	Preblock,
+	NL,
 	End
 };
 
@@ -31,12 +33,13 @@ class Lexer {
 		~Lexer();
 		int tokenize(std::string src);
 		void displayTokenList();
-		std::vector<Tok*> getTokens();
-		static std::vector<std::string> directives;
+		const std::list<Tok> &getTokens() const;
+		static std::list<std::string> directives;
 
 	private:
-		Tok *token(std::string content, TokenType type);
-		std::vector<Tok*> _tokens;
+		void trimNewLines();
+		Tok token(std::string content, TokenType type);
+		std::list<Tok> _tokens;
 };
 
 #endif

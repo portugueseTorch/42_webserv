@@ -1,6 +1,6 @@
 #include "../inc/Lexer.hpp"
 
-std::vector<std::string> Lexer::directives = {
+std::list<std::string> Lexer::directives = {
 	"error_page",
 	"index",
 	"listen",
@@ -11,9 +11,6 @@ std::vector<std::string> Lexer::directives = {
 };
 
 Lexer::~Lexer() {
-	std::vector<Tok*>::iterator it = _tokens.begin();
-	for (; it != _tokens.end(); it++)
-		delete *it;
 	_tokens.clear();
 }
 
@@ -28,20 +25,24 @@ int Lexer::tokenize(std::string src) {
 				_tokens.push_back(token("}", TokenType::CloseBrack));
 			else if (src[i] == ';')
 				_tokens.push_back(token(";", TokenType::Semicolon));
+			else if (src[i] == '\n')
+				_tokens.push_back(token("nl", TokenType::NL));
 			else {
 				if (src[i] == '#') {
 					while (src[i] && src[i] != '\n')
 						i++;
+					if (src[i] && src[i] == '\n')
+						_tokens.push_back(token("nl", TokenType::NL));
 				} else {
 					int start = i;
-					while (src[i] && !isindent(src[i]) && (src[i] != ';' && src[i] != '{' && src[i] != '}'))
+					while (src[i] && !isindent(src[i]) && (src[i] != ';' && src[i] != '{' && src[i] != '}' && src[i] != '\n'))
 						i++;
 					std::string term = src.substr(start, i - start);
 					if (std::find(directives.begin(), directives.end(), term) != directives.end())
 						_tokens.push_back(token(term, TokenType::Name));
 					else
 						_tokens.push_back(token(term, TokenType::Parameter));
-					if (src[i] == ';' || src[i] == '{' || src[i] == '}')
+					if (src[i] == ';' || src[i] == '{' || src[i] == '}' || src[i] == '\n')
 						i--;
 				}
 			}
@@ -51,23 +52,36 @@ int Lexer::tokenize(std::string src) {
 		std::cerr << "FATAL: " << e.what() << std::endl;
 		return 1;
 	}
+	trimNewLines();
 	return 0;
 }
 
-Tok *Lexer::token(std::string content, TokenType type) {
-	Tok *new_token = new Tok;
-	new_token->content = content;
-	new_token->type = type;
+Tok Lexer::token(std::string content, TokenType type) {
+	Tok new_token;
+	new_token.content = content;
+	new_token.type = type;
 	return new_token;
 }
 
 void Lexer::displayTokenList() {
 	std::cout << "##### LEXER OUTPUT #####" << std::endl;
-	std::vector<Tok*>::iterator it = _tokens.begin();
+	std::list<Tok>::iterator it = _tokens.begin();
 	for (; it != _tokens.end(); it++)
-		std::cout << "{ \"" << (*it)->content << "\", " << (*it)->type << " }" << std::endl;
+		std::cout << "[ \"" << it->content << "\", " << it->type << " ]" << std::endl;
 }
 
-std::vector<Tok*> Lexer::getTokens() {
+void Lexer::trimNewLines() {
+	std::list<Tok>::iterator it = _tokens.begin();
+	for (; it != _tokens.end(); it++) {
+		if (it->type == TokenType::NL) {
+			it++;
+			while (it != _tokens.end() && it->type == TokenType::NL)
+				_tokens.erase(it++);
+			it--;
+		}
+	}
+}
+
+const std::list<Tok> &Lexer::getTokens() const {
 	return _tokens;
 }

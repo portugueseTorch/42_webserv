@@ -30,6 +30,5 @@ The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.or
 <simple_dir>		: [name] <parameter_lst>
 					;
 
-<parameter_lst>		: [parameter] ';'
-					| [parameter] <parameter_lst>
+<parameter_lst>		: [parameter] <parameter_lst> ';'
 					;
