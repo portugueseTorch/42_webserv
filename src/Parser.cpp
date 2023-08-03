@@ -55,21 +55,34 @@ void Parser::buildAST() {
 }
 
 void Parser::displayAST() {
-	std::cout << "##### PARSER OUTPUT #####" << std::endl;
+	// std::cout << "\n##### PARSER OUTPUT #####" << std::endl;
+	std::cout << "\n";
 	std::list<Token>::iterator tmp = _tokens.begin();
 	for (; tmp != _tokens.end(); tmp++)
 		tmp->display();
+	std::cout << std::endl;
 }
 
 void Parser::parseAST() {
 	return ;
 }
 
+void Parser::resetTokens(int start) {
+	std::list<Token>::iterator i = _tokens.begin();
+	for (; start > 0 && i != _tokens.end(); start--)
+		i++;
+	for (; i != _tokens.end(); i++) {
+		_tokens.erase(i++);
+		i--;
+	}
+}
+
 //////////////////////////////////////////////////
 
 bool Parser::validConfiguration() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return true;
 
@@ -77,8 +90,7 @@ bool Parser::validConfiguration() {
 	if (conf_case1())
 		return true;
 	log("\t!!! NOT CONF_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -99,7 +111,8 @@ bool Parser::conf_case1() {
 
 bool Parser::validServerBlock() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -107,8 +120,7 @@ bool Parser::validServerBlock() {
 	if (server_block_case1())
 		return true;
 	log("\t!!! NOT SERVER_BLOCK_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -133,7 +145,8 @@ bool Parser::server_block_case1() {
 
 bool Parser::validBlock() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -141,8 +154,7 @@ bool Parser::validBlock() {
 	if (block_case1())
 		return true;
 	log("\t!!! NOT BLOCK_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -172,7 +184,8 @@ bool Parser::block_case1() {
 
 bool Parser::validDirectives() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -180,26 +193,22 @@ bool Parser::validDirectives() {
 	if (directives_case1())
 		return true;
 	log("\t!!! NOT DIRECTIVES_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (directives_case2())
 		return true;
 	log("\t!!! NOT DIRECTIVES_CASE2");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (directives_case3())
 		return true;
 	log("\t!!! NOT DIRECTIVES_CASE3");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (directives_case4())
 		return true;
 	log("\t!!! NOT DIRECTIVES_CASE4");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -251,7 +260,8 @@ bool Parser::directives_case4() {
 
 bool Parser::validBlockDirectives() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -259,14 +269,12 @@ bool Parser::validBlockDirectives() {
 	if (block_directives_case1())
 		return true;
 	log("\t!!! NOT BLOCK_DIRECTIVES_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (block_directives_case2())
 		return true;
 	log("\t!!! NOT BLOCK_DIRECTIVES_CASE2");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -297,7 +305,8 @@ bool Parser::block_directives_case2() {
 
 bool Parser::validSimpleBlock() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -305,8 +314,7 @@ bool Parser::validSimpleBlock() {
 	if (simple_block_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_BLOCK_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -346,7 +354,8 @@ bool Parser::simple_block_case1() {
 
 bool Parser::validSimpleDirectiveList() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -354,14 +363,12 @@ bool Parser::validSimpleDirectiveList() {
 	if (simple_directive_list_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_DIRECTIVE_LIST_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (simple_directive_list_case2())
 		return true;
 	log("\t!!! NOT SIMPLE_DIRECTIVE_LIST_CASE2");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -392,7 +399,8 @@ bool Parser::simple_directive_list_case2() {
 
 bool Parser::validSimpleDirective() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -400,8 +408,7 @@ bool Parser::validSimpleDirective() {
 	if (simple_directive_case1())
 		return true;
 	log("\t!!! NOT SIMPLE_DIRECTIVE_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;
@@ -427,7 +434,8 @@ bool Parser::simple_directive_case1() {
 
 bool Parser::validParameterList() {
 	std::list<Tok>::iterator tmp = it;
-	std::list<Token> backup = _tokens;
+	// std::list<Token> backup = _tokens;
+	int start_index = _tokens.size();
 	if (it->type == TokenType::End)
 		return false;
 
@@ -435,14 +443,12 @@ bool Parser::validParameterList() {
 	if (parameter_list_case1())
 		return true;
 	log("\t!!! NOT PARAMETER_LIST_CASE1");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 	if (parameter_list_case2())
 		return true;
 	log("\t!!! NOT PARAMETER_LIST_CASE2");
-	_tokens.clear();
-	_tokens = backup;
+	resetTokens(start_index);
 	it = tmp;
 
 	return false;

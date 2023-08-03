@@ -119,7 +119,7 @@ class Parser {
 		std::list<Tok>::iterator it;
 		std::list<Tok> _lex;
 	
-		void resetTokens(std::list<Token>::iterator start);
+		void resetTokens(int start);
 		bool validSemicolon();
 };
 
