@@ -6,7 +6,7 @@
 #    By: gda_cruz <gda_cruz@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/28 15:46:49 by gda_cruz          #+#    #+#              #
-#    Updated: 2023/08/03 00:44:51 by gda_cruz         ###   ########.fr        #
+#    Updated: 2023/08/03 01:20:09 by gda_cruz         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -30,6 +30,10 @@ OBJ		=	$(patsubst src/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 NAME 	=	webserv
 
 all: $(NAME)
+
+debug: $(NAME)
+	@./webserv > out.log
+	@printf "INFO:\tOutput log redirected to file out.log\n"
 
 $(NAME): $(OBJ)
 	@printf "$(BLUE)[Compiling]     "$(NAME)"$(RESET)\n"

@@ -24,7 +24,7 @@ int Lexer::tokenize(std::string src) {
 			else if (src[i] == '}')
 				_tokens.push_back(token("}", TokenType::CloseBrack));
 			else if (src[i] == ';')
-				_tokens.push_back(token(";", TokenType::Semicolon));
+				_tokens.push_back(token(";", TokenType::SemiTok));
 			else if (src[i] == '\n')
 				_tokens.push_back(token("nl", TokenType::NL));
 			else {
@@ -39,9 +39,9 @@ int Lexer::tokenize(std::string src) {
 						i++;
 					std::string term = src.substr(start, i - start);
 					if (std::find(directives.begin(), directives.end(), term) != directives.end())
-						_tokens.push_back(token(term, TokenType::Name));
+						_tokens.push_back(token(term, TokenType::NameTok));
 					else
-						_tokens.push_back(token(term, TokenType::Parameter));
+						_tokens.push_back(token(term, TokenType::ParamTok));
 					if (src[i] == ';' || src[i] == '{' || src[i] == '}' || src[i] == '\n')
 						i--;
 				}

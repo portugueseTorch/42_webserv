@@ -15,8 +15,6 @@ int main() {
 
 	Lexer lex;
 	lex.tokenize(content);
-	// lex.displayTokenList();
-	std::cout << std::endl;
 	
 	Parser parser(lex.getTokens());
 	parser.buildAST();

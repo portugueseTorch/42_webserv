@@ -11,8 +11,7 @@
 
 class Server {
 	public:
-
-
+		void configureServer() {};
 	private:
 		int					_server_fd;			// file descriptor of the server socket
 		in_port_t			_port;				// port to be bound to the server_socket

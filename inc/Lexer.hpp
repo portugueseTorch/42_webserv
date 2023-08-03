@@ -11,12 +11,11 @@
 # define log(x) std::cout << x << std::endl
 
 enum TokenType {
-	Start,
-	Name,
-	Parameter,
+	NameTok,
+	ParamTok,
 	OpenBrack,
 	CloseBrack,
-	Semicolon,
+	SemiTok,
 	SBlock,
 	Preblock,
 	NL,
