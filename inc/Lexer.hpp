@@ -6,9 +6,6 @@
 # include <string>
 # include <list>
 # include <algorithm>
-# include "utils.hpp"
-
-# define log(x) std::cout << x << std::endl
 
 enum TokenType {
 	NameTok,
@@ -33,7 +30,6 @@ class Lexer {
 		int tokenize(std::string src);
 		void displayTokenList();
 		const std::list<Tok> &getTokens() const;
-		static std::list<std::string> directives;
 
 	private:
 		void trimNewLines();

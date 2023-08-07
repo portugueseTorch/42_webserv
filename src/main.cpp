@@ -1,24 +1,37 @@
-#include "../inc/Lexer.hpp"
-#include "../inc/Parser.hpp"
-#include <fstream>
+#include "../inc/Webserv.hpp"
 
-int main() {
-	std::ifstream in_file("test/nginx.conf");
-	std::string buff;
-	std::string content;
-
-	while (std::getline(in_file, buff)) {
-		content += buff;
-		if (!in_file.eof())
-			content += "\n";
+int main(int argc, char **argv) {
+	// Check wrong usage
+	if (argc > 2) {
+		std::cout << "[ERROR]:\t\tUsage: ./webserv [config_file_path]" << std::endl;
+		return 1;
 	}
 
-	Lexer lex;
-	lex.tokenize(content);
-	
-	Parser parser(lex.getTokens());
-	parser.buildAST();
+	try {
+		std::string content = readConfigurationFile(argc, argv);
 
-	in_file.close();
+		// Lex config file
+		Lexer lex;
+		if (lex.tokenize(content))
+			return 1;
+
+		// Build pseudo-AST
+		Parser parser(lex.getTokens());
+		if (parser.buildAST())
+			return 1;
+		
+		ServerEngine engine(parser.getNodes());
+		if (engine.configureServers())
+			return 1;
+
+		engine.displayServers();
+		
+		// log(std::cout, MsgType::SUCCESS, "Servers running!", "");
+
+	} catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		return 1;
+	}
+
 	return 0;
 }

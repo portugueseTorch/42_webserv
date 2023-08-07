@@ -3,9 +3,10 @@
 # define PARSER_HPP
 
 # include "Lexer.hpp"
+# include "Webserv.hpp"
 
 /*************************************/
-/*********** DECLARE NODES ***********/
+/*************** NODES ***************/
 /*************************************/
 
 enum NodeType {
@@ -35,9 +36,17 @@ class Parser {
 		Parser(std::list<Tok> lex);
 		~Parser();
 
-		void buildAST();
+		int buildAST();
 		void displayAST();
 		const std::list<Node> &getNodes() const;
+
+	private:
+		std::list<Node> _nodes;
+		std::list<Tok>::iterator it;
+		std::list<Tok> _lex;
+	
+		void resetNodes(int start);
+		bool validSemicolon();
 
 		bool validConfiguration();
 		bool conf_case1();
@@ -71,14 +80,6 @@ class Parser {
 		bool validParameterList();
 		bool parameter_list_case1();
 		bool parameter_list_case2();
-
-	private:
-		std::list<Node> _nodes;
-		std::list<Tok>::iterator it;
-		std::list<Tok> _lex;
-	
-		void resetNodes(int start);
-		bool validSemicolon();
 };
 
 #endif

@@ -1,14 +1,4 @@
-#include "../inc/Lexer.hpp"
-
-std::list<std::string> Lexer::directives = {
-	"error_page",
-	"index",
-	"listen",
-	"location"
-	"root",
-	"server",
-	"server_name",
-};
+#include "../inc/Webserv.hpp"
 
 Lexer::~Lexer() {
 	_tokens.clear();
@@ -27,7 +17,19 @@ int Lexer::tokenize(std::string src) {
 				_tokens.push_back(token(";", TokenType::SemiTok));
 			else if (src[i] == '\n')
 				_tokens.push_back(token("nl", TokenType::NL));
-			else {
+			else if (src[i] == '\'') {
+				log(std::cerr, MsgType::ERROR, "Invalid .conf syntax", "\'");
+				return 1;
+			}
+			else if (src[i] == '\"') {
+				i++;
+				std::string param = "";
+				while (src[i] && src[i] != '\"') {
+					param += src[i];
+					i++;
+				}
+				_tokens.push_back(token(param, TokenType::ParamTok));
+			} else {
 				if (src[i] == '#') {
 					while (src[i] && src[i] != '\n')
 						i++;
@@ -38,7 +40,7 @@ int Lexer::tokenize(std::string src) {
 					while (src[i] && !isindent(src[i]) && (src[i] != ';' && src[i] != '{' && src[i] != '}' && src[i] != '\n'))
 						i++;
 					std::string term = src.substr(start, i - start);
-					if (std::find(directives.begin(), directives.end(), term) != directives.end())
+					if (std::find(ServerEngine::directives.begin(), ServerEngine::directives.end(), term) != ServerEngine::directives.end())
 						_tokens.push_back(token(term, TokenType::NameTok));
 					else
 						_tokens.push_back(token(term, TokenType::ParamTok));
