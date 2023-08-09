@@ -1,7 +1,6 @@
 The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.org/wiki/Backus%E2%80%93Naur_form
 
 <configuration>		: <server_block> <configuration>
-					| (null)
 					;
 
 <server_block>		: [server] <block>

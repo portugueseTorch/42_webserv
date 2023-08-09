@@ -3,12 +3,12 @@
 std::vector<std::string> ServerEngine::directives = {
 	"listen",
 	"server_name",
-	"host",
 	"root",
 	"index",
 	"error_page",
 	"location",
 	"client_max_body_size",
+	"fastcgi_pass",
 };
 
 ServerEngine::ServerEngine(std::list<Node> nodes) {
@@ -66,7 +66,23 @@ void ServerEngine::displayServers() {
 		std::cout << "[Server " << i << "]\n";
 		std::cout << "\tPort: " << it->getPort() << "\n";
 		std::cout << "\tHost: " << it->getIPAddress() << "\n";
-		std::cout << "\tServer Name: " << it->getServerName() << "\n" << std::endl;
+
+		std::cout << "\tServer Names: ";
+		std::vector<std::string> server_names = it->getServerNames();
+		for (std::vector<std::string>::iterator i = server_names.begin(); i != server_names.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+
+		std::cout << "\tError Pages:\n";
+		std::map<int,std::vector<std::string> > error_pages = it->getErrorPages();
+		for (std::map<int,std::vector<std::string> >::iterator i = error_pages.begin(); i != error_pages.end(); i++) {
+			std::cout << "\t  - [ " << (*i).first << ", ";
+			for (std::vector<std::string>::iterator j = (*i).second.begin(); j != (*i).second.end(); j++)
+				std::cout << *j << " ";
+			std::cout << "]\n";
+		}
+
+		std::cout << "\tClient max body size: " << it->getClientMaxBodySize() << std::endl;;
 	}
 }
 
@@ -98,6 +114,12 @@ int ServerEngine::setupServer(std::list<Node>::iterator &it) {
 		else if (it->_type == NodeType::Name) {
 			if (handleName(new_server, it))
 				return 1;
+		} else if (it->_type == NodeType::LocationBlock) {
+			if (handleLocationBlock(new_server, it)) //TODO: FINISH THIS
+				return 1;
+		} else if (it->_type == NodeType::ServerBlock) {
+			it--;
+			break;
 		}
 	}
 	_servers.push_back(new_server);
@@ -113,13 +135,28 @@ int ServerEngine::handleName(Server &new_server, std::list<Node>::iterator &it) 
 			return 1;
 
 	if (it->_content == "listen") {
-		if (new_server.setListen((++it)->_content))
+		if (new_server.setListen(++it))
 			return 1;
 	} else if (it->_content == "server_name") {
-		if (new_server.setServerName((++it)->_content))
+		if (new_server.setServerName(++it))
 			return 1;
-	}
+	} else if (it->_content == "root") {
+		//TODO: FINISH THIS;
+	} else if (it->_content == "error_page") {
+		if (new_server.setErrorPages(++it))
+			return 1;
+	} else if (it->_content == "client_max_body_size") {
+		if (new_server.setClientMaxBodySize(++it))
+			return 1;
+	} else
+		return 1;
 	return 0;
 }
 
+int ServerEngine::handleLocationBlock(Server &new_server, std::list<Node>::iterator &it) {
+	//TODO: FINISH THIS
+	if (new_server.setLocationBlock(it))
+		return 1;
+	return 0;
+}
 

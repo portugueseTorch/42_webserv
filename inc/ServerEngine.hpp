@@ -3,6 +3,14 @@
 
 # include "Webserv.hpp"
 
+enum Methods {
+	GET,
+	POST,
+	HEAD,
+	PUT,
+	DELETE,
+};
+
 class Server;
 
 class ServerEngine {
@@ -23,6 +31,7 @@ class ServerEngine {
 
 		void handleInvalidInput(std::list<Node>::iterator &it);
 		int handleName(Server &new_server, std::list<Node>::iterator &it);
+		int handleLocationBlock(Server &new_server, std::list<Node>::iterator &it);
 };
 
 #endif

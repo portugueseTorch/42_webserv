@@ -19,14 +19,12 @@ int main(int argc, char **argv) {
 		Parser parser(lex.getTokens());
 		if (parser.buildAST())
 			return 1;
-		
+		parser.displayAST();
+
 		ServerEngine engine(parser.getNodes());
 		if (engine.configureServers())
 			return 1;
-
 		engine.displayServers();
-		
-		// log(std::cout, MsgType::SUCCESS, "Servers running!", "");
 
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;

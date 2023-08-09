@@ -4,27 +4,23 @@ Node::Node(std::string content, NodeType type) : _content(content), _type(type) 
 
 Node::~Node() {}
 
-void Node::display()
-{
+void Node::display() {
 	std::cout << "[ \"" << _content << "\", " << _type << " ]" << std::endl;
 }
 
 //////////////////////////////////////////////////
 
-Parser::Parser(std::list<Tok> lex)
-{
+Parser::Parser(std::list<Tok> lex) {
 	_lex = lex;
 	this->it = _lex.begin();
 }
 
-Parser::~Parser()
-{
+Parser::~Parser() {
 	_lex.clear();
 	_nodes.clear();
 }
 
-bool Parser::validSemicolon()
-{
+bool Parser::validSemicolon() {
 	for (; it != _lex.end(); it++)
 	{
 		if (it->type == TokenType::NL)
@@ -43,8 +39,7 @@ bool Parser::validSemicolon()
 	return true;
 }
 
-int Parser::buildAST()
-{
+int Parser::buildAST() {
 	if (!validSemicolon()) {
 		log(std::cerr, MsgType::ERROR, "Syntax error in .conf", "");
 		return 1;
@@ -61,8 +56,7 @@ int Parser::buildAST()
 	return 0;
 }
 
-void Parser::displayAST()
-{
+void Parser::displayAST() {
 	std::cout << "\n##### PARSER OUTPUT #####" << std::endl;
 	std::cout << "\n";
 	std::list<Node>::iterator tmp = _nodes.begin();
@@ -71,8 +65,7 @@ void Parser::displayAST()
 	std::cout << std::endl;
 }
 
-void Parser::resetNodes(int start)
-{
+void Parser::resetNodes(int start) {
 	std::list<Node>::iterator i = _nodes.begin();
 	for (; start > 0 && i != _nodes.end(); start--)
 		i++;
@@ -89,8 +82,7 @@ const std::list<Node> &Parser::getNodes() const {
 
 //////////////////////////////////////////////////
 
-bool Parser::validConfiguration()
-{
+bool Parser::validConfiguration() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -105,8 +97,7 @@ bool Parser::validConfiguration()
 }
 
 // <server_block> <configuration>
-bool Parser::conf_case1()
-{
+bool Parser::conf_case1() {
 	if (!validServerBlock())
 		return false;
 	if (!validConfiguration())
@@ -116,8 +107,7 @@ bool Parser::conf_case1()
 
 /***************************************/
 
-bool Parser::validServerBlock()
-{
+bool Parser::validServerBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -132,8 +122,7 @@ bool Parser::validServerBlock()
 }
 
 // [server] <block>
-bool Parser::server_block_case1()
-{
+bool Parser::server_block_case1() {
 
 	if (it->content != "server")
 		return false;
@@ -147,8 +136,7 @@ bool Parser::server_block_case1()
 
 /***************************************/
 
-bool Parser::validBlock()
-{
+bool Parser::validBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -163,8 +151,7 @@ bool Parser::validBlock()
 }
 
 // '{' <directives> '}'
-bool Parser::block_case1()
-{
+bool Parser::block_case1() {
 
 	if (it->type != TokenType::OpenBrack)
 		return false;
@@ -183,8 +170,7 @@ bool Parser::block_case1()
 
 /***************************************/
 
-bool Parser::validDirectives()
-{
+bool Parser::validDirectives() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -211,8 +197,7 @@ bool Parser::validDirectives()
 }
 
 // <block_dirs> <directives>
-bool Parser::directives_case1()
-{
+bool Parser::directives_case1() {
 
 	if (!validBlockDirectives())
 		return false;
@@ -222,8 +207,7 @@ bool Parser::directives_case1()
 }
 
 // <simple_dir_lst> <directives>
-bool Parser::directives_case2()
-{
+bool Parser::directives_case2() {
 
 	if (!validSimpleDirectiveList())
 		return false;
@@ -233,8 +217,7 @@ bool Parser::directives_case2()
 }
 
 // <block_dirs>
-bool Parser::directives_case3()
-{
+bool Parser::directives_case3() {
 
 	if (!validBlockDirectives())
 		return false;
@@ -242,8 +225,7 @@ bool Parser::directives_case3()
 }
 
 // <simple_dir_lst>
-bool Parser::directives_case4()
-{
+bool Parser::directives_case4() {
 
 	if (!validSimpleDirectiveList())
 		return false;
@@ -252,8 +234,7 @@ bool Parser::directives_case4()
 
 /***************************************/
 
-bool Parser::validBlockDirectives()
-{
+bool Parser::validBlockDirectives() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -272,8 +253,7 @@ bool Parser::validBlockDirectives()
 }
 
 // <simple_block> <block_dirs>
-bool Parser::block_directives_case1()
-{
+bool Parser::block_directives_case1() {
 
 	if (!validSimpleBlock())
 		return false;
@@ -283,8 +263,7 @@ bool Parser::block_directives_case1()
 }
 
 // <simple_block>
-bool Parser::block_directives_case2()
-{
+bool Parser::block_directives_case2() {
 
 	if (!validSimpleBlock())
 		return false;
@@ -293,8 +272,7 @@ bool Parser::block_directives_case2()
 
 /***************************************/
 
-bool Parser::validSimpleBlock()
-{
+bool Parser::validSimpleBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
 	if (it->type == TokenType::End)
@@ -309,8 +287,7 @@ bool Parser::validSimpleBlock()
 }
 
 // [name] [parameter] '{' <simple_dir_lst> '}'
-bool Parser::simple_block_case1()
-{
+bool Parser::simple_block_case1() {
 
 	if (it->type != TokenType::NameTok && it->type != TokenType::ParamTok)
 		return false;
@@ -320,7 +297,7 @@ bool Parser::simple_block_case1()
 		return false;
 	std::string content = n + " " + it->content;
 	it++;
-	Node pre_block_node(content, NodeType::BlockStatement);
+	Node pre_block_node(content, NodeType::LocationBlock);
 	_nodes.push_back(pre_block_node);
 	if (it->type != TokenType::OpenBrack)
 		return false;
