@@ -30,8 +30,6 @@ class ServerEngine {
 		int _num_servers;				// number of servers setup in config_file
 
 		void handleInvalidInput(std::list<Node>::iterator &it);
-		int handleName(Server &new_server, std::list<Node>::iterator &it);
-		int handleLocationBlock(Server &new_server, std::list<Node>::iterator &it);
 };
 
 #endif

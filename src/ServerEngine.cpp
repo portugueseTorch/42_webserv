@@ -9,6 +9,9 @@ std::vector<std::string> ServerEngine::directives = {
 	"location",
 	"client_max_body_size",
 	"fastcgi_pass",
+
+	"autoindex",
+	"http_method",
 };
 
 ServerEngine::ServerEngine(std::list<Node> nodes) {
@@ -62,28 +65,8 @@ int ServerEngine::configureServers() {
 
 void ServerEngine::displayServers() {
 	std::vector<Server>::iterator it = _servers.begin();
-	for (int i = 1; it != _servers.end(); it++, i++) {
-		std::cout << "[Server " << i << "]\n";
-		std::cout << "\tPort: " << it->getPort() << "\n";
-		std::cout << "\tHost: " << it->getIPAddress() << "\n";
-
-		std::cout << "\tServer Names: ";
-		std::vector<std::string> server_names = it->getServerNames();
-		for (std::vector<std::string>::iterator i = server_names.begin(); i != server_names.end(); i++)
-			std::cout << *i << " ";
-		std::cout << std::endl;
-
-		std::cout << "\tError Pages:\n";
-		std::map<int,std::vector<std::string> > error_pages = it->getErrorPages();
-		for (std::map<int,std::vector<std::string> >::iterator i = error_pages.begin(); i != error_pages.end(); i++) {
-			std::cout << "\t  - [ " << (*i).first << ", ";
-			for (std::vector<std::string>::iterator j = (*i).second.begin(); j != (*i).second.end(); j++)
-				std::cout << *j << " ";
-			std::cout << "]\n";
-		}
-
-		std::cout << "\tClient max body size: " << it->getClientMaxBodySize() << std::endl;;
-	}
+	for (int i = 1; it != _servers.end(); it++, i++)
+		it->displayServer(i);
 }
 
 ////////////////////////////////////////////////////////
@@ -105,17 +88,19 @@ int ServerEngine::setupServer(std::list<Node>::iterator &it) {
 	// setup each individual server
 	// std::cout << it->_type << std::endl;
 	for (; it != _nodes.end(); it++) {
-		if (bracks == 0)
+		if (bracks == 0) {
+			it--;
 			break ;
+		}
 		if (it->_type == NodeType::OpenBracket)
 			bracks++;
 		else if (it->_type == NodeType::CloseBracket)
 			bracks--;
 		else if (it->_type == NodeType::Name) {
-			if (handleName(new_server, it))
+			if (new_server.handleName(it))
 				return 1;
 		} else if (it->_type == NodeType::LocationBlock) {
-			if (handleLocationBlock(new_server, it)) //TODO: FINISH THIS
+			if (new_server.handleLocationBlock(it)) //TODO: FINISH THIS
 				return 1;
 		} else if (it->_type == NodeType::ServerBlock) {
 			it--;
@@ -125,38 +110,3 @@ int ServerEngine::setupServer(std::list<Node>::iterator &it) {
 	_servers.push_back(new_server);
 	return 0;
 }
-
-/*************************************/
-/************** HANDLERS *************/
-/*************************************/
-
-int ServerEngine::handleName(Server &new_server, std::list<Node>::iterator &it) {
-	if (!new_server.validDirective(it->_content))
-			return 1;
-
-	if (it->_content == "listen") {
-		if (new_server.setListen(++it))
-			return 1;
-	} else if (it->_content == "server_name") {
-		if (new_server.setServerName(++it))
-			return 1;
-	} else if (it->_content == "root") {
-		//TODO: FINISH THIS;
-	} else if (it->_content == "error_page") {
-		if (new_server.setErrorPages(++it))
-			return 1;
-	} else if (it->_content == "client_max_body_size") {
-		if (new_server.setClientMaxBodySize(++it))
-			return 1;
-	} else
-		return 1;
-	return 0;
-}
-
-int ServerEngine::handleLocationBlock(Server &new_server, std::list<Node>::iterator &it) {
-	//TODO: FINISH THIS
-	if (new_server.setLocationBlock(it))
-		return 1;
-	return 0;
-}
-

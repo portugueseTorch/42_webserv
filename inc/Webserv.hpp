@@ -50,6 +50,7 @@ enum MsgType {
 	ERROR,
 	WARNING,
 	SUCCESS,
+	ALL,
 };
 
 /****** UTILS.CPP ******/

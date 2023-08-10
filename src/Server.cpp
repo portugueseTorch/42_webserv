@@ -19,6 +19,44 @@ void Server::bootServer(std::string port, std::string ip_address) {
 	(void) ip_address;
 }
 
+void Server::displayServer(int i) {
+	std::cout << "[Server " << i << "]\n";
+		std::cout << "\tPort: " << getPort() << "\n";
+		std::cout << "\tHost: " << getIPAddress() << "\n";
+
+		std::cout << "\tServer Names: ";
+		std::vector<std::string> server_names = getServerNames();
+		for (std::vector<std::string>::iterator i = server_names.begin(); i != server_names.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+
+		std::cout << "\tError Pages:\n";
+		std::map<int,std::vector<std::string> > error_pages = getErrorPages();
+		for (std::map<int,std::vector<std::string> >::iterator i = error_pages.begin(); i != error_pages.end(); i++) {
+			std::cout << "\t  - [ " << (*i).first << ", ";
+			for (std::vector<std::string>::iterator j = (*i).second.begin(); j != (*i).second.end(); j++)
+				std::cout << *j << " ";
+			std::cout << "]\n";
+		}
+
+		std::cout << "\tClient max body size: " << getClientMaxBodySize() << std::endl;
+
+		std::cout << "\tIndex: ";
+		std::vector<std::string> index = getIndex();
+		for (std::vector<std::string>::iterator i = index.begin(); i != index.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+
+		std::cout << "\tRoot: " << getRoot() << "\n";
+		std::cout << "\tAutoindex: " << getAutoindex() << "\n";
+
+		std::cout << "\tHTTP Methods: ";
+		std::vector<int> http_methods = getHTTPMethod();
+		for (std::vector<int>::iterator i = http_methods.begin(); i != http_methods.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+}
+
 /*************************************/
 /************** SETTERS **************/
 /*************************************/
@@ -122,6 +160,12 @@ int Server::setServerName(std::list<Node>::iterator &it) {
 	for (; it->_type == NodeType::Parameter; it++)
 		_server_names.push_back(it->_content);
 	it--;
+
+	if (_server_names.size() < 1) {
+		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "listen");
+		_server_names.clear();
+		return 1;
+	}
 	return 0;
 }
 
@@ -151,11 +195,11 @@ int Server::setErrorPages(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
 		stash.push_back(it->_content);
-	
 	it--;
+
 	// Check valid number of parameters
 	if (stash.size() < 2) {
-		log(std::cerr, MsgType::ERROR, "Too few arguments for error_page", "");
+		log(std::cerr, MsgType::ERROR, "Too few arguments for", "error_page");
 		return 1;
 	}
 
@@ -190,10 +234,11 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
 		stash.push_back(it->_content);
-	
+	it--;
+
 	// Check there is only 1 argument specified for client_max_body_size
 	if (stash.size() != 1) {
-		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for client_max_body_size", "");
+		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "client_max_body_size");
 		return 1;
 	}
 
@@ -240,6 +285,88 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	return 0;
 }
 
+int Server::setIndex(std::list<Node>::iterator &it) {
+	for (; it->_type == NodeType::Parameter; it++)
+		_index.push_back(it->_content);
+	it--;
+
+	// Check there is only 1 argument specified for client_max_body_size
+	if (_index.size() < 1) {
+		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "index");
+		_index.clear();
+		return 1;
+	}
+
+	return 0;
+}
+
+int Server::setAutoindex(std::list<Node>::iterator &it) {
+	std::vector<std::string> stash;
+	for (; it->_type == NodeType::Parameter; it++)
+		stash.push_back(it->_content);
+	it--;
+
+	// Check valid number of parameters
+	if (stash.size() != 1) {
+		log(std::cerr, MsgType::ERROR, "Too few arguments for", "autoindex");
+		return 1;
+	}
+
+	if (stash.back() == "on") {
+		_autoindex = true;
+		return 0;
+	} else if (stash.back() == "off") {
+		_autoindex = false;
+		return 0;
+	}
+
+	log(std::cerr, MsgType::ERROR, "Invalid autoindex parameter", it->_content);
+	return 1;
+}
+
+int Server::setRoot(std::list<Node>::iterator &it) {
+	std::vector<std::string> stash;
+	for (; it->_type == NodeType::Parameter; it++)
+		stash.push_back(it->_content);
+	it--;
+
+	// Check there is only 1 argument specified for client_max_body_size
+	if (stash.size() != 1) {
+		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "root");
+		return 1;
+	}
+	_root = stash.back();
+	return 0;
+}
+
+int Server::setHTTPMethod(std::list<Node>::iterator &it) {
+	for (; it->_type == NodeType::Parameter; it++) {
+		if (it->_content == "GET")
+			_http_method.push_back(Methods::GET);
+		else if (it->_content == "POST")
+			_http_method.push_back(Methods::POST);
+		else if (it->_content == "DELETE")
+			_http_method.push_back(Methods::DELETE);
+		else if (it->_content == "HEAD")
+			_http_method.push_back(Methods::HEAD);
+		else if (it->_content == "PUT")
+			_http_method.push_back(Methods::PUT);
+		else {
+			log(std::cerr, MsgType::ERROR, "Invalid argument for http_method", it->_content);
+			_http_method.clear();
+			return 1;
+		}
+	}
+	it--;
+
+	// Check valid number of parameters
+	if (_http_method.empty()) {
+		log(std::cerr, MsgType::ERROR, "Too few arguments for", "http_methods");
+		return 1;
+	}
+	return 0;
+}
+
 /*************************************/
 /************** IS_VALID *************/
 /*************************************/
@@ -259,3 +386,53 @@ bool Server::validHost(std::string ip) {
 		return false;
 	return true;
 }
+
+/*************************************/
+/************** HANDLERS *************/
+/*************************************/
+
+int Server::handleName(std::list<Node>::iterator &it) {
+	if (!validDirective(it->_content))
+			return 1;
+
+	if (it->_content == "listen") {
+		if (setListen(++it))
+			return 1;
+	} else if (it->_content == "server_name") {
+		if (setServerName(++it))
+			return 1;
+	} else if (it->_content == "root") {
+		if (setRoot(++it))
+			return 1;
+	} else if (it->_content == "error_page") {
+		if (setErrorPages(++it))
+			return 1;
+	} else if (it->_content == "client_max_body_size") {
+		if (setClientMaxBodySize(++it))
+			return 1;
+	} else if (it->_content == "index") {
+		if (setIndex(++it))
+			return 1;
+	} else if (it->_content == "autoindex") {
+		if (setAutoindex(++it))
+			return 1;
+	} else if (it->_content == "http_method") {
+		if (setHTTPMethod(++it))
+			return 1;
+	// } else if (it->_content == "http_method") {
+	// 	std::string param = it->_content + " must be within a location block";
+	// 	log(std::cerr, MsgType::ERROR, "Invalid directive", param);
+	// 	return 1;
+	// } else
+	} else
+		return 1;
+	return 0;
+}
+
+int Server::handleLocationBlock(std::list<Node>::iterator &it) {
+	//TODO: FINISH THIS
+	if (setLocationBlock(it))
+		return 1;
+	return 0;
+}
+
