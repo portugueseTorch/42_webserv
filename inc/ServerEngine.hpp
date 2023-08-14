@@ -18,8 +18,13 @@ class ServerEngine {
 		ServerEngine(std::list<Node> nodes);
 		~ServerEngine();
 
+		// Take the information from the parser and build the individual servers, adding them to the _servers vector
 		int configureServers();
-		int setupServer(std::list<Node>::iterator &it);
+		int configureServer(std::list<Node>::iterator &it);
+
+		// Boots the individual servers by iterating on the _servers vector and calling server.bootServer()
+		int setupServers();
+
 		void displayServers();
 
 		static std::vector<std::string> directives;

@@ -14,6 +14,7 @@
 # include <unistd.h>
 # include <signal.h>
 # include <inttypes.h>
+# include <string.h>
 
 # include <arpa/inet.h>
 # include <netinet/in.h>
@@ -29,6 +30,7 @@
 # include "Lexer.hpp"
 # include "Parser.hpp"
 # include "Server.hpp"
+# include "Location.hpp"
 # include "ServerEngine.hpp"
 
 # define RESET			"\x1B[0m"
@@ -54,9 +56,9 @@ enum MsgType {
 };
 
 /****** UTILS.CPP ******/
-int			isindent(int i);
 int			damerauLevenshteinDistance(std::string input, std::string valid);
-std::string	readConfigurationFile(int argc, char **argv);
+bool		isindent(int i);
 void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
+std::string	readConfigurationFile(int argc, char **argv);
 
 #endif

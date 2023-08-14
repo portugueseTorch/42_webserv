@@ -1,9 +1,23 @@
 #include "../inc/Webserv.hpp"
 
-int isindent(int i) {
+/**
+ * @brief Checks if I is a whitespace or tab
+ * 
+ * @param i Character to evaluate
+ * @return Returns true if it is whitespace or tab, and false otherwise
+ */
+bool isindent(int i) {
 	return (i == ' ' || i == '\t');
 }
 
+/**
+ * @brief Calculates the Damerau-Levenshtein Distance between INPUT and
+ * VALID
+ * 
+ * @param input Input to test
+ * @param valid Valid directive tp test against
+ * @return int representing the distance between the two strings
+ */
 int damerauLevenshteinDistance(std::string input, std::string valid) {
 	// Initialize a 2D matrix with all values to 0
 	size_t input_len = input.length();
@@ -29,6 +43,15 @@ int damerauLevenshteinDistance(std::string input, std::string valid) {
 	return d[input_len][valid_len];
 }
 
+/**
+ * @brief Evaluates ARGC and ARGV to check if a config_file was provided. If so
+ * it attempts to open the file, otherwise defaulting to a pre-defined config_file.
+ * If opened successfully, reads the contents of the file into a string to be returned
+ * 
+ * @param argc command-line argument coutner
+ * @param argv command-line arguments
+ * @return std::string with the contents of the config_file
+ */
 std::string readConfigurationFile(int argc, char **argv) {
 	std::ifstream in_file;
 	std::string buff;
@@ -65,6 +88,16 @@ std::string readConfigurationFile(int argc, char **argv) {
 	return content;
 }
 
+/**
+ * @brief Logs MSG and OPTIONAL to STREAM, according with TYPE.
+ * The message is displayed as:
+ * [TYPE]:	MSG: 'OPTIONAL'
+ * 
+ * @param stream output stream where the message will be written
+ * @param type type of the message according to MsgType
+ * @param msg body of the message to display
+ * @param optional optional argument to display
+ */
 void log(std::ostream &stream, MsgType type, std::string msg, std::string optional) {
 	switch (type) {
 		case MsgType::ERROR:

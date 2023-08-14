@@ -17,19 +17,25 @@ int main(int argc, char **argv) {
 
 		// Build pseudo-AST
 		Parser parser(lex.getTokens());
-		if (parser.buildAST())
+		if (parser.parse())
 			return 1;
-		parser.displayAST();
+		// parser.displayAST();
 
+		// Configure the servers with the information from the parser
 		ServerEngine engine(parser.getNodes());
 		if (engine.configureServers())
 			return 1;
+
+		// Boot servers
+		if (engine.setupServers())
+			return 1;
+
+		// Run servers
 		engine.displayServers();
 
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}
-
 	return 0;
 }

@@ -20,6 +20,12 @@ Parser::~Parser() {
 	_nodes.clear();
 }
 
+/**
+ * @brief Checks if the config_file is correctly punctuated by iterating over
+ * the tokens in [_lex]
+ * 
+ * @return true if correctly punctuated, false otherwise
+ */
 bool Parser::validSemicolon() {
 	for (; it != _lex.end(); it++)
 	{
@@ -39,7 +45,14 @@ bool Parser::validSemicolon() {
 	return true;
 }
 
-int Parser::buildAST() {
+/**
+ * @brief Parses the token list while attempting to generate a list of 
+ * nodes of type NodeType and checking if the syntax is valid, as per
+ * the syntax.txt file.The list of nodes is stored in the [_nodes] list.
+ * 
+ * @return Returns 0 if the syntax is valid, and 1 otherwise 
+ */
+int Parser::parse() {
 	if (!validSemicolon()) {
 		log(std::cerr, MsgType::ERROR, "Syntax error in .conf", "");
 		return 1;
@@ -56,6 +69,10 @@ int Parser::buildAST() {
 	return 0;
 }
 
+/**
+ * @brief Displays the ouput of the parsing process [_nodes]
+ * 
+ */
 void Parser::displayAST() {
 	std::cout << "\n##### PARSER OUTPUT #####" << std::endl;
 	std::cout << "\n";
@@ -65,6 +82,12 @@ void Parser::displayAST() {
 	std::cout << std::endl;
 }
 
+/**
+ * @brief Resets the list of nodes [_nodes] after a failed attempt
+ * at validating a certain syntactical case
+ * 
+ * @param start 
+ */
 void Parser::resetNodes(int start) {
 	std::list<Node>::iterator i = _nodes.begin();
 	for (; start > 0 && i != _nodes.end(); start--)
@@ -76,12 +99,23 @@ void Parser::resetNodes(int start) {
 	}
 }
 
+/**
+ * @brief Getter for the output of the parser, returning a constant
+ * reference to [_nodes]
+ * 
+ * @return const std::list<Node>& 
+ */
 const std::list<Node> &Parser::getNodes() const {
 	return _nodes;
 }
 
 //////////////////////////////////////////////////
 
+/**
+ * @brief Tests the <configuration> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validConfiguration() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -107,6 +141,11 @@ bool Parser::conf_case1() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <server_block> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validServerBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -136,6 +175,11 @@ bool Parser::server_block_case1() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <block> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -170,6 +214,11 @@ bool Parser::block_case1() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <directives> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validDirectives() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -234,6 +283,11 @@ bool Parser::directives_case4() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <block_directives> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validBlockDirectives() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -272,6 +326,11 @@ bool Parser::block_directives_case2() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <simple_block> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validSimpleBlock() {
 	std::list<Tok>::iterator tmp = it;
 	int start_index = _nodes.size();
@@ -316,6 +375,11 @@ bool Parser::simple_block_case1() {
 
 /***************************************/
 
+/**
+ * @brief Tests the <simple_directive_list> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validSimpleDirectiveList()
 {
 	std::list<Tok>::iterator tmp = it;
@@ -357,6 +421,11 @@ bool Parser::simple_directive_list_case2()
 
 /***************************************/
 
+/**
+ * @brief Tests the <simple_directive> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validSimpleDirective()
 {
 	std::list<Tok>::iterator tmp = it;
@@ -389,6 +458,11 @@ bool Parser::simple_directive_case1()
 
 /***************************************/
 
+/**
+ * @brief Tests the <parameter_list> block from the syntax.txt file
+ * 
+ * @return Returns true in case of valid syntax, false otherwise
+ */
 bool Parser::validParameterList()
 {
 	std::list<Tok>::iterator tmp = it;

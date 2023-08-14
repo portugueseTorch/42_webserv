@@ -4,6 +4,14 @@ Lexer::~Lexer() {
 	_tokens.clear();
 }
 
+/**
+ * @brief Consumes the contents of the configuration file in the form of a string
+ * and populates the [_tokens] list with Tokens of type TokenType. The resulting
+ * token list contains new_line tokens, which get removed in the last step of lexing
+ * 
+ * @param src Contents of the configuration file
+ * @return 0 on success, 1 on failure
+ */
 int Lexer::tokenize(std::string src) {
 	try {
 		for (int i = 0; src[i]; i++) {
@@ -58,6 +66,14 @@ int Lexer::tokenize(std::string src) {
 	return 0;
 }
 
+/**
+ * @brief Creates a new token on the stack with content CONTENT and 
+ * type TYPE
+ * 
+ * @param content string with the content to populate the Token
+ * @param type type of the token from TokenType
+ * @return created token 
+ */
 Tok Lexer::token(std::string content, TokenType type) {
 	Tok new_token;
 	new_token.content = content;
@@ -65,6 +81,10 @@ Tok Lexer::token(std::string content, TokenType type) {
 	return new_token;
 }
 
+/**
+ * @brief Displays [_tokens]
+ * 
+ */
 void Lexer::displayTokenList() {
 	std::cout << "##### LEXER OUTPUT #####" << std::endl;
 	std::list<Tok>::iterator it = _tokens.begin();
@@ -72,6 +92,11 @@ void Lexer::displayTokenList() {
 		std::cout << "[ \"" << it->content << "\", " << it->type << " ]" << std::endl;
 }
 
+/**
+ * @brief Removes the new line tokens from the _tokens list as the last
+ * step of the lexing process
+ * 
+ */
 void Lexer::trimNewLines() {
 	std::list<Tok>::iterator it = _tokens.begin();
 	for (; it != _tokens.end(); it++) {
@@ -84,6 +109,11 @@ void Lexer::trimNewLines() {
 	}
 }
 
+/**
+ * @brief Getter for the [_tokens] list, returning a constant reference to it
+ * 
+ * @return const std::list<Tok>& 
+ */
 const std::list<Tok> &Lexer::getTokens() const {
 	return _tokens;
 }

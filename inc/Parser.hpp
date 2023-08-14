@@ -36,7 +36,7 @@ class Parser {
 		Parser(std::list<Tok> lex);
 		~Parser();
 
-		int buildAST();
+		int parse();
 		void displayAST();
 		const std::list<Node> &getNodes() const;
 

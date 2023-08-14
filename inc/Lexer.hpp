@@ -27,6 +27,7 @@ typedef struct Tok {
 class Lexer {
 	public:
 		~Lexer();
+
 		int tokenize(std::string src);
 		void displayTokenList();
 		const std::list<Tok> &getTokens() const;

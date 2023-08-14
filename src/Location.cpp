@@ -17,6 +17,28 @@ Location::~Location() {}
 /************** SETTERS **************/
 /*************************************/
 
+/**
+ * @brief Sets the location LOCATION for the location block
+ * 
+ * @param location location to be set
+ * @return 0
+ */
+int Location::setLocation(std::string location) {
+	_location = location;
+	return 0;
+}
+
+/**
+ * @brief Sets the error pages for the location block by iterating over
+ * the list of nodes IT, storing the result in [_error_pages], a map
+ * where the key is an integer representing the error code, and the
+ * value is a vector of strings representing the respective pages
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
 int Location::setErrorPages(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
@@ -56,6 +78,16 @@ int Location::setErrorPages(std::list<Node>::iterator &it) {
 	return 0;
 }
 
+/**
+ * @brief Sets the client_max_body_size by iterating over IT, storing 
+ * it as a size_t in [_client_max_body_size]. The functions handles
+ * numbers, as well as the k, m, and g abbreviations (case-insensitive)
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
 int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
@@ -111,6 +143,15 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	return 0;
 }
 
+/**
+ * @brief Sets the indexes for the location block by iterating over IT, storing
+ * the result in [_index] as a vector of strings
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
 int Location::setIndex(std::list<Node>::iterator &it) {
 	for (; it->_type == NodeType::Parameter; it++)
 		_index.push_back(it->_content);
@@ -126,6 +167,15 @@ int Location::setIndex(std::list<Node>::iterator &it) {
 	return 0;
 }
 
+/**
+ * @brief Sets the autoindex directive by iterating over IT, storing the
+ * result as a boolean in [_autoindex]
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
 int Location::setAutoindex(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
@@ -150,6 +200,15 @@ int Location::setAutoindex(std::list<Node>::iterator &it) {
 	return 1;
 }
 
+/**
+ * @brief Sets the root for the location block by iterating over IT, storing
+ * the result in [_root] as a string
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
 int Location::setRoot(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
 	for (; it->_type == NodeType::Parameter; it++)
@@ -164,4 +223,3 @@ int Location::setRoot(std::list<Node>::iterator &it) {
 	_root = stash.back();
 	return 0;
 }
-

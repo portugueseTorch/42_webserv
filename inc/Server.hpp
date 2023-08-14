@@ -4,14 +4,19 @@
 
 # include "Webserv.hpp"
 
+class Location;
+
 class Server {
 	public:
 		Server();
 		~Server();
-		void bootServer(std::string port, std::string ip_address);
-		void displayServer(int i);
+
+		int setupServer();
+
+		void displayServer();
 
 		// Getters
+		int										getServerID() const { return _server_id; }
 		uint32_t								getPort() const { return _port; }
 		in_addr_t								getIPAddress() const { return _ip_address; }
 		size_t									getClientMaxBodySize() { return _client_max_body_size; }
@@ -20,7 +25,8 @@ class Server {
 		std::vector<std::string>				&getIndex() { return _index; }
 		std::vector<std::string>				&getServerNames() { return _server_names; }
 		std::map<int,std::vector<std::string> >	&getErrorPages() { return _error_pages; }
-		std::vector<int>					&getHTTPMethod() { return _http_method; }
+		std::vector<int>						&getHTTPMethod() { return _http_method; }
+		std::vector<Location>					&getLocations() { return _locations; }
 
 		// Setters
 		int setListen(std::list<Node>::iterator &it);
@@ -40,9 +46,13 @@ class Server {
 		int handleName(std::list<Node>::iterator &it);
 		int handleLocationBlock(std::list<Node>::iterator &it);
 
+		static int num_servers;
+
 	private:
+		int										_server_id;				// ID of the server for management purposes
 		int										_server_fd;				// file descriptor of the server socket
 		struct sockaddr_in						_socket_address;		// struct containing the address info of the server_socket
+		bool									_is_setup;				// flag to signal if the server is setup
 
 		uint32_t								_port;					// port specified by the 'listen' directive in config_file
 		in_addr_t								_ip_address;			// IP address specified by the 'host' directive in config_file
@@ -53,6 +63,7 @@ class Server {
 		bool									_autoindex;				// autoindex as set by the config_file
 		std::string								_root;					// root of the files as provided by the config_file
 		std::vector<int>						_http_method;			// allowed http_methods as per config_file
+		std::vector<Location>					_locations;				// vector of locaitons block as specified by the config_file
 };
 
 #endif
