@@ -11,10 +11,12 @@
 # include <map>
 # include <algorithm>
 
+# include <fcntl.h>
 # include <unistd.h>
 # include <signal.h>
-# include <inttypes.h>
 # include <string.h>
+# include <inttypes.h>
+# include <sys/epoll.h>
 
 # include <arpa/inet.h>
 # include <netinet/in.h>

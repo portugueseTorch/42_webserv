@@ -25,14 +25,18 @@ class ServerEngine {
 		// Boots the individual servers by iterating on the _servers vector and calling server.bootServer()
 		int setupServers();
 
+		// Runs the servers in a loop
+		int runServers();
+
 		void displayServers();
 
 		static std::vector<std::string> directives;
 
 	private:
-		std::list<Node> _nodes;			// list of nodes passed by the Parser
-		std::vector<Server> _servers;	// vector of servers specified in config_file
-		int _num_servers;				// number of servers setup in config_file
+		int					_epoll_fd;		// epoll file descriptor
+		std::list<Node>		_nodes;			// list of nodes passed by the Parser
+		std::vector<Server>	_servers;		// vector of servers specified in config_file
+		int					_num_servers;	// number of servers setup in config_file
 
 		void handleInvalidInput(std::list<Node>::iterator &it);
 };

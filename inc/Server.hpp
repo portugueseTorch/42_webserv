@@ -16,6 +16,7 @@ class Server {
 		void displayServer();
 
 		// Getters
+		int										getServerFD() const { return _server_fd; }
 		int										getServerID() const { return _server_id; }
 		uint32_t								getPort() const { return _port; }
 		in_addr_t								getIPAddress() const { return _ip_address; }

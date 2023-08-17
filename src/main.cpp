@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
 		Lexer lex;
 		if (lex.tokenize(content))
 			return 1;
+		// lex.displayTokenList();
 
 		// Build pseudo-AST
 		Parser parser(lex.getTokens());
@@ -31,7 +32,11 @@ int main(int argc, char **argv) {
 			return 1;
 
 		// Run servers
+		// if (engine.runServers())
+		// 	return 1;
 		engine.displayServers();
+
+		// Run servers
 
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;

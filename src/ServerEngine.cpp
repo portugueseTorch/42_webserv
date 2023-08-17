@@ -124,7 +124,7 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 		bracks++;
 		it++;
 	} else {
-		std::cerr << LIGHT_RED << "[ERROR]:\t\tFailure setting up server" << RESET << std::endl;
+		log(std::cerr, MsgType::ERROR, "could not setup server", "");
 		return 1;
 	}
 
@@ -150,5 +150,19 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 		}
 	}
 	_servers.push_back(new_server);
+	return 0;
+}
+
+int ServerEngine::runServers() {
+	// Setup epoll
+	_epoll_fd = epoll_create1(0);
+
+	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
+		if (listen(it->getServerFD(), 100) == -1) {
+			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
+			return 1;
+		}
+	}
+
 	return 0;
 }
