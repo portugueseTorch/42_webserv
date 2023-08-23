@@ -33,6 +33,7 @@
 # include "Parser.hpp"
 # include "Server.hpp"
 # include "Location.hpp"
+# include "Client.hpp"
 # include "ServerEngine.hpp"
 
 # define RESET			"\x1B[0m"
@@ -47,6 +48,10 @@
 # define LIGHT_YELLOW	"\x1B[93m"
 # define LIGHT_BLUE		"\x1B[94m"
 # define LIGHT_MAGENTA	"\x1B[95m"
+
+# define MAX_EVENTS 10
+# define EPOLL_TIMEOUT 1000
+# define MAX_LENGTH 4960
 
 enum MsgType {
 	INFO,

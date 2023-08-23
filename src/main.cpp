@@ -31,11 +31,11 @@ int main(int argc, char **argv) {
 		if (engine.setupServers())
 			return 1;
 
-		// Run servers
-		// if (engine.runServers())
-		// 	return 1;
 		engine.displayServers();
 
+		// Run servers
+		if (engine.runServers())
+			return 1;
 		// Run servers
 
 	} catch (std::exception &e) {

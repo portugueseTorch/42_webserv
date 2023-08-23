@@ -4,7 +4,7 @@ int Server::num_servers = 0;
 
 Server::Server() {
 	num_servers++;
-	_port = 8080;
+	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 	_server_fd = -1;
 	_client_max_body_size = 1000000;
@@ -60,6 +60,7 @@ int Server::setupServer() {
 	memset(_socket_address.sin_zero, 0, sizeof(_socket_address.sin_zero));
 
 	// Bind the socket to the specified port and IP address
+	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
 		log(std::cerr, MsgType::ERROR, "Unable to bind socket", "");
 		return 1;
@@ -76,7 +77,7 @@ int Server::setupServer() {
  */
 void Server::displayServer() {
 	std::cout << "[Server " << getServerID() << "]\n";
-		std::cout << "\tPort: " << getPort() << "\n";
+		std::cout << "\tPort: " << ntohs(getPort()) << "\n";
 		std::cout << "\tHost: " << getIPAddress() << "\n";
 
 		std::cout << "\tServer Names: [ ";
@@ -189,9 +190,9 @@ int Server::setListen(std::list<Node>::iterator &it) {
 	
 	// Handle special cases
 	if (split[0] == "localhost")
-			split[0] = "127.0.0.1";
-		else if (split[0] == "*")
-			split[0] = "0.0.0.0";
+		split[0] = "127.0.0.1";
+	else if (split[0] == "*")
+		split[0] = "0.0.0.0";
 
 	if (split.size() == 1) {
 		bool port = true;
@@ -215,7 +216,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 				return 1;
 			} else if (port < 1024)
 				log(std::cout, MsgType::WARNING, "Ports under 1024 are only available to the superuser", "");
-			_port = tmp;
+			_port = htons(tmp);
 		} else {
 			struct sockaddr_in sockaddr;
 			if (inet_pton(AF_INET, split[0].c_str(), &(sockaddr.sin_addr)) != 1) {
@@ -246,7 +247,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 		} else if (port < 1024)
 			log(std::cout, MsgType::WARNING, "Ports under 1024 are only available to the superuser", "");
 		_ip_address = inet_addr(split[0].c_str());
-		_port = port;
+		_port = htons(port);
 		it--;
 		return 0;
 	}
