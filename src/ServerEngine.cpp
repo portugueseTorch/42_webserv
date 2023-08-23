@@ -226,7 +226,7 @@ int ServerEngine::setupEpoll() {
 		std::string first_part = "Server " + std::to_string(it->getServerID()) + " is listening on port";
 		log(std::cout, MsgType::INFO, first_part, std::to_string(ntohs(it->getPort())));
 		_server_map[it->getServerFD()] = *it;
-		if (addToPoll(it->getServerFD(), EPOLLIN))
+		if (addToPoll(it->getServerFD(), EPOLLIN | EPOLLET))
 			return 1;
 	}
 	return 0;
@@ -252,23 +252,14 @@ int ServerEngine::acceptNewConnection(Server &server) {
 		}
 	}
 
-	// Set non-blocking file descriptor
-	int flags = fcntl(fd, F_GETFL, 0);	// get current flags
-	if (flags == -1) {
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+	client.setClientFD(fd);
+	if (client.setupClient())
 		return 1;
-	}
 
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+	// Add client socket to epoll() interest list and client map
+	if (addToPoll(fd, EPOLLIN | EPOLLET))
 		return 1;
-	}
-
-	// Add client socket to epoll() interest list
-	if (addToPoll(fd, EPOLLIN))
-		return 1;
-	
-	// client.setClientFD(fd);
+	_client_map[fd] = client;
 
 	return 0;
 }
@@ -282,17 +273,51 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	while (1) {
 		ret = read(fd, &buf, MAX_LENGTH);
 		if (ret == -1) {
-			if (errno != EWOULDBLOCK && errno != EAGAIN)
+			if (errno == EWOULDBLOCK || errno == EAGAIN)
 				break;
 			else {
 				log(std::cout, MsgType::ERROR, "read() call failed", "");
 				return 1;
 			}
+		} else if (ret == 0) {
+			log(std::cout, MsgType::WARNING, "Client closed the connection on fd", std::to_string(fd));
+			// TODO: Remove from list, and close stuff as necessary
 		}
 	}
 
+	// Update the client fd on epoll to be ready for writting
+	struct epoll_event event;
+	event.data.fd = fd;
+	event.events = EPOLLOUT | EPOLLET;
+	if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event) == -1) {
+		log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
+		return 1;
+	}
+
 	log(std::cout, MsgType::SUCCESS, "Message received on client socket", std::to_string(client.getClientFD()));
+	client.setRequest(buf);
 	std::cout << buf << std::endl;
+	return 0;
+}
+
+int ServerEngine::sendResponse(Client &client) {
+	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nHello there, darling!\r\n";
+	int ret = write(client.getClientFD(), response.c_str(), response.length());
+	if (ret != response.length()) {
+		if (ret == -1) {
+			log(std::cerr, MsgType::ERROR, "send() call failed", "");
+			// TODO: consider removing from the set and from the map
+			return 1;
+		} else
+			log(std::cout, MsgType::WARNING, "Unable to send the full data", "");
+	}
+
+	// Reset client fd on epoll() to listen to incoming connections instead
+	struct epoll_event event;
+	event.data.fd = client.getClientFD();
+	event.events = EPOLLIN | EPOLLET;
+	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client.getClientFD(), &event);
+
 	return 0;
 }
 
@@ -325,14 +350,15 @@ int ServerEngine::runServers() {
 				// Otherwise, read the request from the client
 				else if (isClient(_events[i].data.fd)) {
 					log(std::cout, MsgType::INFO, "Request coming through fd", std::to_string(_events[i].data.fd));
-					// if (readHTTPRequest(_client_map[_events[i].data.fd]))
-					// 	return 1;
+					if (readHTTPRequest(_client_map[_events[i].data.fd]))
+						return 1;
 				}
 			}
 
 			// Write event
 			else if (_events[i].events & EPOLLOUT) {
-				// Send message to client
+				std::cout << "Client on fd " << _events[i].data.fd << " ready to receive stuff" << std::endl;
+				sendResponse(_client_map[_events[i].data.fd]);
 			}
 			
 			// Error

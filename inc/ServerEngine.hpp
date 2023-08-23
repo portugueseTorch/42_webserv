@@ -34,6 +34,7 @@ class ServerEngine {
 		int		setupEpoll();
 		int		acceptNewConnection(Server &owner_server);
 		int 	readHTTPRequest(Client &client);
+		int 	sendResponse(Client &client);
 		bool	isServer(int fd);
 		bool	isClient(int fd);
 		int		runServers();

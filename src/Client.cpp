@@ -4,13 +4,14 @@ Client::Client() {
 	_client_fd = -1;
 }
 
-Client::~Client() {
-	if (_client_fd != -1)
-		close(_client_fd);
-}
+Client::~Client() {}
 
 void Client::setClientFD(int client_fd) {
 	_client_fd = client_fd;
+}
+
+void Client::setRequest(std::string request) {
+	_request = request;
 }
 
 int Client::setupClient() {
