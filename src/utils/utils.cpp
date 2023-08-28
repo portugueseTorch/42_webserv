@@ -1,4 +1,4 @@
-#include "../inc/Webserv.hpp"
+#include "Webserv.hpp"
 
 /**
  * @brief Checks if I is a whitespace or tab
@@ -22,7 +22,7 @@ int damerauLevenshteinDistance(std::string input, std::string valid) {
 	// Initialize a 2D matrix with all values to 0
 	size_t input_len = input.length();
 	size_t valid_len = valid.length();
-	std::vector<std::vector<int>> d(input_len + 1, std::vector<int>(valid_len + 1, 0));
+	std::vector<std::vector<int> > d(input_len + 1, std::vector<int>(valid_len + 1, 0));
 
 	// Set the first row and first collumn with numbers
 	for (long unsigned int i = 0; i < (input_len + 1); i++)
@@ -60,20 +60,20 @@ std::string readConfigurationFile(int argc, char **argv) {
 
 	if (argc != 2) {
 		file_name = "conf/default.conf";
-		log(std::cerr, MsgType::WARNING, "No config_file provided", "");
-		log(std::cerr, MsgType::INFO, "Assuming default config_file...", "");
+		log(std::cerr, WARNING, "No config_file provided", "");
+		log(std::cerr, INFO, "Assuming default config_file...", "");
 	} else
 		file_name = argv[1];
 
 	in_file.open(file_name);
 	if (!in_file.is_open()) {
 		if (file_name != "conf/default.conf") {
-			log(std::cerr, MsgType::ERROR, "Unable to open file", file_name);
-			log(std::cerr, MsgType::WARNING, "Assuming default config_file...", "");
+			log(std::cerr, ERROR, "Unable to open file", file_name);
+			log(std::cerr, WARNING, "Assuming default config_file...", "");
 		}
 		in_file.open("conf/default.conf");
 		if (!in_file.is_open()) {
-			log(std::cerr, MsgType::FATAL, "Unable to open file", file_name);
+			log(std::cerr, FATAL, "Unable to open file", file_name);
 			exit (EXIT_FAILURE);
 		}
 	}
@@ -83,7 +83,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 		if (!in_file.eof())
 			content += "\n";
 	}
-	log(std::cout, MsgType::INFO, "Configuration file successfully read!", "");
+	log(std::cout, INFO, "Configuration file successfully read!", "");
 	in_file.close();
 	return content;
 }
@@ -100,23 +100,23 @@ std::string readConfigurationFile(int argc, char **argv) {
  */
 void log(std::ostream &stream, MsgType type, std::string msg, std::string optional) {
 	switch (type) {
-		case MsgType::ERROR:
+		case ERROR:
 			stream << LIGHT_RED << "[ERROR]:\t" << msg;
 			break;
 		
-		case MsgType::FATAL:
+		case FATAL:
 			stream << RED << "[FATAL]:\t\t" << msg;
 			break;
 
-		case MsgType::INFO:
+		case INFO:
 			stream << LIGHT_BLUE << "[INFO]:\t\t" << msg;
 			break;
 		
-		case MsgType::SUCCESS:
+		case SUCCESS:
 			stream << GREEN << "[SUCCESS]:\t" << msg;
 			break;
 
-		case MsgType::WARNING:
+		case WARNING:
 			stream << LIGHT_YELLOW << "[WARNING]:\t" << msg;
 			break;
 

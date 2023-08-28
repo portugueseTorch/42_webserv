@@ -1,13 +1,13 @@
 #include "../inc/Location.hpp"
 
-std::vector<std::string> Location::directives = {
-	"root",
-	"index",
-	"error_page",
-	"fastcgi_pass",
-	"autoindex",
-	"http_method",
-};
+// std::vector<std::string> Location::directives = {
+// 	"root",
+// 	"index",
+// 	"error_page",
+// 	"fastcgi_pass",
+// 	"autoindex",
+// 	"http_method",
+// };
 
 Location::Location() {}
 

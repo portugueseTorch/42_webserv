@@ -7,35 +7,39 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	try {
-		std::string content = readConfigurationFile(argc, argv);
+	// try {
+	// 	std::string content = readConfigurationFile(argc, argv);
 
-		// Lex config file
-		Lexer lex;
-		if (lex.tokenize(content))
-			return 1;
+	// 	// Lex config file
+	// 	Lexer lex;
+	// 	if (lex.tokenize(content))
+	// 		return 1;
 
-		// Build pseudo-AST
-		Parser parser(lex.getTokens());
-		if (parser.parse())
-			return 1;
-		// parser.displayAST();
+	// 	// Build pseudo-AST
+	// 	Parser parser(lex.getTokens());
+	// 	if (parser.parse())
+	// 		return 1;
+	// 	// parser.displayAST();
 
-		// Configure the servers with the information from the parser
-		ServerEngine engine(parser.getNodes());
-		if (engine.configureServers())
-			return 1;
+	// 	// Configure the servers with the information from the parser
+	// 	ServerEngine engine(parser.getNodes());
+	// 	if (engine.configureServers())
+	// 		return 1;
 
-		// Boot servers
-		if (engine.setupServers())
-			return 1;
+	// 	// Boot servers
+	// 	if (engine.setupServers())
+	// 		return 1;
 
-		// Run servers
-		engine.displayServers();
+	// 	// Run servers
+	// 	engine.displayServers();
 
-	} catch (std::exception &e) {
-		std::cerr << e.what() << std::endl;
-		return 1;
-	}
+	// } catch (std::exception &e) {
+	// 	std::cerr << e.what() << std::endl;
+	// 	return 1;
+	// }
+
+	HTTPRequest	req("GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\nthis is the body");
+
+
 	return 0;
 }

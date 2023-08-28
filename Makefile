@@ -26,6 +26,11 @@ INC_DIR	=	inc
 
 ####### FILES #######
 SRC		=	$(shell find src/ -name '*.cpp')
+# SRC		=	src/main.cpp \
+# 			src/HTTPRequest/HTTPRequest.cpp \
+# 			src/HTTPRequest/Lexer.cpp \
+# 			src/HTTPRequest/Parser.cpp \
+# 			src/utils/utils.cpp
 OBJ		=	$(patsubst src/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 NAME 	=	webserv
 
@@ -41,6 +46,8 @@ $(NAME): $(OBJ)
 	@printf "$(GREEN_B)[$(NAME) ready to use]\n$(RESET)"
 
 $(OBJ_DIR)/%.o: src/%.cpp | $(OBJ_DIR)
+	$(eval TMP := $(shell echo $@ | sed 's|\(.*\)/.*|\1|'))
+	@mkdir -p $(TMP)
 	@$(CC) $(FLAGS) -I$(INC_DIR) -c $< -o $@
 	@printf "$(BLUE)[Compiling]     "$@"$(RESET)\n"
 

@@ -5,6 +5,7 @@
 # include <iostream>
 # include <string>
 # include <fstream>
+# include <sstream>
 
 # include <list>
 # include <vector>
@@ -32,6 +33,9 @@
 # include "Server.hpp"
 # include "Location.hpp"
 # include "ServerEngine.hpp"
+# include "HTTPRequest/HTTPRequest.hpp"
+# include "HTTPRequest/Lexer.hpp"
+# include "HTTPRequest/Parser.hpp"
 
 # define RESET			"\x1B[0m"
 # define RED			"\x1B[31m"

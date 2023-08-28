@@ -9,7 +9,6 @@ std::vector<std::string> ServerEngine::directives = {
 	"location",
 	"client_max_body_size",
 	"fastcgi_pass",
-
 	"autoindex",
 	"http_method",
 };

@@ -3,11 +3,11 @@
 
 #include "Webserv.hpp"
 
-enum RequestMethod {
-	GET,
-	POST,
-	DELETE
-};
+// enum RequestMethod {
+// 	GET,
+// 	POST,
+// 	DELETE
+// };
 // Documentation: https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 
 // method, url, http-version
@@ -38,6 +38,7 @@ class HTTPRequest {
 		int parse();
 		int tokenize();
 		int setup();
+		void displayRequest();
 
 		std::string _content;
 

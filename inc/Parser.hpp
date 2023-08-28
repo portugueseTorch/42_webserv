@@ -16,7 +16,9 @@ enum NodeType {
 	CloseBracket,
 	Semicolon,
 	ServerBlock,
-	LocationBlock
+	LocationBlock,
+	EmptyNode,
+	NLNode
 };
 
 // Base Node class
