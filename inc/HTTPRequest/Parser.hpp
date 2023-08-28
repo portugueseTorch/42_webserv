@@ -27,11 +27,22 @@ class HTTPParser {
         std::list<Tok> _lex;
 
         void resetNodes(int start);
+		bool validNL();
+		bool validEmptyLine();
         bool validConfiguration();
 
-        bool conf_case1();
-        bool conf_case2();
-        bool conf_case3();
+		bool validRequestLine();
+		bool validHeader();
+		bool validBody();
+
+		bool validMethod();
+		bool validRequestURI();
+		bool validAbsoluteURI();
+		bool validHTTPVersion();
+
+		bool validGeneralHeader();
+		bool validRequestHeader();
+		bool validEntityHeader();
 };
 
 #endif

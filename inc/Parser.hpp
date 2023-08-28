@@ -18,7 +18,10 @@ enum NodeType {
 	ServerBlock,
 	LocationBlock,
 	EmptyNode,
-	NLNode
+	NLNode,
+	Method,
+	URI,
+	Body
 };
 
 // Base Node class

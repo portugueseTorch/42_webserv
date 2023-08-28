@@ -16,9 +16,11 @@ int	HTTPRequest::parse(){
 	lex.tokenize(_content);
 	lex.displayTokenList();
 
+	
 	HTTPParser parser(lex.getTokens());
 	if (parser.parse())
 		return 1;
+	parser.displayAST();
 	return 0;
 }
 

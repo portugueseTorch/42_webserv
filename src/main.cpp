@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 	// 	return 1;
 	// }
 
-	HTTPRequest	req("GET / HTTP/1.1\r\nHost: www.google.com\r\n\r\nthis is the body");
+	HTTPRequest	req("GET / HTTP/1.1\r\nHost: www.google.com\r\n");
 
 
 	return 0;
