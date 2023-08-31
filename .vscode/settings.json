@@ -91,6 +91,11 @@
 			"cwd": "/Users/mansoter/Documents/Others/42_webserv",
 			"binaryPath": "/Users/mansoter/Documents/Others/42_webserv/webserv",
 			"binaryArgs": []
+		},
+		{
+			"cwd": "/home/touteiro/Documents/42_webserv",
+			"binaryPath": "/home/touteiro/Documents/42_webserv/webserv",
+			"binaryArgs": []
 		}
 	]
 }
