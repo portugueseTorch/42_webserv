@@ -34,7 +34,7 @@ int	HTTPRequest::parse(){
 }
 
 int	HTTPRequest::setup(){
-	std::vector<std::string> validRequestHeaders = { "host" };
+	std::vector<std::string> validHeaders = { "host", "user-agent", "accept-language", "accept-encoding", "connection" };
 
 	std::list<Node>::const_iterator it = parser->getNodes().begin();
 
@@ -52,7 +52,7 @@ int	HTTPRequest::setup(){
 				std::string paramName = it->_content;
 				std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
 				it++;
-				if (std::count(validRequestHeaders.begin(), validRequestHeaders.end(), paramName)) {
+				if (std::count(validHeaders.begin(), validHeaders.end(), paramName)) {
 					std::string paramContent = it->_content;
 					_params[paramName] = paramContent;
 				} else {
@@ -80,11 +80,13 @@ void	HTTPRequest::displayRequest() {
 }
 
 void HTTPRequest::displayParsedRequest(){
-	std::cout << "Method:\t\t" << _method << std::endl;
-	std::cout << "Request URI:\t" << _requestURI << std::endl;
+	std::cout << std::left << std::setw(25) << "Method: " << std::setw(20) << _method << std::endl;
+	std::cout << std::left << std::setw(25) << "Request URI:" << std::setw(20) << _requestURI << std::endl;
 	// std::cout << "Params:" << std::endl;
 	std::map<std::string, std::string>::iterator it = _params.begin();
 	for (; it != _params.end(); it++) {
-		std::cout << it->first << ":\t\t" << it->second << std::endl;
+		std::string temp = it->first;
+		temp.append(":");
+		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
 	}
 }
