@@ -1,20 +1,10 @@
+#pragma once
 #ifndef SERVERENGINE_HPP
 # define SERVERENGINE_HPP
 
+# include "Client.hpp"
 # include "Webserv.hpp"
-#include <algorithm>
-#include <map>
-#include <sys/epoll.h>
 
-enum Methods {
-	GET,
-	POST,
-	HEAD,
-	PUT,
-	DELETE,
-};
-
-class Server;
 class Client;
 
 class ServerEngine {
@@ -30,14 +20,16 @@ class ServerEngine {
 		int		setupServers();
 
 		// Runs the servers in a loop
-		int		addToPoll(int fd, int flags);
 		int		setupEpoll();
 		int		acceptNewConnection(Server &owner_server);
 		int 	readHTTPRequest(Client &client);
-		int 	sendResponse(Client &client);
 		bool	isServer(int fd);
 		bool	isClient(int fd);
 		int		runServers();
+		int		modifyEpoll(int fd, int operation, int flags);
+		int		closeConnection(int fd);
+
+		int		sendResponse(Client &client);
 
 		void	displayServers();
 
@@ -52,9 +44,14 @@ class ServerEngine {
 		int						_num_servers;	// number of servers setup in config_file
 
 		std::map<int,Server>	_server_map;	// map holding as key the server's fd, and the server as value
-		std::map<int,Client>	_client_map;	// map holding as key the clientr's fd, and the clientr as value
+		std::map<int,Client>	_client_map;	// map holding as key the client's fd, and the client as value
 
-		void handleInvalidInput(std::list<Node>::iterator &it);
+		// Functions
+		void	handleInvalidInput(std::list<Node>::iterator &it);
+
+		int		sendErrResponse(Client &client);
+		int 	sendRegResponse(Client &client);
+		int 	sendCGIResponse(Client &client);
 };
 
 #endif

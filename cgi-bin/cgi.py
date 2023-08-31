@@ -1,0 +1,1 @@
+print("<h1>For the love of god, just work!</h1>")

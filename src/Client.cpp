@@ -2,16 +2,21 @@
 
 Client::Client() {
 	_client_fd = -1;
+	_response = "";
+	parent_server = NULL;
+	request = NULL;
 }
 
-Client::~Client() {}
+Client::~Client() {
+	delete request;
+}
 
 void Client::setClientFD(int client_fd) {
 	_client_fd = client_fd;
 }
 
-void Client::setRequest(std::string request) {
-	_request = request;
+void Client::setRequest(std::string request_str) {
+	_request_str = request_str;
 }
 
 int Client::setupClient() {
@@ -27,5 +32,30 @@ int Client::setupClient() {
 		return 1;
 	}
 	log(std::cout, MsgType::INFO, "New Client set up", std::to_string(_client_fd));
+	return 0;
+}
+
+/**
+ * @brief Parses the HTTP request and builds the Request object
+ * with the appropriat attributes according to the parsing
+ * 
+ * @param request String with the contents of the HTTP request
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int Client::parseHTTPRequest(std::string request_str) {
+	request = new Request;
+	_request_str = request_str;
+	return 0;
+}
+
+/**
+ * @brief Builds the HTTP response based off of the attributes
+ * populated during parseHTTPRequest() function in the Request
+ * object
+ * 
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int Client::buildHTTPResponse() {
+	
 	return 0;
 }

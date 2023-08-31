@@ -106,9 +106,9 @@ void Server::displayServer() {
 		std::cout << "\tRoot: " << getRoot() << "\n";
 		std::cout << "\tAutoindex: " << getAutoindex() << "\n";
 
-		std::cout << "\tHTTP Methods: ";
-		std::vector<int> http_methods = getHTTPMethod();
-		for (std::vector<int>::iterator i = http_methods.begin(); i != http_methods.end(); i++)
+		std::cout << "\tHTTP Method: ";
+		std::vector<int> http_Method = getHTTPMethod();
+		for (std::vector<int>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 
@@ -474,7 +474,7 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 }
 
 /**
- * @brief Sets the HTTP methods allowed for the server block by iterating
+ * @brief Sets the HTTP Method allowed for the server block by iterating
  * over IT, storing the result in [_http_method] as a vector of ints
  * 
  * @note IT GETS ITERATED WITHIN THIS FUNCTION
@@ -485,15 +485,15 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 	for (; it->_type == NodeType::Parameter; it++) {
 		if (it->_content == "GET")
-			_http_method.push_back(Methods::GET);
+			_http_method.push_back(Method::GET);
 		else if (it->_content == "POST")
-			_http_method.push_back(Methods::POST);
+			_http_method.push_back(Method::POST);
 		else if (it->_content == "DELETE")
-			_http_method.push_back(Methods::DELETE);
+			_http_method.push_back(Method::DELETE);
 		else if (it->_content == "HEAD")
-			_http_method.push_back(Methods::HEAD);
+			_http_method.push_back(Method::HEAD);
 		else if (it->_content == "PUT")
-			_http_method.push_back(Methods::PUT);
+			_http_method.push_back(Method::PUT);
 		else {
 			log(std::cerr, MsgType::ERROR, "Invalid argument for http_method", it->_content);
 			_http_method.clear();
@@ -504,7 +504,7 @@ int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 
 	// Check valid number of parameters
 	if (_http_method.empty()) {
-		log(std::cerr, MsgType::ERROR, "Too few arguments for", "http_methods");
+		log(std::cerr, MsgType::ERROR, "Too few arguments for", "http_Method");
 		return 1;
 	}
 	return 0;

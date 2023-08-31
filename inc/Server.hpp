@@ -63,7 +63,7 @@ class Server {
 		std::vector<std::string>				_index;					// index list according to config_file
 		bool									_autoindex;				// autoindex as set by the config_file
 		std::string								_root;					// root of the files as provided by the config_file
-		std::vector<int>						_http_method;			// allowed http_methods as per config_file
+		std::vector<int>						_http_method;			// allowed http_Method as per config_file
 		std::vector<Location>					_locations;				// vector of locaitons block as specified by the config_file
 };
 

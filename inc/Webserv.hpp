@@ -28,12 +28,11 @@
 # include <sys/stat.h>
 # include <sys/time.h>
 
-
 # include "Lexer.hpp"
 # include "Parser.hpp"
-# include "Server.hpp"
 # include "Location.hpp"
-# include "Client.hpp"
+# include "Request.hpp"
+# include "Server.hpp"
 # include "ServerEngine.hpp"
 
 # define RESET			"\x1B[0m"
@@ -60,6 +59,14 @@ enum MsgType {
 	WARNING,
 	SUCCESS,
 	ALL,
+};
+
+enum Method {
+	GET,
+	POST,
+	HEAD,
+	PUT,
+	DELETE,
 };
 
 /****** UTILS.CPP ******/

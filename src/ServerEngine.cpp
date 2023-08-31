@@ -188,7 +188,7 @@ bool ServerEngine::isClient(int fd) {
  * @param fd File descriptor to add to epoll
  * @return Returns 0 on success, and 1 otherwise
  */
-int ServerEngine::addToPoll(int fd, int flags) {
+int ServerEngine::modifyEpoll(int fd, int operation, int flags) {
 	// Create necessary struct to add fd to the interest set
 	struct epoll_event ev;
 
@@ -197,12 +197,23 @@ int ServerEngine::addToPoll(int fd, int flags) {
 	ev.data.fd = fd;
 
 	// Add fd and ev to the list of interest file descriptors
-	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-		log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
-		return 1;
+	if (operation == EPOLL_CTL_DEL) {
+		if (epoll_ctl(_epoll_fd, operation, fd, NULL) == -1) {
+			log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
+			return 1;
+		}
+	} else {
+		if (epoll_ctl(_epoll_fd, operation, fd, &ev) == -1) {
+			log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
+			return 1;
+		}
 	}
-
-	log(std::cout, MsgType::INFO, "Added to poll fd", std::to_string(fd));
+	if (operation == EPOLL_CTL_ADD)
+		log(std::cout, MsgType::INFO, "Added to poll fd", std::to_string(fd));
+	else if (operation == EPOLL_CTL_MOD)
+		log(std::cout, MsgType::INFO, "Modified poll fd", std::to_string(fd));
+	else if (operation == EPOLL_CTL_DEL)
+		log(std::cout, MsgType::INFO, "Deleted poll fd", std::to_string(fd));
 	return 0;
 }
 
@@ -226,7 +237,7 @@ int ServerEngine::setupEpoll() {
 		std::string first_part = "Server " + std::to_string(it->getServerID()) + " is listening on port";
 		log(std::cout, MsgType::INFO, first_part, std::to_string(ntohs(it->getPort())));
 		_server_map[it->getServerFD()] = *it;
-		if (addToPoll(it->getServerFD(), EPOLLIN | EPOLLET))
+		if (modifyEpoll(it->getServerFD(), EPOLL_CTL_ADD, EPOLLIN | EPOLLET))
 			return 1;
 	}
 	return 0;
@@ -245,25 +256,54 @@ int ServerEngine::acceptNewConnection(Server &server) {
 	struct sockaddr	client_address;
 	socklen_t		client_addr_len = sizeof(client_address);
 
+	client.parent_server = &server;
 	if ((fd = accept(server.getServerFD(), (sockaddr *) &client_address, &client_addr_len)) == -1) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) {
-			log(std::cerr, MsgType::ERROR, "accept() call failed", "");
-			return 1;
-		}
+		log(std::cerr, MsgType::ERROR, "accept() call failed", "");
+		return 1;
 	}
 
+	// Set up the client
 	client.setClientFD(fd);
 	if (client.setupClient())
 		return 1;
 
 	// Add client socket to epoll() interest list and client map
-	if (addToPoll(fd, EPOLLIN | EPOLLET))
+	if (modifyEpoll(fd, EPOLL_CTL_ADD, EPOLLIN | EPOLLET))
 		return 1;
 	_client_map[fd] = client;
-
 	return 0;
 }
 
+int ServerEngine::closeConnection(int fd) {
+	// Delete fd from the epoll() interest group
+	if (modifyEpoll(fd, EPOLL_CTL_DEL, 0))
+		return 1;
+
+	// Remove fd from its respective map
+	if (_server_map.find(fd) != _server_map.end()) {
+		_server_map.erase(fd);
+		log(std::cout, MsgType::INFO, "Server removed from server map on fd", std::to_string(fd));
+	}
+	if (_client_map.find(fd) != _client_map.end()) {
+		_client_map.erase(fd);
+		log(std::cout, MsgType::INFO, "Client removed from client map on fd", std::to_string(fd));
+	}
+
+	// Close file descriptor
+	close(fd);
+	return 0;
+}
+
+/**
+ * @brief Reads the request from CLIENT, parses the HTTP request
+ * building a Request object. The instance of epoll list associated
+ * with client_fd is modified to be monitored for read events. If
+ * read() returns 0, close connection with the client and remove fd
+ * from the map and epoll list
+ * 
+ * @param client Client whose request is read and parsed
+ * @return int Returns 0 on success, and 1 on failure
+ */
 int ServerEngine::readHTTPRequest(Client &client) {
 	char buf[MAX_LENGTH];
 	int	ret;
@@ -281,27 +321,31 @@ int ServerEngine::readHTTPRequest(Client &client) {
 			}
 		} else if (ret == 0) {
 			log(std::cout, MsgType::WARNING, "Client closed the connection on fd", std::to_string(fd));
-			// TODO: Remove from list, and close stuff as necessary
+			closeConnection(client.getClientFD());
+			return 0;
 		}
 	}
 
 	// Update the client fd on epoll to be ready for writting
-	struct epoll_event event;
-	event.data.fd = fd;
-	event.events = EPOLLOUT | EPOLLET;
-	if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event) == -1) {
-		log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
+	if (modifyEpoll(fd, EPOLL_CTL_MOD, EPOLLOUT | EPOLLET))
 		return 1;
-	}
 
 	log(std::cout, MsgType::SUCCESS, "Message received on client socket", std::to_string(client.getClientFD()));
-	client.setRequest(buf);
+	// Parse HTTP Request
+	client.parseHTTPRequest(buf);
 	std::cout << buf << std::endl;
 	return 0;
 }
 
-int ServerEngine::sendResponse(Client &client) {
-	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 21\r\n\r\nHello there, darling!\r\n";
+/**
+ * @brief sends the regular HTML response to a regular HTML request
+ * from CLIENT
+ * 
+ * @param client Client to which the request reffers
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int ServerEngine::sendRegResponse(Client &client) {
+	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 30\r\n\r\n<h1>Hello there, darling!</h1>\r\n";
 	int ret = write(client.getClientFD(), response.c_str(), response.length());
 	if (ret != response.length()) {
 		if (ret == -1) {
@@ -313,11 +357,94 @@ int ServerEngine::sendResponse(Client &client) {
 	}
 
 	// Reset client fd on epoll() to listen to incoming connections instead
-	struct epoll_event event;
-	event.data.fd = client.getClientFD();
-	event.events = EPOLLIN | EPOLLET;
-	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, client.getClientFD(), &event);
+	if (modifyEpoll(client.getClientFD(), EPOLL_CTL_MOD, EPOLLIN | EPOLLET))
+		return 1;
 
+	return 0;
+}
+
+/**
+ * @brief Runs the CGI script in a child process, writes the output to
+ * a pipe, and the parent process reads from the pipe and sends the response
+ * to the client. It assumes that all requests fed to the function are valid
+ * 
+ * @param client Client to which the request reffers
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int ServerEngine::sendCGIResponse(Client &client) {
+	int pipe_fd[2];
+	int pid;
+
+	// Create the pipe
+	if (pipe(pipe_fd) == -1) {
+		log(std::cerr, MsgType::ERROR, "pipe() call failed", "");
+		return 1;
+	}
+	// Fork and execve the script on the child pr
+	if ((pid = fork()) == -1) {
+		log(std::cerr, MsgType::ERROR, "fork() call failed", "");
+		return 1;
+	}
+
+	// In the child process, execute the cgi script
+	if (pid == 0) {
+		std::cout << "Hello, there!" << std::endl;
+		dup2(pipe_fd[1], STDOUT_FILENO);
+		close(pipe_fd[0]);
+		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
+		execve("/usr/bin/python3", args, NULL);
+	} else {
+		close(pipe_fd[1]);
+		wait(NULL);
+		char *msg = new char[256];
+		if (read(pipe_fd[0], msg, 256) == -1) {
+			log(std::cerr, MsgType::ERROR, "read() call failed", "");
+			return 1;
+		}
+		std::cout << msg << std::endl;
+	}
+	return 0;
+}
+
+/**
+ * @brief Builds an error response and sends it back to the client
+ * 
+ * @param client Client to whom the response will be sent
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int ServerEngine::sendErrResponse(Client &client) {
+
+	return 0;
+}
+
+/**
+ * @brief Evaluates the request associated with the client,
+ * and redirects to either sendCGIResponse or sendRegularResponse
+ * according to the type of request
+ * 
+ * @param client CLient whose request will be evaluated
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int ServerEngine::sendResponse(Client &client) {
+	// Attempt to build a response
+	if (client.buildHTTPResponse())
+		return 1;
+
+	// If it's an error, call sendErrResponse()
+	if (client.request->getIsError()) {
+		if (sendErrResponse(client))
+			return 1;
+		return 0;
+	}
+
+	// If the request is for CGI
+	if (client.request->getIsCGI()) {
+		if (sendCGIResponse(client))
+			return 1;
+	} else {
+		if (sendRegResponse(client))
+			return 1;
+	}
 	return 0;
 }
 
@@ -349,7 +476,7 @@ int ServerEngine::runServers() {
 
 				// Otherwise, read the request from the client
 				else if (isClient(_events[i].data.fd)) {
-					log(std::cout, MsgType::INFO, "Request coming through fd", std::to_string(_events[i].data.fd));
+					log(std::cout, MsgType::INFO, "Change of status in fd", std::to_string(_events[i].data.fd));
 					if (readHTTPRequest(_client_map[_events[i].data.fd]))
 						return 1;
 				}
@@ -357,8 +484,9 @@ int ServerEngine::runServers() {
 
 			// Write event
 			else if (_events[i].events & EPOLLOUT) {
-				std::cout << "Client on fd " << _events[i].data.fd << " ready to receive stuff" << std::endl;
-				sendResponse(_client_map[_events[i].data.fd]);
+				// Send response
+				if (sendResponse(_client_map[_events[i].data.fd]))
+					return 1;
 			}
 			
 			// Error
