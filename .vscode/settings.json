@@ -79,5 +79,18 @@
 		"utility": "cpp",
 		"numbers": "cpp",
 		"cinttypes": "cpp"
-	}
+	},
+	"makefile.configurations": [
+		{
+			"name": "Default",
+			"makeArgs": []
+		}
+	],
+	"makefile.launchConfigurations": [
+		{
+			"cwd": "/Users/mansoter/Documents/Others/42_webserv",
+			"binaryPath": "/Users/mansoter/Documents/Others/42_webserv/webserv",
+			"binaryArgs": []
+		}
+	]
 }

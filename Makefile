@@ -17,8 +17,9 @@ BLUE	=	\033[0;34m
 RESET	=	\033[0m
 
 ####### COMPILER #######
-CC		=	c++
+CC		=	c++ -std=c++11 #for mac only
 # FLAGS	=	-Wall -Wextra -Werror -g #-std=c++98
+FLAGS	=	-fsanitize=address -g
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj
