@@ -1,14 +1,20 @@
 #include "../inc/Client.hpp"
 
+int Client::num_clients = 0;
+
 Client::Client() {
+	num_clients++;
 	_client_fd = -1;
 	_response = "";
 	parent_server = NULL;
+	location_block = NULL;
 	request = NULL;
+	_client_id = num_clients;
 }
 
 Client::~Client() {
-	delete request;
+	if (request)
+		delete request;
 }
 
 void Client::setClientFD(int client_fd) {

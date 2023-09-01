@@ -10,6 +10,8 @@ class Location
 		~Location();
 
 		static std::vector<std::string> directives;
+	
+		void									displayLocationBlock();
 
 		std::string								getLocation() { return _location; }
 		std::string								getRoot() { return _root; }

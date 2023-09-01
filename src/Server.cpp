@@ -117,27 +117,7 @@ void Server::displayServer() {
 		std::cout << "\tLocations:\n";
 		std::vector<Location> locations = getLocations();
 		for (std::vector<Location>::iterator i = locations.begin(); i != locations.end(); i++) {
-			std::cout << "\t  - Location " << i->getLocation() << std::endl;
-			std::cout << "\t\tRoot: " << i->getRoot() << "\n";
-
-			{
-				std::cout << "\t\tIndex: ";
-				std::vector<std::string> index = i->getIndex();
-				for (std::vector<std::string>::iterator j = index.begin(); j != index.end(); j++)
-					std::cout << *j << " ";
-				std::cout << std::endl;
-			}
-
-			{
-				std::cout << "\t\tError Pages:\n";
-				std::map<int,std::vector<std::string> > error_pages = i->getErrorPages();
-				for (std::map<int,std::vector<std::string> >::iterator j = error_pages.begin(); j != error_pages.end(); j++) {
-					std::cout << "\t\t  - [ " << (*j).first << ", ";
-					for (std::vector<std::string>::iterator k = (*j).second.begin(); k != (*j).second.end(); k++)
-						std::cout << *k << " ";
-					std::cout << "]\n";
-				}
-			}
+			i->displayLocationBlock();
 		}
 }
 
@@ -560,6 +540,8 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		} else if (it->_content == "autoindex") {
 			if (location.setAutoindex(++it))
 				return 1;
+		} else {
+			return 1;
 		}
 	}
 

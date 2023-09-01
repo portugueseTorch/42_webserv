@@ -1,13 +1,14 @@
 #include "../inc/Request.hpp"
 
 Request::Request() {
-	_port = 8080;
+	_port = htons(8080);
 	_ip_address = inet_addr("127.0.0.1");
 	_server_name = "localhost";
 	_http_method = 0;
 	_is_CGI = false;
 	_is_error = false;
 	_error_code = 404;
+	_uri = "/index.html";
 }
 
 Request::~Request() {}

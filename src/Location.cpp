@@ -13,6 +13,30 @@ Location::Location() {}
 
 Location::~Location() {}
 
+void Location::displayLocationBlock() {
+	std::cout << "\t  - Location " << getLocation() << std::endl;
+	std::cout << "\t\tRoot: " << getRoot() << "\n";
+
+	{
+		std::cout << "\t\tIndex: ";
+		std::vector<std::string> index = getIndex();
+		for (std::vector<std::string>::iterator j = index.begin(); j != index.end(); j++)
+			std::cout << *j << " ";
+		std::cout << std::endl;
+	}
+
+	{
+		std::cout << "\t\tError Pages:\n";
+		std::map<int,std::vector<std::string> > error_pages = getErrorPages();
+		for (std::map<int,std::vector<std::string> >::iterator j = error_pages.begin(); j != error_pages.end(); j++) {
+			std::cout << "\t\t  - [ " << (*j).first << ", ";
+			for (std::vector<std::string>::iterator k = (*j).second.begin(); k != (*j).second.end(); k++)
+				std::cout << *k << " ";
+			std::cout << "]\n";
+		}
+	}
+}
+
 /*************************************/
 /************** SETTERS **************/
 /*************************************/

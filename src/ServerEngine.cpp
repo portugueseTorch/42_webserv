@@ -22,10 +22,12 @@ std::vector<std::string> ServerEngine::directives = {
 ServerEngine::ServerEngine(std::list<Node> nodes) {
 	_nodes = nodes;
 	_num_servers = 0;
+	_events = NULL;
 }
 
 ServerEngine::~ServerEngine() {
-	delete[] _events;
+	if (_events)
+		delete[] _events;
 }
 
 /**
@@ -231,6 +233,8 @@ int ServerEngine::setupEpoll() {
 	// Finish preparing the servers for connection (listen()) and add to interest poll
 	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
 		if (listen(it->getServerFD(), 10) == -1) {
+			if (errno == EADDRINUSE)
+				continue;
 			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
 			return 1;
 		}
@@ -240,6 +244,78 @@ int ServerEngine::setupEpoll() {
 		if (modifyEpoll(it->getServerFD(), EPOLL_CTL_ADD, EPOLLIN | EPOLLET))
 			return 1;
 	}
+	return 0;
+}
+
+int ServerEngine::assignServer(Client &client) {
+	bool exact_match_found = false;
+	std::vector<Server*> possible_servers;
+	std::vector<Server*> backup_servers;
+
+	/**	First check for the Port and IP Address of the request against each of the server block.
+	 *	If an exact match is found add to possible_servers; if a non-exact match is found, and no
+	 *	exact matches have been found so far, add to backup_servers.
+	**/
+	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
+		if (client.request->getPort() == it->getPort() && \
+			client.request->getIPAddress() == it->getIPAddress()) {
+			if (!exact_match_found) exact_match_found = true;
+			possible_servers.push_back(&(*it));
+		}
+		else if (!exact_match_found && (client.request->getPort() == it->getPort() || \
+			client.request->getIPAddress() == it->getIPAddress())) {
+			backup_servers.push_back(&(*it));
+		}
+	}
+
+	// If exact matches were found, else if only exact matches were found
+	if (exact_match_found) {
+		//	If only one was find, assign it to the client and go to location assignment
+		if (possible_servers.size() == 1) {
+			client.parent_server = possible_servers[0];
+			goto location_assignment;
+		}
+		// If multiple were found, try to get an exact match for the server_name directive
+		for (std::vector<Server*>::iterator it = possible_servers.begin(); it != possible_servers.end(); it++) {
+			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
+				client.parent_server = *it;
+				goto location_assignment;
+			}
+		}
+	} else {
+		// If no appropriate server was found, the default server will handle the request
+		if (backup_servers.size() == 0)
+			goto location_assignment;
+		// If multiple were found, try to get an exact match for the server_name directive
+		for (std::vector<Server*>::iterator it = backup_servers.begin(); it != backup_servers.end(); it++) {
+			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
+				client.parent_server = *it;
+				goto location_assignment;
+			}
+		}
+	}
+
+	location_assignment:
+		std::string client_id_string = "Client '" + std::to_string(client.getClientID()) + "' assigned to server with ID";
+		log(std::cout, MsgType::SUCCESS, client_id_string, std::to_string(client.parent_server->getServerID()));
+		client.parent_server->displayServer();
+
+		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
+		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
+			if (it->getLocation() == client.request->getURI()) {
+				client.location_block = &(*it);
+				break ;
+			}
+		}
+
+		if (client.location_block) {
+			client_id_string = "Client '" + std::to_string(client.getClientID()) + "' assigned to location block";
+			log(std::cout, MsgType::SUCCESS, client_id_string, "");
+			client.location_block->displayLocationBlock();
+		} else {
+			log(std::cout, MsgType::INFO, client_id_string, "NONE");
+		}
+
 	return 0;
 }
 
@@ -256,7 +332,9 @@ int ServerEngine::acceptNewConnection(Server &server) {
 	struct sockaddr	client_address;
 	socklen_t		client_addr_len = sizeof(client_address);
 
+	// Set the default server to handle the server
 	client.parent_server = &server;
+
 	if ((fd = accept(server.getServerFD(), (sockaddr *) &client_address, &client_addr_len)) == -1) {
 		log(std::cerr, MsgType::ERROR, "accept() call failed", "");
 		return 1;
@@ -331,9 +409,17 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		return 1;
 
 	log(std::cout, MsgType::SUCCESS, "Message received on client socket", std::to_string(client.getClientFD()));
+	std::cout << buf << std::endl;
+
 	// Parse HTTP Request
 	client.parseHTTPRequest(buf);
-	std::cout << buf << std::endl;
+
+	// Assign the server according to the parsed request
+	if (assignServer(client)) {
+		log(std::cerr, MsgType::ERROR, "Failure assigning server", "");
+		return 1;
+	}
+
 	return 0;
 }
 

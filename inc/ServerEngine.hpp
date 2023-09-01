@@ -18,6 +18,7 @@ class ServerEngine {
 
 		// Boots the individual servers by iterating on the _servers vector and calling server.bootServer()
 		int		setupServers();
+		int		assignServer(Client &client);
 
 		// Runs the servers in a loop
 		int		setupEpoll();
