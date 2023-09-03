@@ -229,12 +229,21 @@ int ServerEngine::setupEpoll() {
 	// Setup _epoll_fd and _events
 	_epoll_fd = epoll_create1(0);
 	_events = new struct epoll_event[MAX_EVENTS];
+	bool repeated = false;
 	
 	// Finish preparing the servers for connection (listen()) and add to interest poll
 	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
+		for (std::vector<Server>::iterator ite = _servers.begin(); ite != it; ite++) {
+			if (ite->getPort() == it->getPort()) {
+				repeated = true;
+				break;
+			}
+		}
+		if (repeated) {
+			repeated = false;
+			continue;
+		}
 		if (listen(it->getServerFD(), 10) == -1) {
-			if (errno == EADDRINUSE)
-				continue;
 			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
 			return 1;
 		}
