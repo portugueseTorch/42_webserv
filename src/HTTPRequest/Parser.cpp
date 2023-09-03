@@ -118,7 +118,7 @@ bool HTTPParser::validRequestLine() {
 
 bool HTTPParser::validMethod() {
 	std::vector<std::string> validMethods = {
-		"GET", "POST", "DELETE", "HEAD", "PUT"};
+		"GET", "POST", "DELETE"};
 	std::vector<std::string>::iterator methodIt = validMethods.begin(); 
 	for (; methodIt != validMethods.end(); methodIt++) {
 		if (*methodIt == it->content) {

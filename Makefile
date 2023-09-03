@@ -6,7 +6,7 @@
 #    By: touteiro <touteiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/28 15:46:49 by gda_cruz          #+#    #+#              #
-#    Updated: 2023/08/28 21:19:03 by touteiro         ###   ########.fr        #
+#    Updated: 2023/09/03 10:31:36 by touteiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ BLUE	=	\033[0;34m
 RESET	=	\033[0m
 
 ####### COMPILER #######
-CC		=	c++ -std=c++11 #for mac only
+CC		=	c++
 # FLAGS	=	-Wall -Wextra -Werror -g #-std=c++98
 FLAGS	=	-fsanitize=address -g
 

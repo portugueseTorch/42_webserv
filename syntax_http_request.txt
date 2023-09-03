@@ -10,7 +10,7 @@ The grammar below is written in Backus-Naur Form (BNF) - https://en.wikipedia.or
 					;
 
 <request_URI>		: '*'
-					| <absolute_URI> ## REQUIRED WHEN REQUEST IS BEIGN MADE TO PROXY ##
+					| <absolute_URI> ## REQUIRED WHEN REQUEST IS BEING MADE TO PROXY ##
 					| <absolute_path>
 					;
 
@@ -26,7 +26,8 @@ http_version		: 'HTTP/' 1*DIGIT '.' 1*DIGIT
 					| <entity_header>
 					;
 
-<general_header>	: [cache_control] [connection] [date] [pragma] [trailer] [transfer_encoding] [upgrade] [via] [warning]
+<general_header>	: [cache_control] [connection] [date] [pragma] [trailer] [transfer_encoding] 
+						[upgrade] [via] [warning]
 					;
 
 ## PROBABLY WON'T NEED THESE

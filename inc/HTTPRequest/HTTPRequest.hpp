@@ -34,11 +34,27 @@ class HTTPRequest {
 		int setup();
 		void displayRequest();
 		void displayParsedRequest();
+		void extractQuery(std::string URI);
+		void checkIfConnection(std::string paramName, std::string paramContent);
+		void checkIfAccept(std::string paramName, std::string paramContent);
+		void checkContentLength(std::string paramName, std::string paramContent);
 
 		HTTPParser * parser;
 		std::string _content;
+
 		std::string _method;
 		std::string	_requestURI;
+		std::map<std::string, std::string> _accept;
+		std::map<std::string, std::string> _query;
+		bool _keepAlive;
+		int	_contentLength;
+
+		//TO-DO
+		//	parse body
+		//	do exceptions
+		//	improve accept parsing
+		//	create getters
+
 		std::map<std::string, std::string> _params;
 		// std::list<Node>::const_iterator it;
 		// std::list<Node>::const_iterator end;
