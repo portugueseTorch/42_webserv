@@ -21,16 +21,13 @@ int HTTPLexer::tokenize(std::string src) {
                 } else {
                     _tokens.push_back(token(word, ParamTok));
                 }
-                // std::cout << word << std::endl;
             }
-            // std::cout << ss.peek() << std::endl;
         }
         if (ss.peek() > -1) {
             _tokens.push_back(token("nl", NL));
         } else {
             _tokens.push_back(token("EOF", End));
         }
-        // std::cout << '\'' << buf.substr(0, buf.size() - 1) << '\'' << std::endl;
     }
     return 0;
 }

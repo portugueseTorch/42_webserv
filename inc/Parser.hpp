@@ -21,6 +21,7 @@ enum NodeType {
 	NLNode,
 	Method,
 	URI,
+	Protocol,
 	Body
 };
 

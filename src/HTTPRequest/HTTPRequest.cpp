@@ -6,7 +6,6 @@ HTTPRequest::HTTPRequest(std::string request)
 	{
 	// try {
 		parse();
-		// tokenize();
 		setup();
 		displayParsedRequest();
 	// } catch {
@@ -22,21 +21,17 @@ int	HTTPRequest::parse(){
 	// displayRequest();
 	HTTPLexer	lex;
 	lex.tokenize(_content);
-	lex.displayTokenList();
+	// lex.displayTokenList();
 
-	// parser->setLexer(lex.getTokens());
 	parser = new HTTPParser(lex.getTokens());
-	// HTTPParser parser(lex.getTokens());
 	if (parser->parse())
 		return 1;
-	parser->displayAST();
-	// this->it = parser.getNodes().begin();
-	// this->end = parser.getNodes().end();
+	// parser->displayAST();
 	return 0;
 }
 
 int	HTTPRequest::setup(){
-	std::vector<std::string> validHeaders = \
+	std::string headers[] = \
 	{ 	"cache-control", "connection", "date", "'pragma", "trailer", \
 		"transfer-encoding", "upgrade", "via", "warning", \
 		"accept", "accept-charset", "accept-encoding", "accept-language", \
@@ -46,6 +41,7 @@ int	HTTPRequest::setup(){
 		"allow", "content-encoding", "content-language", "content-length", \
 		"content-location", "content-md5", "content-range", "content-type", \
 		"expires", "last-modified", "extension-header"};
+	std::vector<std::string> validHeaders(headers, headers + sizeof(headers) / sizeof(std::string));
 
 	std::list<Node>::const_iterator it = parser->getNodes().begin();
 
@@ -64,6 +60,10 @@ int	HTTPRequest::setup(){
 				}
 				break ;
 			}
+			case Protocol: {
+				this->_protocol = it->_content;
+				break ;
+			}
 			case Name: {
 				std::string paramName = it->_content;
 				std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
@@ -75,17 +75,23 @@ int	HTTPRequest::setup(){
 					checkIfAccept(paramName, paramContent);
 					checkContentLength(paramName, paramContent);
 
-					// _keepAlive = paramName == 'keep-alive' ? it->_content == 'true' : false;
 					_params[paramName] = paramContent;
 				} else {
+					//change to exception
 					std::string err = "Invalid header: ";
 					err.append(paramName);
 					log(std::cout, ERROR, err, "");
 				}
 				break ;
 			}
+			case Body: {
+				//change to exception
+				if (this->_body.size())
+					break ;
+				this->_body = it->_content;
+				break ;
+			}
 			default:
-				// std::cout << it->_type << ", " << it->_content << std::endl;
 				break ;
 		}
 	}
@@ -121,8 +127,6 @@ void	HTTPRequest::checkIfAccept(std::string paramName, std::string paramContent)
 			//add exception
 			if (param.size() && value.size())
 				_accept[param] = value;
-			// std::cout << param << ", " << value << std::endl;
-			// std::cout << buf << std::endl;
 		}
 	}
 }
@@ -151,7 +155,6 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		//add exception
 		if (param.size() && value.size())
 			_query[param] = value;
-		// std::cout << param << ", " << value << std::endl;
 	}
 }
 
@@ -167,6 +170,7 @@ void	HTTPRequest::displayRequest() {
 void HTTPRequest::displayParsedRequest(){
 	std::cout << std::left << std::setw(25) << "Method: " << std::setw(20) << _method << std::endl;
 	std::cout << std::left << std::setw(25) << "Request URI:" << std::setw(20) << _requestURI << std::endl;
+	std::cout << std::left << std::setw(25) << "Protocol:" << std::setw(20) << _protocol << std::endl;
 	std::map<std::string, std::string>::iterator it;
 	
 	if (_query.size()) {
@@ -199,11 +203,13 @@ void HTTPRequest::displayParsedRequest(){
 
 	it = _params.begin();
 	for (; it != _params.end(); it++) {
-		// if (it->first == "connection")
-		// 	continue ;
 		std::string temp = it->first;
 		temp.append(":");
 		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
+	}
+
+	if (_body.size()) {
+		std::cout << "\r\n" << _body << std::endl;
 	}
 
 }

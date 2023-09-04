@@ -44,8 +44,13 @@ int main(int argc, char **argv) {
 		Accept-Language: en-us\r\n \
 		Accept-Encoding: gzip, deflate\r\n \
 		Accept: text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8\r\n \
-		Connection: keep-alive\r\n");
+		Connection: keep-alive\r\n\r\n \
+		<h1>Header</h1>");
 
+	// log(std::cout, INFO, req.getMethod(), "");
+	// log(std::cout, INFO, req.getRequestURI(), "");
+	// log(std::cout, INFO, req.getProtocol(), "");
+	// log(std::cout, INFO, req.getBody(), "");
 
 	return 0;
 }

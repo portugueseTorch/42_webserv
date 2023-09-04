@@ -75,29 +75,6 @@ bool HTTPParser::validConfiguration() {
     return true;
 }
 
-// <general_header> | <request_header> | <entity_header>
-bool HTTPParser::validHeader() {
-	std::list<Tok>::iterator tmp = it;
-    int start_index = _nodes.size();
-    if (it->type == End)
-        return true;
-	if (validGeneralHeader())
-		return true;
-
-	resetNodes(start_index);
-	it = tmp;
-	if (validRequestHeader())
-		return true;
-	resetNodes(start_index);
-	it = tmp;
-	if (validEntityHeader())
-		return true;
-	resetNodes(start_index);
-	it = tmp;
-
-	return false;
-}
-
 // <method> <request_URI> <http_version> 'CRLF'
 bool HTTPParser::validRequestLine() {
 	std::list<Tok>::iterator tmp = it;
@@ -116,9 +93,26 @@ bool HTTPParser::validRequestLine() {
 	return true;
 }
 
+// <general_header> | <request_header> | <entity_header>
+bool HTTPParser::validHeader() {
+	std::list<Tok>::iterator tmp = it;
+    int start_index = _nodes.size();
+    if (it->type == End)
+        return true;
+
+	if (validRequestHeader())
+		return true;
+	resetNodes(start_index);
+	it = tmp;
+
+	return false;
+}
+
+
 bool HTTPParser::validMethod() {
-	std::vector<std::string> validMethods = {
-		"GET", "POST", "DELETE"};
+	std::string	methods[] = {"GET", "POST", "DELETE"}; 
+	std::vector<std::string> validMethods(methods, methods + sizeof(methods) / sizeof(std::string));
+
 	std::vector<std::string>::iterator methodIt = validMethods.begin(); 
 	for (; methodIt != validMethods.end(); methodIt++) {
 		if (*methodIt == it->content) {
@@ -155,14 +149,18 @@ bool HTTPParser::validAbsoluteURI() {
 }
 
 bool HTTPParser::validHTTPVersion() {
-	if ((it++)->content != ("HTTP/1.1"))
-		return false;
-	return true;
-}
-
-// [cache_control] [connection] [date] [pragma] [trailer] 
-// [transfer_encoding] [upgrade] [via] [warning]
-bool HTTPParser::validGeneralHeader() {
+	std::string temp = (it++)->content;
+	std::string toKeep(temp);
+	size_t isHTTP = temp.find("HTTP/");
+	if (isHTTP == 0) {
+		temp.erase(0, 5);
+		double version = std::atof(temp.c_str());
+		if (version == 1 || version == 1.1 || version == 2 || version == 3) {
+			Node HTTPVersion(toKeep, Protocol);
+			_nodes.push_back(HTTPVersion);
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -198,44 +196,44 @@ bool HTTPParser::validRequestHeader() {
 			return false;
 		} else
 			it++;
-		std::cout << it->content << ", " << it->type << std::endl;
+		// std::cout << it->content << ", " << it->type << std::endl;
 	}
 	// it++;
 	return true;
 }
 
-// [allow] [content_encoding] [content_language] [content_length]
-// [content_location] [content_md5] [content_range] [content_type]
-// [expires] [last_modified] [extension_header]
-bool HTTPParser::validEntityHeader() {
-	return false;
-}
-
 // 'CRLF' <message_body>
 bool HTTPParser::validBody() {
-	
-	if (it == _lex.end() || it->type == End)
-		return true;
-	
-			std::cout << "aqui" << std::endl;
-	// if (validNL()) {
-	// 	std::cout << it->content << ", " << it->type << std::endl;
+	std::string body;
+	bool nextSpace = false;
 
-	// 	return true;
-	// }
-	
-	if (it != _lex.end() && !validEmptyLine())
-		return false;
-	it++;
-	std::string fullText = "";
-	while (it->type != End) {
-		if (!fullText.empty())
-			fullText.append(" ");
-		fullText.append(it->content);
-		it++;
-	}
-	Node bodyText(fullText, Body);
-	_nodes.push_back(bodyText);
-	
-	return true;
+	if (it != _lex.end() && validEmptyLine() && validNL()) {
+		while (it != _lex.end() && it->type != End) {
+			if (it->type == Empty) {
+				body.append("\r");
+				nextSpace = false;
+			}
+			else if (it->type == NL) {
+				body.append("\n");
+				nextSpace = false;
+			}
+			else {
+				if (nextSpace) {
+					body.append(" ");
+				}
+				body.append(it->content);
+				nextSpace = true;
+			}
+			// std::cout << it->content << ", " << it->type << std::endl;
+			it++;
+		}
+		if (body.size()) {
+			std::cout << body << std::endl;
+			Node bodyText(body, Body);
+			_nodes.push_back(bodyText);
+			return true;
+		}
+	} else if (it == _lex.end() || it->type == End)
+		return true;
+	return false;
 }

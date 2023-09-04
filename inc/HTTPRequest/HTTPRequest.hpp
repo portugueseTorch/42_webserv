@@ -4,36 +4,37 @@
 #include "Webserv.hpp"
 #include "HTTPRequest/Parser.hpp"
 
-// enum RequestMethod {
-// 	GET,
-// 	POST,
-// 	DELETE
-// };
-// Documentation: https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-
-/* 
-Bodies can be broadly divided into two categories:
-
-Single-resource bodies, consisting of one single file, defined by the two headers: Content-Type and Content-Length.
-Multiple-resource bodies, consisting of a multipart body, each containing a different bit of information. This is typically associated with HTML Forms.
- */
-class HTTPBody;
-
 class HTTPParser;
 
+//TO-DO
+//	do exceptions
+//	improve accept parsing
 class HTTPRequest {
 	public:
 		HTTPRequest(std::string request);
 		~HTTPRequest();
 
+		// Getters
+		std::string		getMethod() const { return _method; }
+		std::string		getRequestURI() const { return _requestURI; }
+		std::string		getProtocol() const { return _protocol; }
+		bool			getKeepAlive() const { return _keepAlive; }
+		int				getContentLength() const { return _contentLength; }
+		std::string		getBody() const { return _body; }
+
+		std::map<std::string, std::string>	&getAcceptParams() { return _accept; }
+		std::map<std::string, std::string>	&getQueryParams() { return _query; }
+		std::map<std::string, std::string>	&getAllParams() { return _params; }
+
 	private:
 		HTTPRequest(){};
 
 		int parse();
-		int tokenize();
 		int setup();
+
 		void displayRequest();
 		void displayParsedRequest();
+
 		void extractQuery(std::string URI);
 		void checkIfConnection(std::string paramName, std::string paramContent);
 		void checkIfAccept(std::string paramName, std::string paramContent);
@@ -42,33 +43,17 @@ class HTTPRequest {
 		HTTPParser * parser;
 		std::string _content;
 
-		std::string _method;
-		std::string	_requestURI;
-		std::map<std::string, std::string> _accept;
-		std::map<std::string, std::string> _query;
-		bool _keepAlive;
-		int	_contentLength;
+		std::string 						_method;
+		std::string							_requestURI;
+		std::string 						_protocol;
+		std::map<std::string, std::string>	_accept;
+		std::map<std::string, std::string>	_query;
+		bool								_keepAlive;
+		int									_contentLength;
+		std::string							_body;
 
-		//TO-DO
-		//	parse body
-		//	do exceptions
-		//	improve accept parsing
-		//	create getters
+		std::map<std::string, std::string>	_params;
 
-		std::map<std::string, std::string> _params;
-		// std::list<Node>::const_iterator it;
-		// std::list<Node>::const_iterator end;
-
-		/* 
-			Header fields and values
-			Content-Length
-			Request method
-			Response status code
-			Transfer-Encoding
-			HTTP version
-			Request URL
-			Message body
-		 */
 
 };
 
