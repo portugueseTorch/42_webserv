@@ -309,6 +309,7 @@ int ServerEngine::assignServer(Client &client) {
 		log(std::cout, MsgType::SUCCESS, client_id_string, std::to_string(client.parent_server->getServerID()));
 		client.parent_server->displayServer();
 
+		std::cout << "\n" << "Trying to assign URI: " << client.request->getURI() << std::endl;
 		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
 		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
 			if (it->getLocation() == client.request->getURI()) {
@@ -440,7 +441,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendRegResponse(Client &client) {
-	std::string response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 30\r\n\r\n<h1>Hello there, darling!</h1>\r\n";
+	std::string response = client.getResponse();
 	int ret = write(client.getClientFD(), response.c_str(), response.length());
 	if (ret != response.length()) {
 		if (ret == -1) {
@@ -454,6 +455,9 @@ int ServerEngine::sendRegResponse(Client &client) {
 	// Reset client fd on epoll() to listen to incoming connections instead
 	if (modifyEpoll(client.getClientFD(), EPOLL_CTL_MOD, EPOLLIN | EPOLLET))
 		return 1;
+
+	// Reset Client
+	client.reset();
 
 	return 0;
 }
@@ -526,7 +530,7 @@ int ServerEngine::sendResponse(Client &client) {
 		return 1;
 
 	// If it's an error, call sendErrResponse()
-	if (client.request->getIsError()) {
+	if (client.getIsError()) {
 		if (sendErrResponse(client))
 			return 1;
 		return 0;

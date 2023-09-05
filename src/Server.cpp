@@ -11,7 +11,7 @@ Server::Server() {
 	_autoindex = false;
 	_server_id = num_servers;
 	_is_setup = false;
-	_root = "/";
+	_root = "";
 }
 
 Server::~Server() {
@@ -447,6 +447,9 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 	// Check there is only 1 argument specified for client_max_body_size
 	if (stash.size() != 1) {
 		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "root");
+		return 1;
+	} else if (stash.back()[0] != '/') {
+		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
 	_root = stash.back();
