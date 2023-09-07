@@ -1,4 +1,4 @@
-#include "../inc/Server.hpp"
+#include "Server.hpp"
 
 int Server::num_servers = 0;
 

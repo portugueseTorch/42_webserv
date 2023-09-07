@@ -1,4 +1,4 @@
-#include "../inc/ServerEngine.hpp"
+#include "ServerEngine/ServerEngine.hpp"
 
 std::vector<std::string> ServerEngine::directives = {
 	"listen",

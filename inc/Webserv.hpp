@@ -30,11 +30,11 @@
 # include <sys/time.h>
 
 
-# include "Lexer.hpp"
-# include "Parser.hpp"
 # include "Server.hpp"
-# include "Location.hpp"
-# include "ServerEngine.hpp"
+# include "ServerEngine/Lexer.hpp"
+# include "ServerEngine/Parser.hpp"
+# include "ServerEngine/Location.hpp"
+# include "ServerEngine/ServerEngine.hpp"
 # include "HTTPRequest/HTTPRequest.hpp"
 # include "HTTPRequest/Lexer.hpp"
 # include "HTTPRequest/Parser.hpp"

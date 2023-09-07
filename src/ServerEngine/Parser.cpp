@@ -1,4 +1,4 @@
-#include "../inc/Webserv.hpp"
+#include "Webserv.hpp"
 
 Node::Node(std::string content, NodeType type) : _content(content), _type(type) {}
 

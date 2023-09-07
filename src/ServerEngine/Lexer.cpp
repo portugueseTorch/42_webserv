@@ -1,4 +1,4 @@
-#include "../inc/Webserv.hpp"
+#include "Webserv.hpp"
 
 Lexer::~Lexer() {
 	_tokens.clear();

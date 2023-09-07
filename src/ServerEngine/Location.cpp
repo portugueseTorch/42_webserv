@@ -1,4 +1,4 @@
-#include "../inc/Location.hpp"
+#include "ServerEngine/Location.hpp"
 
 // std::vector<std::string> Location::directives = {
 // 	"root",

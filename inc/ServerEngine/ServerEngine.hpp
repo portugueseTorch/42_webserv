@@ -12,6 +12,7 @@ enum Methods {
 };
 
 class Server;
+class Node;
 
 class ServerEngine {
 	public:
