@@ -1,6 +1,6 @@
 #include "ServerEngine/ServerEngine.hpp"
 
-std::vector<std::string> ServerEngine::directives = {
+std::string ServerEngine::possibleDirectives[] = {
 	"listen",
 	"server_name",
 	"root",
@@ -12,6 +12,9 @@ std::vector<std::string> ServerEngine::directives = {
 	"autoindex",
 	"http_method",
 };
+
+std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
+	ServerEngine::possibleDirectives + sizeof(ServerEngine::possibleDirectives) / sizeof(std::string));
 
 ServerEngine::ServerEngine(std::list<Node> nodes) {
 	_nodes = nodes;
@@ -29,7 +32,7 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	int min_distance = INT32_MAX;
 	std::string best_match;
 
-	if (it->_type != NodeType::Name)
+	if (it->_type != Name)
 		return ;
 
 	for (std::vector<std::string>::iterator i = ServerEngine::directives.begin(); i != ServerEngine::directives.end(); i++)
@@ -44,11 +47,11 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	if (min_distance != 0)
 	{
 		if (min_distance < 4) {
-			log(std::cerr, MsgType::ERROR, "Unkown directive", it->_content);
+			log(std::cerr, ERROR, "Unkown directive", it->_content);
 			std::cerr << "       |------> Did you mean: " << best_match << "?" << std::endl;
 		}
 		else
-			log(std::cerr, MsgType::ERROR, "Unknown directive", it->_content);
+			log(std::cerr, ERROR, "Unknown directive", it->_content);
 	}
 }
 
@@ -60,7 +63,7 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
  */
 int ServerEngine::configureServers() {
 	for (std::list<Node>::iterator it = _nodes.begin(); it != _nodes.end(); it++) {
-		if (it->_type == NodeType::ServerBlock) {
+		if (it->_type == ServerBlock) {
 			if (configureServer(it)) {
 				handleInvalidInput(it);
 				return 1;
@@ -83,13 +86,17 @@ int ServerEngine::setupServers() {
 	bool all_failed = true;
 	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
 		if (it->setupServer()) {
-			std::string err_msg = "Failure setting up server block " + std::to_string(it->getServerID());
-			log(std::cerr, MsgType::ERROR, err_msg, "");
+			std::stringstream out;
+			out << it->getServerID();
+			std::string stringID = out.str();
+			
+			std::string err_msg = "Failure setting up server block " + stringID;
+			log(std::cerr, ERROR, err_msg, "");
 		} else
 			all_failed = false;
 	}
 	if (all_failed) {
-		log(std::cerr, MsgType::FATAL, "Unable to boot servers", "");
+		log(std::cerr, FATAL, "Unable to boot servers", "");
 		return 1;
 	}
 	return 0;
@@ -119,7 +126,7 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 
 	// skip the 'server' keyword and check and skip the '{'
 	it++;
-	if (it->_type == NodeType::OpenBracket) {
+	if (it->_type == OpenBracket) {
 		bracks++;
 		it++;
 	} else {
@@ -133,17 +140,17 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 			it--;
 			break ;
 		}
-		if (it->_type == NodeType::OpenBracket)
+		if (it->_type == OpenBracket)
 			bracks++;
-		else if (it->_type == NodeType::CloseBracket)
+		else if (it->_type == CloseBracket)
 			bracks--;
-		else if (it->_type == NodeType::Name) {
+		else if (it->_type == Name) {
 			if (new_server.handleName(it))
 				return 1;
-		} else if (it->_type == NodeType::LocationBlock) {
+		} else if (it->_type == LocationBlock) {
 			if (new_server.handleLocationBlock(it))
 				return 1;
-		} else if (it->_type == NodeType::ServerBlock || it->_type == NodeType::LocationBlock) {
+		} else if (it->_type == ServerBlock || it->_type == LocationBlock) {
 			it--;
 			break;
 		}

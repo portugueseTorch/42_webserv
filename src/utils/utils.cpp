@@ -65,7 +65,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 	} else
 		file_name = argv[1];
 
-	in_file.open(file_name);
+	in_file.open(file_name.c_str());
 	if (!in_file.is_open()) {
 		if (file_name != "conf/default.conf") {
 			log(std::cerr, ERROR, "Unable to open file", file_name);

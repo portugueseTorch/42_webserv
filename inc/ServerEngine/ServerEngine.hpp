@@ -29,6 +29,7 @@ class ServerEngine {
 		void displayServers();
 
 		static std::vector<std::string> directives;
+		static std::string possibleDirectives[];
 
 	private:
 		std::list<Node> _nodes;			// list of nodes passed by the Parser
