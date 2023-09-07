@@ -6,7 +6,7 @@
 #    By: touteiro <touteiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/28 15:46:49 by gda_cruz          #+#    #+#              #
-#    Updated: 2023/09/03 10:31:36 by touteiro         ###   ########.fr        #
+#    Updated: 2023/09/07 20:55:18 by touteiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,8 +18,8 @@ RESET	=	\033[0m
 
 ####### COMPILER #######
 CC		=	c++
-# FLAGS	=	-Wall -Wextra -Werror -g #-std=c++98
-FLAGS	=	-fsanitize=address -g
+FLAGS	=	-Wall -Wextra -Werror #-std=c++98
+FLAGS	+=	-fsanitize=address -g
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj

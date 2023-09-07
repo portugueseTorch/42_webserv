@@ -200,7 +200,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 			if (tmp < 1 || tmp > 65636) {
 				log(std::cerr, MsgType::ERROR, "Invalid port number", split[0]);
 				return 1;
-			} else if (port < 1024)
+			} else if (tmp < 1024)
 				log(std::cout, MsgType::WARNING, "Ports under 1024 are only available to the superuser", "");
 			_port = tmp;
 		} else {
@@ -220,7 +220,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 			return 1;
 		}
 
-		for (int i = 0; i < split[1].length(); i++) {
+		for (size_t i = 0; i < split[1].length(); i++) {
 			if (!isdigit(split[1][i])) {
 				log(std::cerr, MsgType::ERROR, "Invalid port number", split[1]);
 				return 1;
@@ -286,9 +286,9 @@ int Server::setErrorPages(std::list<Node>::iterator &it) {
 		return 1;
 	}
 
-	for (int i = 0; i < stash.size() - 1; i++) {
+	for (size_t i = 0; i < stash.size() - 1; i++) {
 		// Check all digits
-		for (int j = 0; j < stash[i].length(); j++) {
+		for (size_t j = 0; j < stash[i].length(); j++) {
 			if (!isdigit(stash[i][j])) {
 				log(std::cerr, MsgType::ERROR, "Invalid error code", stash[i]);
 				return 1;
@@ -340,7 +340,7 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	int flag = NUMBER;
 	std::string body_size = stash.back();
 	stash.clear();
-	for (int i = 0; i < body_size.length(); i++) {
+	for (size_t i = 0; i < body_size.length(); i++) {
 		if (body_size[i] == 'k' || body_size[i] == 'K' || \
 			body_size[i] == 'm' || body_size[i] == 'M' || \
 			body_size[i] == 'g' || body_size[i] == 'G') {

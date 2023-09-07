@@ -77,8 +77,6 @@ bool HTTPParser::validConfiguration() {
 
 // <method> <request_URI> <http_version> 'CRLF'
 bool HTTPParser::validRequestLine() {
-	std::list<Tok>::iterator tmp = it;
-	int start_index = _nodes.size();
 	if (it->type == End)
 		return false;
 	
@@ -98,8 +96,8 @@ bool HTTPParser::validHeader() {
 	std::list<Tok>::iterator tmp = it;
     int start_index = _nodes.size();
     if (it->type == End)
-        return true;
-
+		return true;
+	
 	if (validRequestHeader())
 		return true;
 	resetNodes(start_index);
@@ -191,7 +189,7 @@ bool HTTPParser::validRequestHeader() {
 			Node paramNode(fullText, Parameter);
 			_nodes.push_back(paramNode);
 			nameSet = false;
-		} else if (it->type == NameTok && nameSet || it->type == ParamTok && !nameSet) {
+		} else if ((it->type == NameTok && nameSet) || (it->type == ParamTok && !nameSet)) {
 			it++;
 			return false;
 		} else

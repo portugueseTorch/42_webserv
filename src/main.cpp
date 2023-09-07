@@ -38,6 +38,8 @@ int main(int argc, char **argv) {
 	// 	return 1;
 	// }
 
+	//will delete later
+	(void)argv;
 	HTTPRequest	req("GET /admin/login.py?user=user&password=pass HTTP/1.1\r\n \
 		User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\n \
 		Host: www.tutorialspoint.com\r\n \

@@ -107,8 +107,9 @@ int	HTTPRequest::setup(){
 void	HTTPRequest::checkIfConnection(std::string paramName, std::string paramContent) {
 	if (paramName == "connection") {
 		//change to print error or throw exception
-		if (paramContent != "keep-alive" && paramContent != "closed")
+		if (paramContent != "keep-alive" && paramContent != "closed") {
 			;
+		}
 		_keepAlive = (paramContent == "keep-alive") ? true : false;
 	}
 }
