@@ -16,7 +16,7 @@ int HTTPLexer::tokenize(std::string src) {
             std::stringstream sbuf(buf);
 
             while (sbuf >> word) {
-                if (word.find(':') == word.size() - 1) {
+                if (word.find_last_of(':') == word.size() - 1) {
                     _tokens.push_back(token(word.substr(0, word.size() - 1), NameTok));
                 } else {
                     _tokens.push_back(token(word, ParamTok));

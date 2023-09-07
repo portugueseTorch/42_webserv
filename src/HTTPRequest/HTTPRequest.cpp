@@ -37,7 +37,7 @@ int	HTTPRequest::setup(){
 		"accept", "accept-charset", "accept-encoding", "accept-language", \
 		"authorization", "expect", "from", "host", "if-match", "if-modified-since", \
 		"if-none-match", "if-range", "if-unmodified-since", "max-forwards", \
-		"proxy-authorization", "range", "referer", "te", "user-agent", \
+		"proxy-authorization", "range", "referer", "referrer-policy", "te", "user-agent", \
 		"allow", "content-encoding", "content-language", "content-length", \
 		"content-location", "content-md5", "content-range", "content-type", \
 		"expires", "last-modified", "extension-header"};
@@ -68,7 +68,13 @@ int	HTTPRequest::setup(){
 				std::string paramName = it->_content;
 				std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
 				it++;
-				if (std::count(validHeaders.begin(), validHeaders.end(), paramName)) {
+				/* The `if` statement is checking if the `paramName` is a valid header name. It does this by
+				checking if the `paramName` is present in the `validHeaders` list, or if it starts with "sec-",
+				or if it starts and ends with a colon. If any of these conditions are true, then the header is
+				considered valid and its content is stored in the `_params` map. */
+				if (std::count(validHeaders.begin(), validHeaders.end(), paramName) || \
+					paramName.find("sec-") == 0 || \
+					(paramName.find_first_of(':') == 0 && paramName.find_last_of(':') == paramName.size() - 1)) {
 					std::string paramContent = it->_content;
 					std::transform(paramContent.begin(), paramContent.end(), paramContent.begin(), ::tolower);
 					checkIfConnection(paramName, paramContent);
