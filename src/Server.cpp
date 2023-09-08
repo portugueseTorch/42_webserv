@@ -4,13 +4,14 @@ int Server::num_servers = 0;
 
 Server::Server() {
 	num_servers++;
-	_port = 8080;
+	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 	_server_fd = -1;
 	_client_max_body_size = 1000000;
 	_autoindex = false;
 	_server_id = num_servers;
 	_is_setup = false;
+	_root = "";
 }
 
 Server::~Server() {
@@ -35,8 +36,20 @@ int Server::setupServer() {
 
 	// Allow sockets to be reutilized with setsockopt
 	int flag = 1;
-	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) == -1) {
-		log(std::cerr, ERROR, "setsockopt() returned an error", "");
+	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, (char *) &flag, sizeof(flag)) == -1) {
+		log(std::cerr, MsgType::ERROR, "setsockopt() call failed", "");
+		return 1;
+	}
+
+	// Set socket to be non-blocking
+	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
+	if (flags == -1) {
+		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+		return 1;
+	}
+
+	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
+		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
 		return 1;
 	}
 
@@ -47,6 +60,7 @@ int Server::setupServer() {
 	memset(_socket_address.sin_zero, 0, sizeof(_socket_address.sin_zero));
 
 	// Bind the socket to the specified port and IP address
+	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
 		log(std::cerr, ERROR, "Unable to bind socket", "");
 		return 1;
@@ -63,7 +77,7 @@ int Server::setupServer() {
  */
 void Server::displayServer() {
 	std::cout << "[Server " << getServerID() << "]\n";
-		std::cout << "\tPort: " << getPort() << "\n";
+		std::cout << "\tPort: " << ntohs(getPort()) << "\n";
 		std::cout << "\tHost: " << getIPAddress() << "\n";
 
 		std::cout << "\tServer Names: [ ";
@@ -92,9 +106,9 @@ void Server::displayServer() {
 		std::cout << "\tRoot: " << getRoot() << "\n";
 		std::cout << "\tAutoindex: " << getAutoindex() << "\n";
 
-		std::cout << "\tHTTP Methods: ";
-		std::vector<int> http_methods = getHTTPMethod();
-		for (std::vector<int>::iterator i = http_methods.begin(); i != http_methods.end(); i++)
+		std::cout << "\tHTTP Method: ";
+		std::vector<int> http_Method = getHTTPMethod();
+		for (std::vector<int>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 
@@ -103,27 +117,7 @@ void Server::displayServer() {
 		std::cout << "\tLocations:\n";
 		std::vector<Location> locations = getLocations();
 		for (std::vector<Location>::iterator i = locations.begin(); i != locations.end(); i++) {
-			std::cout << "\t  - Location " << i->getLocation() << std::endl;
-			std::cout << "\t\tRoot: " << i->getRoot() << "\n";
-
-			{
-				std::cout << "\t\tIndex: ";
-				std::vector<std::string> index = i->getIndex();
-				for (std::vector<std::string>::iterator j = index.begin(); j != index.end(); j++)
-					std::cout << *j << " ";
-				std::cout << std::endl;
-			}
-
-			{
-				std::cout << "\t\tError Pages:\n";
-				std::map<int,std::vector<std::string> > error_pages = i->getErrorPages();
-				for (std::map<int,std::vector<std::string> >::iterator j = error_pages.begin(); j != error_pages.end(); j++) {
-					std::cout << "\t\t  - [ " << (*j).first << ", ";
-					for (std::vector<std::string>::iterator k = (*j).second.begin(); k != (*j).second.end(); k++)
-						std::cout << *k << " ";
-					std::cout << "]\n";
-				}
-			}
+			i->displayLocationBlock();
 		}
 }
 
@@ -176,9 +170,9 @@ int Server::setListen(std::list<Node>::iterator &it) {
 	
 	// Handle special cases
 	if (split[0] == "localhost")
-			split[0] = "127.0.0.1";
-		else if (split[0] == "*")
-			split[0] = "0.0.0.0";
+		split[0] = "127.0.0.1";
+	else if (split[0] == "*")
+		split[0] = "0.0.0.0";
 
 	if (split.size() == 1) {
 		bool port = true;
@@ -202,7 +196,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 				return 1;
 			} else if (tmp < 1024)
 				log(std::cout, WARNING, "Ports under 1024 are only available to the superuser", "");
-			_port = tmp;
+			_port = htons(tmp);
 		} else {
 			struct sockaddr_in sockaddr;
 			if (inet_pton(AF_INET, split[0].c_str(), &(sockaddr.sin_addr)) != 1) {
@@ -233,7 +227,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 		} else if (port < 1024)
 			log(std::cout, WARNING, "Ports under 1024 are only available to the superuser", "");
 		_ip_address = inet_addr(split[0].c_str());
-		_port = port;
+		_port = htons(port);
 		it--;
 		return 0;
 	}
@@ -454,13 +448,16 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 	if (stash.size() != 1) {
 		log(std::cerr, ERROR, "Invalid number of arguments for", "root");
 		return 1;
+	} else if (stash.back()[0] != '/') {
+		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
+		return 1;
 	}
 	_root = stash.back();
 	return 0;
 }
 
 /**
- * @brief Sets the HTTP methods allowed for the server block by iterating
+ * @brief Sets the HTTP Method allowed for the server block by iterating
  * over IT, storing the result in [_http_method] as a vector of ints
  * 
  * @note IT GETS ITERATED WITHIN THIS FUNCTION
@@ -490,7 +487,7 @@ int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 
 	// Check valid number of parameters
 	if (_http_method.empty()) {
-		log(std::cerr, ERROR, "Too few arguments for", "http_methods");
+		log(std::cerr, ERROR, "Too few arguments for", "http_Method");
 		return 1;
 	}
 	return 0;
@@ -546,6 +543,8 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		} else if (it->_content == "autoindex") {
 			if (location.setAutoindex(++it))
 				return 1;
+		} else {
+			return 1;
 		}
 	}
 

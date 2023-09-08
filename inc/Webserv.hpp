@@ -8,16 +8,19 @@
 # include <sstream>
 # include <iomanip>
 
+# include <ctime>
 
 # include <list>
 # include <vector>
 # include <map>
 # include <algorithm>
 
+# include <fcntl.h>
 # include <unistd.h>
 # include <signal.h>
-# include <inttypes.h>
 # include <string.h>
+# include <inttypes.h>
+# include <sys/epoll.h>
 
 # include <arpa/inet.h>
 # include <netinet/in.h>
@@ -38,6 +41,7 @@
 # include "HTTPRequest/HTTPRequest.hpp"
 # include "HTTPRequest/Lexer.hpp"
 # include "HTTPRequest/Parser.hpp"
+# include "Request.hpp"
 
 # define RESET			"\x1B[0m"
 # define RED			"\x1B[31m"
@@ -52,6 +56,15 @@
 # define LIGHT_BLUE		"\x1B[94m"
 # define LIGHT_MAGENTA	"\x1B[95m"
 
+# define MAX_EVENTS		10
+# define EPOLL_TIMEOUT	1000
+# define MAX_LENGTH		4960
+# define READ_SET		0
+# define WRITE_SET		1
+# define ADD_SET		2
+# define MOD_SET		4
+# define DEL_SET		8
+
 enum MsgType {
 	INFO,
 	FATAL,
@@ -59,6 +72,14 @@ enum MsgType {
 	WARNING,
 	SUCCESS,
 	ALL,
+};
+
+enum Method {
+	GET,
+	POST,
+	HEAD,
+	PUT,
+	DELETE,
 };
 
 /****** UTILS.CPP ******/

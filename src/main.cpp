@@ -54,6 +54,16 @@ int main(int argc, char **argv) {
 			Connection: keep-alive\r\n\r\n \
 			<h1>Header</h1>\r\n\r\n");
 		req.displayParsedRequest();
+		// engine.displayServers();
+
+		// Run servers
+		// if (engine.runServers())
+			// return 1;
+		// Run servers
+
+	// } catch (std::exception &e) {
+		// std::cerr << e.what() << std::endl;
+		// return 1;
 	}
 	catch(HTTPRequest::invalidHTTPRequest &e)
 	{

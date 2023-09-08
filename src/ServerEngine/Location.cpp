@@ -16,6 +16,30 @@ Location::Location() {}
 
 Location::~Location() {}
 
+void Location::displayLocationBlock() {
+	std::cout << "\t  - Location " << getLocation() << std::endl;
+	std::cout << "\t\tRoot: " << getRoot() << "\n";
+
+	{
+		std::cout << "\t\tIndex: ";
+		std::vector<std::string> index = getIndex();
+		for (std::vector<std::string>::iterator j = index.begin(); j != index.end(); j++)
+			std::cout << *j << " ";
+		std::cout << std::endl;
+	}
+
+	{
+		std::cout << "\t\tError Pages:\n";
+		std::map<int,std::vector<std::string> > error_pages = getErrorPages();
+		for (std::map<int,std::vector<std::string> >::iterator j = error_pages.begin(); j != error_pages.end(); j++) {
+			std::cout << "\t\t  - [ " << (*j).first << ", ";
+			for (std::vector<std::string>::iterator k = (*j).second.begin(); k != (*j).second.end(); k++)
+				std::cout << *k << " ";
+			std::cout << "]\n";
+		}
+	}
+}
+
 /*************************************/
 /************** SETTERS **************/
 /*************************************/
@@ -221,6 +245,9 @@ int Location::setRoot(std::list<Node>::iterator &it) {
 	// Check there is only 1 argument specified for client_max_body_size
 	if (stash.size() != 1) {
 		log(std::cerr, ERROR, "Invalid number of arguments for", "root");
+		return 1;
+	} else if (stash.back()[0] != '/') {
+		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
 	_root = stash.back();

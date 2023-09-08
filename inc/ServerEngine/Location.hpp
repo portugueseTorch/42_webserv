@@ -10,6 +10,8 @@ class Location
 		~Location();
 
 		static std::vector<std::string> directives;
+	
+		void									displayLocationBlock();
 
 		std::string								getLocation() { return _location; }
 		std::string								getRoot() { return _root; }
@@ -32,7 +34,7 @@ class Location
 		std::vector<std::string>				_index;					// index list according to config_file
 		std::string								_root;					// root of the files as provided by the config_file
 		bool									_autoindex;				// autoindex as per config_file
-		std::vector<int>						_http_method;			// allowed http_methods as per config_file
+		std::vector<int>						_http_method;			// allowed http_Method as per config_file
 		size_t									_client_max_body_size;	// lmax size (in bytes) of the client body according to config_file
 };
 
