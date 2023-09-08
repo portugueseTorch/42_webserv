@@ -1,22 +1,23 @@
 #include "HTTPRequest/Parser.hpp"
 
 HTTPParser::HTTPParser(std::list<Tok> lex) {
+	_errReason = "";
     _lex = lex;
     this->it = _lex.begin();
 }
 
 HTTPParser::~HTTPParser() {
-    _lex.clear();
+	if (_lex.size())
+    	_lex.clear();
     _nodes.clear();
 }
 
-int HTTPParser::parse() {
+void HTTPParser::parse() {
     if (!validConfiguration()) {
-        log(std::cerr, ERROR, "Syntax error in HTTP Request", "");
-        return 1;
+		throw invalidSyntaxException(_errReason.c_str());
+		return ;
     }
 	log(std::cout, SUCCESS, "HTTP Request successfully parsed", "");
-    return 0;
 }
 
 void HTTPParser::displayAST() {
@@ -48,6 +49,7 @@ bool HTTPParser::validNL() {
 		it++;
 		return true;
 	}
+	_errReason = "missing new line";
 	it++;
 	return false;
 }
@@ -57,6 +59,7 @@ bool HTTPParser::validEmptyLine() {
 		it++;
 		return true;
 	}
+	_errReason = "missing empty line";
 	it++;
 	return false;
 }
@@ -120,6 +123,7 @@ bool HTTPParser::validMethod() {
 			return true;
 		}
 	}
+	_errReason = "wrong HTTP request method " + it->content;
 	return false;
 }
 
@@ -130,6 +134,7 @@ bool HTTPParser::validRequestURI() {
 		_nodes.push_back(URI_node);
 		return true;
 	}
+	_errReason = "wrong HTTP request URI " + it->content;
 	it++;
 	return false;
 }
@@ -137,7 +142,6 @@ bool HTTPParser::validRequestURI() {
 bool HTTPParser::validAbsoluteURI() {
 	std::transform(it->content.begin(), it->content.end(), it->content.begin(), ::tolower);
 	std::size_t isHTTP = it->content.find("http://");
-	std::cout << it->content.at(7) << std::endl;
 	if (isHTTP == 0 && \
 		it->content.find_last_of("http://") == 6 && \
 		it->content.size() > 7 && \
@@ -159,6 +163,7 @@ bool HTTPParser::validHTTPVersion() {
 			return true;
 		}
 	}
+	_errReason = "wrong HTTP protocol " + toKeep;
 	return false;
 }
 
@@ -169,8 +174,6 @@ bool HTTPParser::validHTTPVersion() {
 bool HTTPParser::validRequestHeader() {
 	bool nameSet = false;
 	while (it != _lex.end() && it->type != Empty && it->type != End) {
-		// while (it != _lex.end() && it->type == NL)
-			// it++;
 		if (!nameSet && it->type == NameTok) {
 			Node nameNode(it->content, Name);
 			_nodes.push_back(nameNode);
@@ -184,19 +187,19 @@ bool HTTPParser::validRequestHeader() {
 				fullText.append(it->content);
 				it++;
 			}
-			// if (it != _lex.end())
-			// 	it++;
 			Node paramNode(fullText, Parameter);
 			_nodes.push_back(paramNode);
 			nameSet = false;
 		} else if ((it->type == NameTok && nameSet) || (it->type == ParamTok && !nameSet)) {
+			if (nameSet)
+				_errReason = "wrong HTTP request header " + ((--it)++)->content;
+			else
+				_errReason = "wrong HTTP request param " + it->content;
 			it++;
 			return false;
 		} else
 			it++;
-		// std::cout << it->content << ", " << it->type << std::endl;
 	}
-	// it++;
 	return true;
 }
 
@@ -222,16 +225,16 @@ bool HTTPParser::validBody() {
 				body.append(it->content);
 				nextSpace = true;
 			}
-			// std::cout << it->content << ", " << it->type << std::endl;
 			it++;
 		}
 		if (body.size()) {
-			std::cout << body << std::endl;
 			Node bodyText(body, Body);
 			_nodes.push_back(bodyText);
 			return true;
 		}
 	} else if (it == _lex.end() || it->type == End)
 		return true;
+	//nao esquecer de conferir
+	_errReason = "empty HTTP request body";
 	return false;
 }

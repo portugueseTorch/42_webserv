@@ -2,35 +2,40 @@
 
 
 HTTPRequest::HTTPRequest(std::string request)
-	: _content(request), _keepAlive(true), _contentLength(0)
+	: _content(request), _keepAlive(true), _contentLength(0), _parserCreated(false)
 	{
-	// try {
+	try {
 		parse();
 		setup();
-		displayParsedRequest();
-	// } catch {
-		// throw failedHTTPRequest
-	// }
+		// displayParsedRequest();
+	} catch (parserNotInitialized & e) {
+		log(std::cerr, ERROR, "HTTPRequest", e.what());
+	} catch(HTTPParser::invalidSyntaxException &e) {
+		log(std::cerr, ERROR, "Parser", e.what());
+		cleanExit();
+	}
 }
 
 HTTPRequest::~HTTPRequest() {
-	delete parser;
+	if (_parserCreated)
+		delete parser;
 };
 
-int	HTTPRequest::parse(){
-	// displayRequest();
-	HTTPLexer	lex;
-	lex.tokenize(_content);
-	// lex.displayTokenList();
-
-	parser = new HTTPParser(lex.getTokens());
-	if (parser->parse())
-		return 1;
-	// parser->displayAST();
-	return 0;
+void	HTTPRequest::parse(){
+	try
+	{
+		HTTPLexer	lex;
+		lex.tokenize(_content);
+		parser = new HTTPParser(lex.getTokens());
+		_parserCreated = true;
+		parser->parse();
+	} catch(HTTPLexer::emptyRequestException &e) {
+		log(std::cerr, ERROR, "Lexer", e.what());
+		throw parserNotInitialized();
+	}
 }
 
-int	HTTPRequest::setup(){
+void	HTTPRequest::setup(){
 	std::string headers[] = \
 	{ 	"cache-control", "connection", "date", "'pragma", "trailer", \
 		"transfer-encoding", "upgrade", "via", "warning", \
@@ -91,9 +96,6 @@ int	HTTPRequest::setup(){
 				break ;
 			}
 			case Body: {
-				//change to exception
-				if (this->_body.size())
-					break ;
 				this->_body = it->_content;
 				break ;
 			}
@@ -101,14 +103,13 @@ int	HTTPRequest::setup(){
 				break ;
 		}
 	}
-	return 0;
 }
 
 void	HTTPRequest::checkIfConnection(std::string paramName, std::string paramContent) {
 	if (paramName == "connection") {
 		//change to print error or throw exception
 		if (paramContent != "keep-alive" && paramContent != "closed") {
-			;
+			log(std::cerr, ERROR, "Connection invalid param", paramContent);
 		}
 		_keepAlive = (paramContent == "keep-alive") ? true : false;
 	}
@@ -138,6 +139,10 @@ void	HTTPRequest::checkIfAccept(std::string paramName, std::string paramContent)
 	}
 }
 
+/* 
+Ja nao sei o que queria fazer com esta funcao :)
+O content-length e verificado em que momento? request? response? ambos?
+ */
 void	HTTPRequest::checkContentLength(std::string paramName, std::string paramContent) {
 	if (paramName == "content-length") {
 		//change to print error or throw exception
@@ -155,13 +160,19 @@ void	HTTPRequest::extractQuery(std::string URI) {
 	while (getline(squery, buf, '&')) {
 		size_t sep = buf.find('=');
 		//change to if !sep throw exception
-		if (sep == std::string::npos)
-			continue ;
+		if (sep == std::string::npos) {
+			log(std::cerr, ERROR, "Invalid proxy query", buf);
+			cleanExit();
+		}
 		param = buf.substr(0, sep);
 		value = buf.substr(sep + 1, buf.size());
 		//add exception
 		if (param.size() && value.size())
 			_query[param] = value;
+		else {
+			log(std::cerr, ERROR, "Invalid proxy query", buf);
+			cleanExit();
+		}
 	}
 }
 
@@ -184,20 +195,21 @@ void HTTPRequest::displayParsedRequest(){
 		std::cout << "\n###Query params###" << std::endl;
 		it = _query.begin();
 		for (; it != _query.end(); it++) {
-		std::string temp = it->first;
-		temp.append(":");
-		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
+			std::string temp = it->first;
+			temp.append(":");
+			std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
 		}
-		std::cout << std::endl;
+		if (_accept.empty())
+			std::cout << std::endl;
 	}
 
 	if (_accept.size()) {
-		std::cout << "###Accept params###" << std::endl;
+		std::cout << "\n###Accept params###" << std::endl;
 		it = _accept.begin();
 		for (; it != _accept.end(); it++) {
-		std::string temp = it->first;
-		temp.append(":");
-		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
+			std::string temp = it->first;
+			temp.append(":");
+			std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
 		}
 		std::cout << std::endl;
 	}
@@ -218,5 +230,10 @@ void HTTPRequest::displayParsedRequest(){
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
+}
 
+void	HTTPRequest::cleanExit() {
+	if (_parserCreated)
+		delete parser;
+	throw invalidHTTPRequest();
 }

@@ -4,11 +4,12 @@ HTTPLexer::~HTTPLexer() {
     _tokens.clear();
 }
 
-int HTTPLexer::tokenize(std::string src) {
+void HTTPLexer::tokenize(std::string src) {
     std::stringstream ss(src);
     std::string buf;
     std::string word;
-
+	if (src.empty())
+		throw emptyRequestException();
     while (getline(ss, buf, '\n')) {
         if (buf.size() == 1)
             _tokens.push_back(token("empty", Empty));
@@ -29,7 +30,6 @@ int HTTPLexer::tokenize(std::string src) {
             _tokens.push_back(token("EOF", End));
         }
     }
-    return 0;
 }
 
 Tok HTTPLexer::token(std::string content, TokenType type) {

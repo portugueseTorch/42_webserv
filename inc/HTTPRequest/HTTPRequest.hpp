@@ -13,6 +13,7 @@ class HTTPRequest {
 	public:
 		HTTPRequest(std::string request);
 		~HTTPRequest();
+		void displayParsedRequest();
 
 		// Getters
 		std::string		getMethod() const { return _method; }
@@ -26,14 +27,27 @@ class HTTPRequest {
 		std::map<std::string, std::string>	&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
 
+		class invalidHTTPRequest : public std::exception {
+			public:
+				virtual const char* what() const throw() {
+					return "could not create object";
+					}
+		};
+		class parserNotInitialized : public std::exception {
+			public:
+				virtual const char* what() const throw() {
+					return "parser not initialized";
+					}
+		};
+
 	private:
 		HTTPRequest(){};
 
-		int parse();
-		int setup();
+		void parse();
+		void setup();
+		void cleanExit();
 
 		void displayRequest();
-		void displayParsedRequest();
 
 		void extractQuery(std::string URI);
 		void checkIfConnection(std::string paramName, std::string paramContent);
@@ -53,6 +67,7 @@ class HTTPRequest {
 		std::string							_body;
 
 		std::map<std::string, std::string>	_params;
+		bool								_parserCreated;
 
 
 };
