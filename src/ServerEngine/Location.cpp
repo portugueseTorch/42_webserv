@@ -247,7 +247,7 @@ int Location::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid number of arguments for", "root");
 		return 1;
 	} else if (stash.back()[0] != '/') {
-		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
+		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
 	_root = stash.back();

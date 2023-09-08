@@ -37,19 +37,19 @@ int Server::setupServer() {
 	// Allow sockets to be reutilized with setsockopt
 	int flag = 1;
 	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, (char *) &flag, sizeof(flag)) == -1) {
-		log(std::cerr, MsgType::ERROR, "setsockopt() call failed", "");
+		log(std::cerr, ERROR, "setsockopt() call failed", "");
 		return 1;
 	}
 
 	// Set socket to be non-blocking
 	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
 	if (flags == -1) {
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
 
 	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
 
@@ -449,7 +449,7 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid number of arguments for", "root");
 		return 1;
 	} else if (stash.back()[0] != '/') {
-		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
+		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
 	_root = stash.back();

@@ -74,14 +74,6 @@ enum MsgType {
 	ALL,
 };
 
-enum Method {
-	GET,
-	POST,
-	HEAD,
-	PUT,
-	DELETE,
-};
-
 /****** UTILS.CPP ******/
 int			damerauLevenshteinDistance(std::string input, std::string valid);
 bool		isindent(int i);
