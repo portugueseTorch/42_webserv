@@ -1,13 +1,16 @@
 #include "ServerEngine/Location.hpp"
 
-// std::vector<std::string> Location::directives = {
-// 	"root",
-// 	"index",
-// 	"error_page",
-// 	"fastcgi_pass",
-// 	"autoindex",
-// 	"http_method",
-// };
+std::string	Location::_possibleDirectives[] = {
+	"root",
+	"index",
+	"error_page",
+	"fastcgi_pass",
+	"autoindex",
+	"http_method",
+};
+
+std::vector<std::string> Location::directives(Location::_possibleDirectives, \
+	Location::_possibleDirectives + sizeof(Location::_possibleDirectives) / sizeof(std::string));
 
 Location::Location() {}
 
