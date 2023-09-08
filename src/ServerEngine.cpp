@@ -14,7 +14,6 @@ std::vector<std::string> ServerEngine::directives = {
 	"location",
 	"client_max_body_size",
 	"fastcgi_pass",
-
 	"autoindex",
 	"http_method",
 };
@@ -22,13 +21,10 @@ std::vector<std::string> ServerEngine::directives = {
 ServerEngine::ServerEngine(std::list<Node> nodes) {
 	_nodes = nodes;
 	_num_servers = 0;
-	_events = NULL;
+	_max_fd = 0;
 }
 
-ServerEngine::~ServerEngine() {
-	if (_events)
-		delete[] _events;
-}
+ServerEngine::~ServerEngine() {}
 
 /**
  * @brief Handles invalid directives
@@ -174,96 +170,21 @@ bool ServerEngine::isServer(int fd) {
 }
 
 /**
- * @brief Checks if file descriptos FD is a client by attempting to find it in
- * the client map
+ * @brief Assigns the client to the appropriate server and location block
+ * if applicable
  * 
- * @param fd File descriptor to evaluate
- * @return Returns true if it's a client, and false otherwise
+ * @param client Client to Assign 
+ * @return int Returns 0 on success, and 1 on failure
  */
-bool ServerEngine::isClient(int fd) {
-	return _client_map.find(fd) != _client_map.end();
-}
-
-/**
- * @brief Adds file descriptor FD to the interest group of epoll
- * 
- * @param fd File descriptor to add to epoll
- * @return Returns 0 on success, and 1 otherwise
- */
-int ServerEngine::modifyEpoll(int fd, int operation, int flags) {
-	// Create necessary struct to add fd to the interest set
-	struct epoll_event ev;
-
-	/* Add fd to epoll monitoring input, output, and in edge-triggered mode */
-	ev.events = flags;
-	ev.data.fd = fd;
-
-	// Add fd and ev to the list of interest file descriptors
-	if (operation == EPOLL_CTL_DEL) {
-		if (epoll_ctl(_epoll_fd, operation, fd, NULL) == -1) {
-			log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
-			return 1;
-		}
-	} else {
-		if (epoll_ctl(_epoll_fd, operation, fd, &ev) == -1) {
-			log(std::cerr, MsgType::ERROR, "epoll_ctl() call failed", "");
-			return 1;
-		}
-	}
-	if (operation == EPOLL_CTL_ADD)
-		log(std::cout, MsgType::INFO, "Added to poll fd", std::to_string(fd));
-	else if (operation == EPOLL_CTL_MOD)
-		log(std::cout, MsgType::INFO, "Modified poll fd", std::to_string(fd));
-	else if (operation == EPOLL_CTL_DEL)
-		log(std::cout, MsgType::INFO, "Deleted poll fd", std::to_string(fd));
-	return 0;
-}
-
-/**
- * @brief Sets up the epoll instance and iterates over the vector of servers
- * adding each one to the epoll() interest group
- * 
- * @return Returns 0 on sucess, and 1 on failure
- */
-int ServerEngine::setupEpoll() {
-	// Setup _epoll_fd and _events
-	_epoll_fd = epoll_create1(0);
-	_events = new struct epoll_event[MAX_EVENTS];
-	bool repeated = false;
-	
-	// Finish preparing the servers for connection (listen()) and add to interest poll
-	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
-		for (std::vector<Server>::iterator ite = _servers.begin(); ite != it; ite++) {
-			if (ite->getPort() == it->getPort()) {
-				repeated = true;
-				break;
-			}
-		}
-		if (repeated) {
-			repeated = false;
-			continue;
-		}
-		if (listen(it->getServerFD(), 10) == -1) {
-			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
-			return 1;
-		}
-		std::string first_part = "Server " + std::to_string(it->getServerID()) + " is listening on port";
-		log(std::cout, MsgType::INFO, first_part, std::to_string(ntohs(it->getPort())));
-		_server_map[it->getServerFD()] = *it;
-		if (modifyEpoll(it->getServerFD(), EPOLL_CTL_ADD, EPOLLIN | EPOLLET))
-			return 1;
-	}
-	return 0;
-}
-
 int ServerEngine::assignServer(Client &client) {
 	bool exact_match_found = false;
 	std::vector<Server*> possible_servers;
 	std::vector<Server*> backup_servers;
 
-	/**	First check for the Port and IP Address of the request against each of the server block.
-	 *	If an exact match is found add to possible_servers; if a non-exact match is found, and no
-	 *	exact matches have been found so far, add to backup_servers.
+	/**
+	 * First check for the Port and IP Address of the request against each of the server block.
+	 * If an exact match is found add to possible_servers; if a non-exact match is found, and no
+	 * exact matches have been found so far, add to backup_servers.
 	**/
 	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
 		if (client.request->getPort() == it->getPort() && \
@@ -356,16 +277,17 @@ int ServerEngine::acceptNewConnection(Server &server) {
 		return 1;
 
 	// Add client socket to epoll() interest list and client map
-	if (modifyEpoll(fd, EPOLL_CTL_ADD, EPOLLIN | EPOLLET))
-		return 1;
+	modifySet(fd, READ_SET, ADD_SET);
 	_client_map[fd] = client;
 	return 0;
 }
 
 int ServerEngine::closeConnection(int fd) {
-	// Delete fd from the epoll() interest group
-	if (modifyEpoll(fd, EPOLL_CTL_DEL, 0))
-		return 1;
+	// Delete fd from the relevant set
+	if (FD_ISSET(fd, &_read_set))
+		modifySet(fd, READ_SET, DEL_SET);
+	if (FD_ISSET(fd, &_write_set))
+		modifySet(fd, WRITE_SET, DEL_SET);
 
 	// Remove fd from its respective map
 	if (_server_map.find(fd) != _server_map.end()) {
@@ -397,26 +319,19 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	int	ret;
 	int	fd = client.getClientFD();
 
-	// Read message until we reach the end
-	while (1) {
-		ret = read(fd, &buf, MAX_LENGTH);
-		if (ret == -1) {
-			if (errno == EWOULDBLOCK || errno == EAGAIN)
-				break;
-			else {
-				log(std::cout, MsgType::ERROR, "read() call failed", "");
-				return 1;
-			}
-		} else if (ret == 0) {
-			log(std::cout, MsgType::WARNING, "Client closed the connection on fd", std::to_string(fd));
-			closeConnection(client.getClientFD());
-			return 0;
-		}
+	ret = read(fd, buf, MAX_LENGTH);
+	if (ret == -1) {
+		log(std::cout, MsgType::ERROR, "read() call failed", "");
+		closeConnection(fd);
+		return 1;
+	} else if (ret == 0) {
+		log(std::cout, MsgType::WARNING, "Client closed the connection on fd", std::to_string(fd));
+		closeConnection(fd);
+		return 0;
 	}
 
-	// Update the client fd on epoll to be ready for writting
-	if (modifyEpoll(fd, EPOLL_CTL_MOD, EPOLLOUT | EPOLLET))
-		return 1;
+	// Update the client fd from reading to writing
+	modifySet(fd, READ_SET, MOD_SET);
 
 	log(std::cout, MsgType::SUCCESS, "Message received on client socket", std::to_string(client.getClientFD()));
 	std::cout << buf << std::endl;
@@ -452,9 +367,8 @@ int ServerEngine::sendRegResponse(Client &client) {
 			log(std::cout, MsgType::WARNING, "Unable to send the full data", "");
 	}
 
-	// Reset client fd on epoll() to listen to incoming connections instead
-	if (modifyEpoll(client.getClientFD(), EPOLL_CTL_MOD, EPOLLIN | EPOLLET))
-		return 1;
+	// Modify fd to monitor read events instead of write
+	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 
 	// Reset Client
 	client.reset();
@@ -547,52 +461,103 @@ int ServerEngine::sendResponse(Client &client) {
 	return 0;
 }
 
+/**
+ * @brief Applies the operation OP to the set specified by SET
+ * with fd FD
+ * 
+ * @param fd File descriptor of the server to manipulate
+ * @param set Set to manipulate
+ * @param op Operation to perform
+ */
+void ServerEngine::modifySet(int fd, int set, int op) {
+	fd_set &curr = (set == READ_SET) ? _read_set : _write_set;
+
+	if (op == MOD_SET) {
+		modifySet(fd, set, DEL_SET);
+		modifySet(fd, !set, ADD_SET);
+	} else if (op == ADD_SET) {
+		FD_SET(fd, &curr);
+	} else if (op == DEL_SET) {
+		FD_CLR(fd, &curr);
+	}
+
+	// Update the max_fd, if needed
+	if (fd > _max_fd)
+		_max_fd = fd;
+}
+
+int ServerEngine::setupSets() {
+	std::map<int,Server*> assigned_servers;
+	// Initialize sets
+	FD_ZERO(&_read_set);
+	FD_ZERO(&_write_set);
+
+	// Finish preparing the servers for connection (listen()) and add to interest poll
+	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
+		// If server already assigned, continue; else, add it to the map
+		if (assigned_servers.count(it->getPort()))
+			continue;
+		else
+			assigned_servers[it->getPort()] = &(*it);
+
+		if (listen(it->getServerFD(), 10) == -1) {
+			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
+			return 1;
+		}
+
+		std::string first_part = "Server " + std::to_string(it->getServerID()) + " is listening on port";
+		log(std::cout, MsgType::INFO, first_part, std::to_string(ntohs(it->getPort())));
+		_server_map[it->getServerFD()] = *it;
+
+		// Add server fd to the set of read fd
+		modifySet(it->getServerFD(), READ_SET, ADD_SET);
+	}
+
+	return 0;
+}
+
 int ServerEngine::runServers() {
-	// Setup epoll and add servers to _server_map
-	if (setupEpoll())
+	struct timeval t;
+	fd_set read_cpy;
+    fd_set write_cpy;
+
+	// Setup fd_sets and add servers to _server_map
+	if (setupSets())
 		return 1;
 
 	// Run the infinite loop
-	int ready_fds;
 	while (1) {
-		// Call epoll_wait and see if it fails
-		if ((ready_fds = epoll_wait(_epoll_fd, _events, MAX_EVENTS, EPOLL_TIMEOUT)) == -1) {
-			log(std::cerr, MsgType::ERROR, "epoll_wait() call failed", "");
+		t.tv_sec = 1;
+		t.tv_usec = 0;
+		read_cpy = _read_set;
+		write_cpy = _write_set;
+
+		if (select(_max_fd + 1, &read_cpy, &write_cpy, NULL, &t) == -1 ) {
+			log(std::cerr, MsgType::ERROR, "select() call failed", "");
 			return 1;
 		}
-		
-		// Iterate over the ready file_descriptors and handle them appropriately
-		for (int i = 0; i < ready_fds; i++) {
-			// Read event
-			std::cout << "I'm an event: " << _events[i].data.fd << std::endl;
-			if (_events[i].events & EPOLLIN) {
-				// If the fd is from an existing server, accept new connection
-				if (isServer(_events[i].data.fd)) {
-					log(std::cout, MsgType::INFO, "Incoming connection coming through fd", std::to_string(_events[i].data.fd));
-					if (acceptNewConnection(_server_map[_events[i].data.fd]))
+
+		// Iterate over the file descriptors to check for ready file descriptors
+		for (int fd = 0; fd <= _max_fd; fd++) {
+			// If the fd is set on read_set
+			if (FD_ISSET(fd, &read_cpy)) {
+				// If it's a server, accept new connection
+				if (_server_map.count(fd)) {
+					log(std::cout, MsgType::INFO, "Incoming connection coming through fd", std::to_string(fd));
+					if (acceptNewConnection(_server_map[fd]))
 						return 1;
 				}
-
-				// Otherwise, read the request from the client
-				else if (isClient(_events[i].data.fd)) {
-					log(std::cout, MsgType::INFO, "Change of status in fd", std::to_string(_events[i].data.fd));
-					if (readHTTPRequest(_client_map[_events[i].data.fd]))
+				// If it's a client, accept new connection
+				else if (_client_map.count(fd)) {
+					log(std::cout, MsgType::INFO, "Change of status in fd", std::to_string(fd));
+					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}
-			}
-
-			// Write event
-			else if (_events[i].events & EPOLLOUT) {
-				// Send response
-				if (sendResponse(_client_map[_events[i].data.fd]))
-					return 1;
-			}
-			
-			// Error
-			else if (_events[i].events & (EPOLLERR | EPOLLHUP)) {
-				log(std::cerr, MsgType::ERROR, "file descriptor", std::to_string(_events[i].data.fd));
-				// TODO: Consider removing the server where the error happened from the set
-				continue;
+			} else if (FD_ISSET(fd, &write_cpy)) {
+				if (_client_map.count(fd)) {
+					if (sendResponse(_client_map[fd]))
+						return 1;
+				}
 			}
 		}
 	}

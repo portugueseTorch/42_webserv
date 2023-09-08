@@ -6,6 +6,7 @@
 # include <string>
 # include <fstream>
 # include <ctime>
+# include <sstream>
 
 # include <list>
 # include <vector>
@@ -49,9 +50,14 @@
 # define LIGHT_BLUE		"\x1B[94m"
 # define LIGHT_MAGENTA	"\x1B[95m"
 
-# define MAX_EVENTS 10
-# define EPOLL_TIMEOUT 1000
-# define MAX_LENGTH 4960
+# define MAX_EVENTS		10
+# define EPOLL_TIMEOUT	1000
+# define MAX_LENGTH		4960
+# define READ_SET		0
+# define WRITE_SET		1
+# define ADD_SET		2
+# define MOD_SET		4
+# define DEL_SET		8
 
 enum MsgType {
 	INFO,

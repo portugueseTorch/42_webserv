@@ -156,9 +156,9 @@ std::string Client::getContentType(std::string uri) {
 		return "text/xml\r\n";
 	else if (ex == ".txt")
 		return "text/plain\r\n";
-	else if (ex == ".gif")
-		return "image/gif\r\n";
-	else if (ex == ".jpeg")
+	// else if (ex == ".gif")
+	// 	return "image/gif\r\n";
+	else if (ex == ".jpeg" || ex == ".jpg")
 		return "image/jpeg\r\n";
 	else if (ex == ".png")
 		return "image/png\r\n";
@@ -211,7 +211,6 @@ int Client::searchRequestedContent(std::string uri) {
 						_uri = "/" + *it;
 						uri = _uri;
 						found = true;
-						goto next_step;
 					}
 				}
 			}
@@ -232,7 +231,6 @@ int Client::searchRequestedContent(std::string uri) {
 						_uri = "/" + *it;
 						uri = _uri;
 						found = true;
-						goto next_step;
 					}
 				}
 			}
@@ -249,7 +247,6 @@ int Client::searchRequestedContent(std::string uri) {
 			uri = '/' + uri;
 	}
 
-	next_step:
 	// Create the full path and test that we have access to it
 	std::string full_path = '.' + root + uri;
 	std::cout << full_path << std::endl;
