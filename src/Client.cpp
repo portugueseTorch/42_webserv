@@ -151,8 +151,10 @@ std::string Client::getContentType(std::string uri) {
 	std::string ex = uri.substr(lp);	
 	if (ex == ".html")
 		return "text/html\r\n";
-	else if (ex == ".css")
+	else if (ex == ".css" || uri.find("text/css") == 0)
 		return "text/css\r\n";
+	else if (ex == ".js")
+		return "application/javascript\r\n";
 	else if (ex == ".csv")
 		return "text/csv\r\n";
 	else if (ex == ".xml")
@@ -165,6 +167,10 @@ std::string Client::getContentType(std::string uri) {
 		return "image/jpeg\r\n";
 	else if (ex == ".png")
 		return "image/png\r\n";
+	else if (ex == ".ico")
+		return "image/ico\r\n";
+	else if (ex == ".svg")
+		return "image/svg+xml\r\n";
 	else
 		return "undefined";
 }
