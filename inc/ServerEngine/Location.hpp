@@ -28,6 +28,7 @@ class Location
 		int setClientMaxBodySize(std::list<Node>::iterator &it);
 
 	private:
+		static std::string					_possibleDirectives[];
 		std::string 							_location;				// location specified by the location directive
 		std::map<int,std::vector<std::string> >	_error_pages;			// map storing the error codes and their respective error_pages
 		std::vector<std::string>				_index;					// index list according to config_file

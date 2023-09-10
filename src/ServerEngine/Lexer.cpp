@@ -1,4 +1,4 @@
-#include "../inc/Webserv.hpp"
+#include "Webserv.hpp"
 
 Lexer::~Lexer() {
 	_tokens.clear();
@@ -18,15 +18,15 @@ int Lexer::tokenize(std::string src) {
 			if (isindent(src[i]))
 				continue;
 			else if (src[i] == '{')
-				_tokens.push_back(token("{", TokenType::OpenBrack));
+				_tokens.push_back(token("{", OpenBrack));
 			else if (src[i] == '}')
-				_tokens.push_back(token("}", TokenType::CloseBrack));
+				_tokens.push_back(token("}", CloseBrack));
 			else if (src[i] == ';')
-				_tokens.push_back(token(";", TokenType::SemiTok));
+				_tokens.push_back(token(";", SemiTok));
 			else if (src[i] == '\n')
-				_tokens.push_back(token("nl", TokenType::NL));
+				_tokens.push_back(token("nl", NL));
 			else if (src[i] == '\'') {
-				log(std::cerr, MsgType::ERROR, "Invalid .conf syntax", "\'");
+				log(std::cerr, ERROR, "Invalid .conf syntax", "\'");
 				return 1;
 			}
 			else if (src[i] == '\"') {
@@ -36,22 +36,22 @@ int Lexer::tokenize(std::string src) {
 					param += src[i];
 					i++;
 				}
-				_tokens.push_back(token(param, TokenType::ParamTok));
+				_tokens.push_back(token(param, ParamTok));
 			} else {
 				if (src[i] == '#') {
 					while (src[i] && src[i] != '\n')
 						i++;
 					if (src[i] && src[i] == '\n')
-						_tokens.push_back(token("nl", TokenType::NL));
+						_tokens.push_back(token("nl", NL));
 				} else {
 					int start = i;
 					while (src[i] && !isindent(src[i]) && (src[i] != ';' && src[i] != '{' && src[i] != '}' && src[i] != '\n'))
 						i++;
 					std::string term = src.substr(start, i - start);
 					if (std::find(ServerEngine::directives.begin(), ServerEngine::directives.end(), term) != ServerEngine::directives.end())
-						_tokens.push_back(token(term, TokenType::NameTok));
+						_tokens.push_back(token(term, NameTok));
 					else
-						_tokens.push_back(token(term, TokenType::ParamTok));
+						_tokens.push_back(token(term, ParamTok));
 					if (src[i] == ';' || src[i] == '{' || src[i] == '}' || src[i] == '\n')
 						i--;
 				}
@@ -100,9 +100,9 @@ void Lexer::displayTokenList() {
 void Lexer::trimNewLines() {
 	std::list<Tok>::iterator it = _tokens.begin();
 	for (; it != _tokens.end(); it++) {
-		if (it->type == TokenType::NL) {
+		if (it->type == NL) {
 			it++;
-			while (it != _tokens.end() && it->type == TokenType::NL)
+			while (it != _tokens.end() && it->type == NL)
 				_tokens.erase(it++);
 			it--;
 		}

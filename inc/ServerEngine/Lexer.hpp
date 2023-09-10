@@ -16,6 +16,7 @@ enum TokenType {
 	SBlock,
 	Preblock,
 	NL,
+	Empty,
 	End
 };
 

@@ -5,6 +5,16 @@
 # include "Client.hpp"
 # include "Webserv.hpp"
 
+enum Methods {
+	GET,
+	POST,
+	HEAD,
+	PUT,
+	DELETE,
+};
+
+class Server;
+class Node;
 class Client;
 
 class ServerEngine {
@@ -35,6 +45,7 @@ class ServerEngine {
 		void	displayServers();
 
 		static std::vector<std::string> directives;
+		static std::string possibleDirectives[];
 
 	private:
 		fd_set					_read_set;		// set of sockets being monitored for read events

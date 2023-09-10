@@ -5,8 +5,10 @@
 # include <iostream>
 # include <string>
 # include <fstream>
-# include <ctime>
 # include <sstream>
+# include <iomanip>
+
+# include <ctime>
 
 # include <list>
 # include <vector>
@@ -30,12 +32,16 @@
 # include <sys/stat.h>
 # include <sys/time.h>
 
-# include "Lexer.hpp"
-# include "Parser.hpp"
-# include "Location.hpp"
-# include "Request.hpp"
+
 # include "Server.hpp"
-# include "ServerEngine.hpp"
+# include "ServerEngine/Lexer.hpp"
+# include "ServerEngine/Parser.hpp"
+# include "ServerEngine/Location.hpp"
+# include "ServerEngine/ServerEngine.hpp"
+# include "HTTPRequest/HTTPRequest.hpp"
+# include "HTTPRequest/Lexer.hpp"
+# include "HTTPRequest/Parser.hpp"
+# include "Request.hpp"
 
 # define RESET			"\x1B[0m"
 # define RED			"\x1B[31m"
@@ -66,14 +72,6 @@ enum MsgType {
 	WARNING,
 	SUCCESS,
 	ALL,
-};
-
-enum Method {
-	GET,
-	POST,
-	HEAD,
-	PUT,
-	DELETE,
 };
 
 /****** UTILS.CPP ******/

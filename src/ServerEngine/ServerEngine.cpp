@@ -1,11 +1,11 @@
-#include "../inc/ServerEngine.hpp"
+#include "ServerEngine/ServerEngine.hpp"
 #include <cstdlib>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-std::vector<std::string> ServerEngine::directives = {
+std::string ServerEngine::possibleDirectives[] = {
 	"listen",
 	"server_name",
 	"root",
@@ -17,6 +17,9 @@ std::vector<std::string> ServerEngine::directives = {
 	"autoindex",
 	"http_method",
 };
+
+std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
+	ServerEngine::possibleDirectives + sizeof(ServerEngine::possibleDirectives) / sizeof(std::string));
 
 ServerEngine::ServerEngine(std::list<Node> nodes) {
 	_nodes = nodes;
@@ -35,7 +38,7 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	int min_distance = INT32_MAX;
 	std::string best_match;
 
-	if (it->_type != NodeType::Name)
+	if (it->_type != Name)
 		return ;
 
 	for (std::vector<std::string>::iterator i = ServerEngine::directives.begin(); i != ServerEngine::directives.end(); i++)
@@ -50,11 +53,11 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	if (min_distance != 0)
 	{
 		if (min_distance < 4) {
-			log(std::cerr, MsgType::ERROR, "Unkown directive", it->_content);
+			log(std::cerr, ERROR, "Unkown directive", it->_content);
 			std::cerr << "       |------> Did you mean: " << best_match << "?" << std::endl;
 		}
 		else
-			log(std::cerr, MsgType::ERROR, "Unknown directive", it->_content);
+			log(std::cerr, ERROR, "Unknown directive", it->_content);
 	}
 }
 
@@ -66,7 +69,7 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
  */
 int ServerEngine::configureServers() {
 	for (std::list<Node>::iterator it = _nodes.begin(); it != _nodes.end(); it++) {
-		if (it->_type == NodeType::ServerBlock) {
+		if (it->_type == ServerBlock) {
 			if (configureServer(it)) {
 				handleInvalidInput(it);
 				return 1;
@@ -89,13 +92,17 @@ int ServerEngine::setupServers() {
 	bool all_failed = true;
 	for (std::vector<Server>::iterator it = _servers.begin(); it != _servers.end(); it++) {
 		if (it->setupServer()) {
-			std::string err_msg = "Failure setting up server block " + std::to_string(it->getServerID());
-			log(std::cerr, MsgType::ERROR, err_msg, "");
+			std::stringstream out;
+			out << it->getServerID();
+			std::string stringID = out.str();
+			
+			std::string err_msg = "Failure setting up server block " + stringID;
+			log(std::cerr, ERROR, err_msg, "");
 		} else
 			all_failed = false;
 	}
 	if (all_failed) {
-		log(std::cerr, MsgType::FATAL, "Unable to boot servers", "");
+		log(std::cerr, FATAL, "Unable to boot servers", "");
 		return 1;
 	}
 	return 0;
@@ -125,11 +132,11 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 
 	// skip the 'server' keyword and check and skip the '{'
 	it++;
-	if (it->_type == NodeType::OpenBracket) {
+	if (it->_type == OpenBracket) {
 		bracks++;
 		it++;
 	} else {
-		log(std::cerr, MsgType::ERROR, "could not setup server", "");
+		log(std::cerr, ERROR, "could not setup server", "");
 		return 1;
 	}
 
@@ -139,17 +146,17 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 			it--;
 			break ;
 		}
-		if (it->_type == NodeType::OpenBracket)
+		if (it->_type == OpenBracket)
 			bracks++;
-		else if (it->_type == NodeType::CloseBracket)
+		else if (it->_type == CloseBracket)
 			bracks--;
-		else if (it->_type == NodeType::Name) {
+		else if (it->_type == Name) {
 			if (new_server.handleName(it))
 				return 1;
-		} else if (it->_type == NodeType::LocationBlock) {
+		} else if (it->_type == LocationBlock) {
 			if (new_server.handleLocationBlock(it))
 				return 1;
-		} else if (it->_type == NodeType::ServerBlock || it->_type == NodeType::LocationBlock) {
+		} else if (it->_type == ServerBlock || it->_type == LocationBlock) {
 			it--;
 			break;
 		}
@@ -226,8 +233,17 @@ int ServerEngine::assignServer(Client &client) {
 	}
 
 	location_assignment:
-		std::string client_id_string = "Client '" + std::to_string(client.getClientID()) + "' assigned to server with ID";
-		log(std::cout, MsgType::SUCCESS, client_id_string, std::to_string(client.parent_server->getServerID()));
+		std::stringstream ss;
+		std::string clientStringID;
+		std::string parentStringID;
+
+		ss << client.getClientID();
+		clientStringID = ss.str();
+		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
+		ss.clear();
+		ss << client.parent_server->getServerID();
+		parentStringID = ss.str();
+		log(std::cout, SUCCESS, client_id_string, parentStringID);
 		client.parent_server->displayServer();
 
 		std::cout << "\n" << "Trying to assign URI: " << client.request->getURI() << std::endl;
@@ -240,11 +256,11 @@ int ServerEngine::assignServer(Client &client) {
 		}
 
 		if (client.location_block) {
-			client_id_string = "Client '" + std::to_string(client.getClientID()) + "' assigned to location block";
-			log(std::cout, MsgType::SUCCESS, client_id_string, "");
+			client_id_string = "Client '" + clientStringID + "' assigned to location block";
+			log(std::cout, SUCCESS, client_id_string, "");
 			client.location_block->displayLocationBlock();
 		} else {
-			log(std::cout, MsgType::INFO, client_id_string, "NONE");
+			log(std::cout, INFO, client_id_string, "NONE");
 		}
 
 	return 0;
@@ -267,7 +283,7 @@ int ServerEngine::acceptNewConnection(Server &server) {
 	client.parent_server = &server;
 
 	if ((fd = accept(server.getServerFD(), (sockaddr *) &client_address, &client_addr_len)) == -1) {
-		log(std::cerr, MsgType::ERROR, "accept() call failed", "");
+		log(std::cerr, ERROR, "accept() call failed", "");
 		return 1;
 	}
 
@@ -283,6 +299,10 @@ int ServerEngine::acceptNewConnection(Server &server) {
 }
 
 int ServerEngine::closeConnection(int fd) {
+	//Store fd as stringstream
+	std::stringstream ss;
+	ss << fd;
+
 	// Delete fd from the relevant set
 	if (FD_ISSET(fd, &_read_set))
 		modifySet(fd, READ_SET, DEL_SET);
@@ -292,11 +312,11 @@ int ServerEngine::closeConnection(int fd) {
 	// Remove fd from its respective map
 	if (_server_map.find(fd) != _server_map.end()) {
 		_server_map.erase(fd);
-		log(std::cout, MsgType::INFO, "Server removed from server map on fd", std::to_string(fd));
+		log(std::cout, INFO, "Server removed from server map on fd", ss.str());
 	}
 	if (_client_map.find(fd) != _client_map.end()) {
 		_client_map.erase(fd);
-		log(std::cout, MsgType::INFO, "Client removed from client map on fd", std::to_string(fd));
+		log(std::cout, INFO, "Client removed from client map on fd", ss.str());
 	}
 
 	// Close file descriptor
@@ -318,14 +338,16 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	char buf[MAX_LENGTH];
 	int	ret;
 	int	fd = client.getClientFD();
+	std::stringstream ss;
+	ss << fd;
 
 	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
-		log(std::cout, MsgType::ERROR, "read() call failed", "");
+		log(std::cout, ERROR, "read() call failed", "");
 		closeConnection(fd);
 		return 1;
 	} else if (ret == 0) {
-		log(std::cout, MsgType::WARNING, "Client closed the connection on fd", std::to_string(fd));
+		log(std::cout, WARNING, "Client closed the connection on fd", ss.str());
 		closeConnection(fd);
 		return 0;
 	}
@@ -333,7 +355,9 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	// Update the client fd from reading to writing
 	modifySet(fd, READ_SET, MOD_SET);
 
-	log(std::cout, MsgType::SUCCESS, "Message received on client socket", std::to_string(client.getClientFD()));
+	ss.clear();
+	ss << client.getClientFD();
+	log(std::cout, SUCCESS, "Message received on client socket", ss.str());
 	std::cout << buf << std::endl;
 
 	// Parse HTTP Request
@@ -341,7 +365,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
 
 	// Assign the server according to the parsed request
 	if (assignServer(client)) {
-		log(std::cerr, MsgType::ERROR, "Failure assigning server", "");
+		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
 
@@ -357,14 +381,14 @@ int ServerEngine::readHTTPRequest(Client &client) {
  */
 int ServerEngine::sendRegResponse(Client &client) {
 	std::string response = client.getResponse();
-	int ret = write(client.getClientFD(), response.c_str(), response.length());
-	if (ret != response.length()) {
-		if (ret == -1) {
-			log(std::cerr, MsgType::ERROR, "send() call failed", "");
+	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
+	if (ret != static_cast<ssize_t>(response.length())) {
+		if (ret == static_cast<ssize_t>(-1)) {
+			log(std::cerr, ERROR, "send() call failed", "");
 			// TODO: consider removing from the set and from the map
 			return 1;
 		} else
-			log(std::cout, MsgType::WARNING, "Unable to send the full data", "");
+			log(std::cout, WARNING, "Unable to send the full data", "");
 	}
 
 	// Modify fd to monitor read events instead of write
@@ -388,14 +412,17 @@ int ServerEngine::sendCGIResponse(Client &client) {
 	int pipe_fd[2];
 	int pid;
 
+	//to delete later
+	(void)client;
+
 	// Create the pipe
 	if (pipe(pipe_fd) == -1) {
-		log(std::cerr, MsgType::ERROR, "pipe() call failed", "");
+		log(std::cerr, ERROR, "pipe() call failed", "");
 		return 1;
 	}
 	// Fork and execve the script on the child pr
 	if ((pid = fork()) == -1) {
-		log(std::cerr, MsgType::ERROR, "fork() call failed", "");
+		log(std::cerr, ERROR, "fork() call failed", "");
 		return 1;
 	}
 
@@ -411,7 +438,7 @@ int ServerEngine::sendCGIResponse(Client &client) {
 		wait(NULL);
 		char *msg = new char[256];
 		if (read(pipe_fd[0], msg, 256) == -1) {
-			log(std::cerr, MsgType::ERROR, "read() call failed", "");
+			log(std::cerr, ERROR, "read() call failed", "");
 			return 1;
 		}
 		std::cout << msg << std::endl;
@@ -427,6 +454,7 @@ int ServerEngine::sendCGIResponse(Client &client) {
  */
 int ServerEngine::sendErrResponse(Client &client) {
 
+	(void)client;
 	return 0;
 }
 
@@ -501,12 +529,17 @@ int ServerEngine::setupSets() {
 			assigned_servers[it->getPort()] = &(*it);
 
 		if (listen(it->getServerFD(), 10) == -1) {
-			log(std::cerr, MsgType::ERROR, "listen() call failed", "");
+			log(std::cerr, ERROR, "listen() call failed", "");
 			return 1;
 		}
 
-		std::string first_part = "Server " + std::to_string(it->getServerID()) + " is listening on port";
-		log(std::cout, MsgType::INFO, first_part, std::to_string(ntohs(it->getPort())));
+		std::stringstream ss;
+		ss << it->getServerID();
+
+		std::string first_part = "Server " + ss.str() + " is listening on port";
+		ss.clear();
+		ss << ntohs(it->getPort());
+		log(std::cout, INFO, first_part, ss.str());
 		_server_map[it->getServerFD()] = *it;
 
 		// Add server fd to the set of read fd
@@ -533,23 +566,26 @@ int ServerEngine::runServers() {
 		write_cpy = _write_set;
 
 		if (select(_max_fd + 1, &read_cpy, &write_cpy, NULL, &t) == -1 ) {
-			log(std::cerr, MsgType::ERROR, "select() call failed", "");
+			log(std::cerr, ERROR, "select() call failed", "");
 			return 1;
 		}
 
+		std::stringstream ss;
 		// Iterate over the file descriptors to check for ready file descriptors
 		for (int fd = 0; fd <= _max_fd; fd++) {
+			ss << fd;
 			// If the fd is set on read_set
 			if (FD_ISSET(fd, &read_cpy)) {
 				// If it's a server, accept new connection
 				if (_server_map.count(fd)) {
-					log(std::cout, MsgType::INFO, "Incoming connection coming through fd", std::to_string(fd));
+
+					log(std::cout, INFO, "Incoming connection coming through fd", ss.str());
 					if (acceptNewConnection(_server_map[fd]))
 						return 1;
 				}
 				// If it's a client, accept new connection
 				else if (_client_map.count(fd)) {
-					log(std::cout, MsgType::INFO, "Change of status in fd", std::to_string(fd));
+					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}
@@ -559,6 +595,7 @@ int ServerEngine::runServers() {
 						return 1;
 				}
 			}
+			ss.clear();
 		}
 	}
 	return 0;

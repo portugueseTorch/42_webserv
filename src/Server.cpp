@@ -1,4 +1,4 @@
-#include "../inc/Server.hpp"
+#include "Server.hpp"
 
 int Server::num_servers = 0;
 
@@ -30,26 +30,26 @@ int Server::setupServer() {
 	// Create a socket for the server
 	_server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (_server_fd == -1) {
-		log(std::cerr, MsgType::ERROR, "Unable to create socket", "");
+		log(std::cerr, ERROR, "Unable to create socket", "");
 		return 1;
 	}
 
 	// Allow sockets to be reutilized with setsockopt
 	int flag = 1;
 	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, (char *) &flag, sizeof(flag)) == -1) {
-		log(std::cerr, MsgType::ERROR, "setsockopt() call failed", "");
+		log(std::cerr, ERROR, "setsockopt() call failed", "");
 		return 1;
 	}
 
 	// Set socket to be non-blocking
 	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
 	if (flags == -1) {
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
 
 	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
-		log(std::cerr, MsgType::ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
 
@@ -62,7 +62,7 @@ int Server::setupServer() {
 	// Bind the socket to the specified port and IP address
 	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
-		log(std::cerr, MsgType::ERROR, "Unable to bind socket", "");
+		log(std::cerr, ERROR, "Unable to bind socket", "");
 		return 1;
 	}
 
@@ -141,7 +141,7 @@ void Server::displayServer() {
 int Server::setListen(std::list<Node>::iterator &it) {
 	std::vector<std::string> split;
 
-	for (std::list<Node>::iterator tmp = it; tmp->_type != NodeType::CloseBracket && tmp->_type != NodeType::Name; tmp++)
+	for (std::list<Node>::iterator tmp = it; tmp->_type != CloseBracket && tmp->_type != Name; tmp++)
 		split.push_back(tmp->_content);
 
 	if (split.size() != 1) {
@@ -152,7 +152,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 				tmp += " ";
 			i--;
 		}
-		log(std::cerr, MsgType::ERROR, "Too many arguments for listen", tmp);
+		log(std::cerr, ERROR, "Too many arguments for listen", tmp);
 		return 1;
 	}
 
@@ -190,17 +190,17 @@ int Server::setListen(std::list<Node>::iterator &it) {
 			port = false;
 
 		if (port) {
-			int tmp = std::stoi(split[0]);
+			int tmp = std::atoi(split[0].c_str());
 			if (tmp < 1 || tmp > 65636) {
-				log(std::cerr, MsgType::ERROR, "Invalid port number", split[0]);
+				log(std::cerr, ERROR, "Invalid port number", split[0]);
 				return 1;
-			} else if (port < 1024)
-				log(std::cout, MsgType::WARNING, "Ports under 1024 are only available to the superuser", "");
+			} else if (tmp < 1024)
+				log(std::cout, WARNING, "Ports under 1024 are only available to the superuser", "");
 			_port = htons(tmp);
 		} else {
 			struct sockaddr_in sockaddr;
 			if (inet_pton(AF_INET, split[0].c_str(), &(sockaddr.sin_addr)) != 1) {
-				log(std::cerr, MsgType::ERROR, "Invalid IP Address number", split[0]);
+				log(std::cerr, ERROR, "Invalid IP Address number", split[0]);
 				return 1;
 			}
 			_ip_address = inet_addr(split[0].c_str());
@@ -210,28 +210,28 @@ int Server::setListen(std::list<Node>::iterator &it) {
 	} else if (split.size() == 2) {
 		struct sockaddr_in sockaddr;
 		if (inet_pton(AF_INET, split[0].c_str(), &(sockaddr.sin_addr)) != 1) {
-			log(std::cerr, MsgType::ERROR, "Invalid IP Address number", split[0]);
+			log(std::cerr, ERROR, "Invalid IP Address number", split[0]);
 			return 1;
 		}
 
-		for (int i = 0; i < split[1].length(); i++) {
+		for (size_t i = 0; i < split[1].length(); i++) {
 			if (!isdigit(split[1][i])) {
-				log(std::cerr, MsgType::ERROR, "Invalid port number", split[1]);
+				log(std::cerr, ERROR, "Invalid port number", split[1]);
 				return 1;
 			}
 		}
-		int port = std::stoi(split[1]);
+		int port = std::atoi(split[1].c_str());
 		if (port < 1 || port > 65636) {
-			log(std::cerr, MsgType::ERROR, "Invalid port number", split[1]);
+			log(std::cerr, ERROR, "Invalid port number", split[1]);
 			return 1;
 		} else if (port < 1024)
-			log(std::cout, MsgType::WARNING, "Ports under 1024 are only available to the superuser", "");
+			log(std::cout, WARNING, "Ports under 1024 are only available to the superuser", "");
 		_ip_address = inet_addr(split[0].c_str());
 		_port = htons(port);
 		it--;
 		return 0;
 	}
-	log(std::cerr, MsgType::ERROR, "Invalid listen directive", param);
+	log(std::cerr, ERROR, "Invalid listen directive", param);
 	return 1;
 }
 
@@ -245,12 +245,12 @@ int Server::setListen(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setServerName(std::list<Node>::iterator &it) {
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		_server_names.push_back(it->_content);
 	it--;
 
 	if (_server_names.size() < 1) {
-		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "listen");
+		log(std::cerr, ERROR, "Invalid number of arguments for", "listen");
 		_server_names.clear();
 		return 1;
 	}
@@ -270,29 +270,29 @@ int Server::setServerName(std::list<Node>::iterator &it) {
  */
 int Server::setErrorPages(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		stash.push_back(it->_content);
 	it--;
 
 	// Check valid number of parameters
 	if (stash.size() < 2) {
-		log(std::cerr, MsgType::ERROR, "Too few arguments for", "error_page");
+		log(std::cerr, ERROR, "Too few arguments for", "error_page");
 		return 1;
 	}
 
-	for (int i = 0; i < stash.size() - 1; i++) {
+	for (size_t i = 0; i < stash.size() - 1; i++) {
 		// Check all digits
-		for (int j = 0; j < stash[i].length(); j++) {
+		for (size_t j = 0; j < stash[i].length(); j++) {
 			if (!isdigit(stash[i][j])) {
-				log(std::cerr, MsgType::ERROR, "Invalid error code", stash[i]);
+				log(std::cerr, ERROR, "Invalid error code", stash[i]);
 				return 1;
 			}
 		}
 
 		// Convert to int and check if it's between 400 and 599
-		int code = stoi(stash[i]);
+		int code = std::atoi(stash[i].c_str());
 		if (code < 400 || code > 599) {
-			log(std::cerr, MsgType::ERROR, "Invalid error code", stash[i]);
+			log(std::cerr, ERROR, "Invalid error code", stash[i]);
 			return 1;
 		}
 
@@ -319,13 +319,13 @@ int Server::setErrorPages(std::list<Node>::iterator &it) {
  */
 int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		stash.push_back(it->_content);
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
 	if (stash.size() != 1) {
-		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "client_max_body_size");
+		log(std::cerr, ERROR, "Invalid number of arguments for", "client_max_body_size");
 		return 1;
 	}
 
@@ -334,7 +334,7 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	int flag = NUMBER;
 	std::string body_size = stash.back();
 	stash.clear();
-	for (int i = 0; i < body_size.length(); i++) {
+	for (size_t i = 0; i < body_size.length(); i++) {
 		if (body_size[i] == 'k' || body_size[i] == 'K' || \
 			body_size[i] == 'm' || body_size[i] == 'M' || \
 			body_size[i] == 'g' || body_size[i] == 'G') {
@@ -355,12 +355,12 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 	}
 
 	if (flag == ERR) {
-		log(std::cerr, MsgType::ERROR, "Invalid client_max_body_size", body_size);
+		log(std::cerr, ERROR, "Invalid client_max_body_size", body_size);
 		return 1;
 	}
 
 	// Adjust max body size according to the relevant flag
-	size_t cmbs = (size_t) stoi(body_size);
+	size_t cmbs = (size_t) std::atoi(body_size.c_str());
 	if (flag == KILO)
 		cmbs *= 1000;
 	else if (flag == MEGA)
@@ -382,13 +382,13 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setIndex(std::list<Node>::iterator &it) {
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		_index.push_back(it->_content);
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
 	if (_index.size() < 1) {
-		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "index");
+		log(std::cerr, ERROR, "Invalid number of arguments for", "index");
 		_index.clear();
 		return 1;
 	}
@@ -407,13 +407,13 @@ int Server::setIndex(std::list<Node>::iterator &it) {
  */
 int Server::setAutoindex(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		stash.push_back(it->_content);
 	it--;
 
 	// Check valid number of parameters
 	if (stash.size() != 1) {
-		log(std::cerr, MsgType::ERROR, "Too few arguments for", "autoindex");
+		log(std::cerr, ERROR, "Too few arguments for", "autoindex");
 		return 1;
 	}
 
@@ -425,7 +425,7 @@ int Server::setAutoindex(std::list<Node>::iterator &it) {
 		return 0;
 	}
 
-	log(std::cerr, MsgType::ERROR, "Invalid autoindex parameter", it->_content);
+	log(std::cerr, ERROR, "Invalid autoindex parameter", it->_content);
 	return 1;
 }
 
@@ -440,16 +440,16 @@ int Server::setAutoindex(std::list<Node>::iterator &it) {
  */
 int Server::setRoot(std::list<Node>::iterator &it) {
 	std::vector<std::string> stash;
-	for (; it->_type == NodeType::Parameter; it++)
+	for (; it->_type == Parameter; it++)
 		stash.push_back(it->_content);
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
 	if (stash.size() != 1) {
-		log(std::cerr, MsgType::ERROR, "Invalid number of arguments for", "root");
+		log(std::cerr, ERROR, "Invalid number of arguments for", "root");
 		return 1;
 	} else if (stash.back()[0] != '/') {
-		log(std::cerr, MsgType::ERROR, "Invalid root directive: must start with '/'", stash.back());
+		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
 	_root = stash.back();
@@ -466,19 +466,19 @@ int Server::setRoot(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setHTTPMethod(std::list<Node>::iterator &it) {
-	for (; it->_type == NodeType::Parameter; it++) {
+	for (; it->_type == Parameter; it++) {
 		if (it->_content == "GET")
-			_http_method.push_back(Method::GET);
+			_http_method.push_back(GET);
 		else if (it->_content == "POST")
-			_http_method.push_back(Method::POST);
+			_http_method.push_back(POST);
 		else if (it->_content == "DELETE")
-			_http_method.push_back(Method::DELETE);
+			_http_method.push_back(DELETE);
 		else if (it->_content == "HEAD")
-			_http_method.push_back(Method::HEAD);
+			_http_method.push_back(HEAD);
 		else if (it->_content == "PUT")
-			_http_method.push_back(Method::PUT);
+			_http_method.push_back(PUT);
 		else {
-			log(std::cerr, MsgType::ERROR, "Invalid argument for http_method", it->_content);
+			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
 			_http_method.clear();
 			return 1;
 		}
@@ -487,7 +487,7 @@ int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 
 	// Check valid number of parameters
 	if (_http_method.empty()) {
-		log(std::cerr, MsgType::ERROR, "Too few arguments for", "http_Method");
+		log(std::cerr, ERROR, "Too few arguments for", "http_Method");
 		return 1;
 	}
 	return 0;
@@ -516,7 +516,7 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 
 	// Check if the location directive is valid
 	if (split.size() != 2 || split[0] != "location") {
-		log(std::cerr, MsgType::ERROR, "Invalid location directive", it->_content);
+		log(std::cerr, ERROR, "Invalid location directive", it->_content);
 		return 1;
 	}
 	
@@ -527,9 +527,9 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 	it++;
 	int bracks = 1;
 	for (; bracks != 0; it++) {
-		if (it->_type == NodeType::OpenBracket)
+		if (it->_type == OpenBracket)
 			bracks++;
-		else if (it->_type == NodeType::CloseBracket)
+		else if (it->_type == CloseBracket)
 			bracks--;
 		else if (it->_content == "root") {
 			if (location.setRoot(++it))

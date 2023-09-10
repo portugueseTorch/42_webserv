@@ -5,6 +5,7 @@
 # include "Webserv.hpp"
 
 class Location;
+class Node;
 
 class Server {
 	public:

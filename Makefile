@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: gda_cruz <gda_cruz@student.42.fr>          +#+  +:+       +#+         #
+#    By: touteiro <touteiro@student.42lisboa.com    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2023/07/28 15:46:49 by gda_cruz          #+#    #+#              #
-#    Updated: 2023/08/28 14:45:07 by gda_cruz         ###   ########.fr        #
+#    Updated: 2023/09/08 19:49:22 by touteiro         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -18,7 +18,8 @@ RESET	=	\033[0m
 
 ####### COMPILER #######
 CC		=	c++
-# FLAGS	=	-Wall -Wextra -Werror -g #-std=c++98
+FLAGS	=	-Wall -Wextra -Werror -std=c++98
+FLAGS	+=	-fsanitize=address -g
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj
@@ -26,6 +27,11 @@ INC_DIR	=	inc
 
 ####### FILES #######
 SRC		=	$(shell find src/ -name '*.cpp')
+# SRC		=	src/main.cpp \
+# 			src/HTTPRequest/HTTPRequest.cpp \
+# 			src/HTTPRequest/Lexer.cpp \
+# 			src/HTTPRequest/Parser.cpp \
+# 			src/utils/utils.cpp
 OBJ		=	$(patsubst src/%.cpp,$(OBJ_DIR)/%.o,$(SRC))
 NAME 	=	webserv
 
@@ -41,6 +47,8 @@ $(NAME): $(OBJ)
 	@printf "$(GREEN_B)[$(NAME) ready to use]\n$(RESET)"
 
 $(OBJ_DIR)/%.o: src/%.cpp | $(OBJ_DIR)
+	$(eval TMP := $(shell echo $@ | sed 's|\(.*\)/.*|\1|'))
+	@mkdir -p $(TMP)
 	@$(CC) $(FLAGS) -I$(INC_DIR) -c $< -o $@
 	@printf "$(BLUE)[Compiling]     "$@"$(RESET)\n"
 
