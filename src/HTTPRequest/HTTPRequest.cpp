@@ -1,18 +1,22 @@
 #include "HTTPRequest/HTTPRequest.hpp"
 
 
-HTTPRequest::HTTPRequest(std::string request)
-	: _content(request), _keepAlive(true), _contentLength(0), _parserCreated(false)
-	{
+HTTPRequest::HTTPRequest()
+	: _keepAlive(true), _contentLength(0), _parserCreated(false), _processed(true) {}
+
+void HTTPRequest::process(std::string request) {
+	_content = request;
 	try {
 		parse();
 		setup();
-		// displayParsedRequest();
 	} catch (parserNotInitialized & e) {
 		log(std::cerr, ERROR, "HTTPRequest", e.what());
 	} catch(HTTPParser::invalidSyntaxException &e) {
 		log(std::cerr, ERROR, "Parser", e.what());
-		cleanExit();
+		_processed = false;
+	} catch(invalidHTTPRequest &e) {
+		log(std::cerr, ERROR, "HTTPRequest", e.what());
+		_processed = false;
 	}
 }
 
@@ -162,7 +166,7 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		//change to if !sep throw exception
 		if (sep == std::string::npos) {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			cleanExit();
+			throw invalidHTTPRequest();
 		}
 		param = buf.substr(0, sep);
 		value = buf.substr(sep + 1, buf.size());
@@ -171,7 +175,7 @@ void	HTTPRequest::extractQuery(std::string URI) {
 			_query[param] = value;
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			cleanExit();
+			throw invalidHTTPRequest();
 		}
 	}
 }
@@ -230,10 +234,4 @@ void HTTPRequest::displayParsedRequest(){
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
-}
-
-void	HTTPRequest::cleanExit() {
-	if (_parserCreated)
-		delete parser;
-	throw invalidHTTPRequest();
 }

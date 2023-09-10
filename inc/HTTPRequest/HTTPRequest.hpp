@@ -7,11 +7,12 @@
 class HTTPParser;
 
 //TO-DO
-//	do exceptions
 //	improve accept parsing
+//	implement err as enum
 class HTTPRequest {
 	public:
-		HTTPRequest(std::string request);
+		HTTPRequest();
+		void process(std::string request);
 		~HTTPRequest();
 		void displayParsedRequest();
 
@@ -22,6 +23,8 @@ class HTTPRequest {
 		bool			getKeepAlive() const { return _keepAlive; }
 		int				getContentLength() const { return _contentLength; }
 		std::string		getBody() const { return _body; }
+		//to be changed to enum
+		bool			success() const { return _processed; }
 
 		std::map<std::string, std::string>	&getAcceptParams() { return _accept; }
 		std::map<std::string, std::string>	&getQueryParams() { return _query; }
@@ -41,11 +44,8 @@ class HTTPRequest {
 		};
 
 	private:
-		HTTPRequest(){};
-
 		void parse();
 		void setup();
-		void cleanExit();
 
 		void displayRequest();
 
@@ -68,7 +68,8 @@ class HTTPRequest {
 
 		std::map<std::string, std::string>	_params;
 		bool								_parserCreated;
-
+		//to be changed to enum
+		bool								_processed;
 
 };
 
