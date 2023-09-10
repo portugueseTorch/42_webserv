@@ -52,8 +52,11 @@ int main(int argc, char **argv) {
 		Accept: text/html, application/xhtml+xml, application/xml;q=0.9, image/webp, */*;q=0.8\r\n \
 		Connection: keep-alive\r\n\r\n \
 		<h1>Header</h1>\r\n\r\n");
-	if (req.success())
+	if (req.success()) {
 		req.displayParsedRequest();
+		if (req.getAllParams().count("accept"))
+			log(std::cout, INFO, req.getAllParams()["accept"], "");
+	}
 
 	return 0;
 }

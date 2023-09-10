@@ -87,7 +87,6 @@ void	HTTPRequest::setup(){
 					std::string paramContent = it->_content;
 					std::transform(paramContent.begin(), paramContent.end(), paramContent.begin(), ::tolower);
 					checkIfConnection(paramName, paramContent);
-					checkIfAccept(paramName, paramContent);
 					checkContentLength(paramName, paramContent);
 
 					_params[paramName] = paramContent;
@@ -116,30 +115,6 @@ void	HTTPRequest::checkIfConnection(std::string paramName, std::string paramCont
 			log(std::cerr, ERROR, "Connection invalid param", paramContent);
 		}
 		_keepAlive = (paramContent == "keep-alive") ? true : false;
-	}
-}
-
-/* Parsing is messed up, what is really needed? */
-void	HTTPRequest::checkIfAccept(std::string paramName, std::string paramContent) {
-	if (paramName == "accept") {
-		std::stringstream ss(paramContent);
-		std::string buf;
-		std::string param;
-		std::string value;
-
-		while (getline(ss, buf, ',')) {
-			size_t noSpace = buf.find_first_not_of(" \t\v");
-			buf.erase(0, noSpace);
-			size_t sep = buf.find('/');
-			//change to if !sep throw exception
-			if (sep == std::string::npos)
-				continue ;
-			param = buf.substr(0, sep);
-			value = buf.substr(sep + 1, buf.size());
-			//add exception
-			if (param.size() && value.size())
-				_accept[param] = value;
-		}
 	}
 }
 

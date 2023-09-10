@@ -7,7 +7,6 @@
 class HTTPParser;
 
 //TO-DO
-//	improve accept parsing
 //	implement err as enum
 class HTTPRequest {
 	public:
@@ -26,7 +25,6 @@ class HTTPRequest {
 		//to be changed to enum
 		bool			success() const { return _processed; }
 
-		std::map<std::string, std::string>	&getAcceptParams() { return _accept; }
 		std::map<std::string, std::string>	&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
 
@@ -51,7 +49,6 @@ class HTTPRequest {
 
 		void extractQuery(std::string URI);
 		void checkIfConnection(std::string paramName, std::string paramContent);
-		void checkIfAccept(std::string paramName, std::string paramContent);
 		void checkContentLength(std::string paramName, std::string paramContent);
 
 		HTTPParser * parser;
