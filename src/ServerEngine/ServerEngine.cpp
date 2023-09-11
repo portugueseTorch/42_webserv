@@ -240,16 +240,17 @@ int ServerEngine::assignServer(Client &client) {
 		ss << client.getClientID();
 		clientStringID = ss.str();
 		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
-		ss.clear();
+		ss.str("");
+ss.clear();;
 		ss << client.parent_server->getServerID();
 		parentStringID = ss.str();
 		log(std::cout, SUCCESS, client_id_string, parentStringID);
 		client.parent_server->displayServer();
 
-		std::cout << "\n" << "Trying to assign URI: " << client.request->getURI() << std::endl;
+		std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
 		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
-			if (it->getLocation() == client.request->getURI()) {
+			if (it->getLocation() == client.request->getRequestURI()) {
 				client.location_block = &(*it);
 				break ;
 			}
@@ -355,7 +356,8 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	// Update the client fd from reading to writing
 	modifySet(fd, READ_SET, MOD_SET);
 
-	ss.clear();
+	ss.str("");
+	ss.clear();;
 	ss << client.getClientFD();
 	log(std::cout, SUCCESS, "Message received on client socket", ss.str());
 	std::cout << buf << std::endl;
@@ -453,8 +455,23 @@ int ServerEngine::sendCGIResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendErrResponse(Client &client) {
+	std::string response = client.getResponse();
+	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
+	if (ret != static_cast<ssize_t>(response.length())) {
+		if (ret == static_cast<ssize_t>(-1)) {
+			log(std::cerr, ERROR, "send() call failed", "");
+			// TODO: consider removing from the set and from the map
+			return 1;
+		} else
+			log(std::cout, WARNING, "Unable to send the full data", "");
+	}
 
-	(void)client;
+	// Modify fd to monitor read events instead of write
+	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+
+	// Reset Client
+	client.reset();
+
 	return 0;
 }
 
@@ -479,13 +496,15 @@ int ServerEngine::sendResponse(Client &client) {
 	}
 
 	// If the request is for CGI
-	if (client.request->getIsCGI()) {
-		if (sendCGIResponse(client))
-			return 1;
-	} else {
-		if (sendRegResponse(client))
-			return 1;
-	}
+	// if (client.request->getIsCGI()) {
+	// 	if (sendCGIResponse(client))
+	// 		return 1;
+	// } else {
+		// if (sendRegResponse(client))
+		// 	return 1;
+	// }
+	if (sendRegResponse(client))
+		return 1;
 	return 0;
 }
 
@@ -537,7 +556,8 @@ int ServerEngine::setupSets() {
 		ss << it->getServerID();
 
 		std::string first_part = "Server " + ss.str() + " is listening on port";
-		ss.clear();
+		ss.str("");
+ss.clear();;
 		ss << ntohs(it->getPort());
 		log(std::cout, INFO, first_part, ss.str());
 		_server_map[it->getServerFD()] = *it;
@@ -595,7 +615,8 @@ int ServerEngine::runServers() {
 						return 1;
 				}
 			}
-			ss.clear();
+			ss.str("");
+ss.clear();;
 		}
 	}
 	return 0;

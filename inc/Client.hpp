@@ -7,7 +7,7 @@
 # include "Server.hpp"
 
 class Server;
-class Request;
+class HTTPRequest;
 
 class Client
 {
@@ -38,7 +38,7 @@ class Client
 
 		Server				*parent_server;		// server who is serving the current client
 		Location			*location_block;	// location block that will handle the request - NULL if
-		Request				*request;			// object to be populated during the parseHTTPRequest()
+		HTTPRequest			*request;			// object to be populated during the parseHTTPRequest()
 
 		static int			num_clients;	// number of clients
 	
@@ -51,6 +51,7 @@ class Client
 
 		int					_status_code;	// status code associated with the request
 
+		int					_cont_length;	// length of the requested content
 		std::string			_file_buff;		// buffer to where the file will be read
 		std::string			_file_type;		// type of the requested file
 		std::string			_response;		// response to be sent

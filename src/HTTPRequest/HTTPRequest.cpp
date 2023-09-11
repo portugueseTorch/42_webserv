@@ -1,15 +1,21 @@
 #include "HTTPRequest/HTTPRequest.hpp"
 
 
-HTTPRequest::HTTPRequest()
-	: _keepAlive(true), _contentLength(0), _parserCreated(false), _processed(true) {}
+HTTPRequest::HTTPRequest():
+	_keepAlive(true),
+	_contentLength(0),
+	_parserCreated(false),
+	_processed(true) {
+	_port = htons(8080);
+	_ip_address = inet_addr("0.0.0.0");
+}
 
 void HTTPRequest::process(std::string request) {
 	_content = request;
 	try {
 		parse();
 		setup();
-	} catch (parserNotInitialized & e) {
+	} catch (parserNotInitialized &e) {
 		log(std::cerr, ERROR, "HTTPRequest", e.what());
 	} catch(HTTPParser::invalidSyntaxException &e) {
 		log(std::cerr, ERROR, "Parser", e.what());
@@ -25,6 +31,33 @@ HTTPRequest::~HTTPRequest() {
 		delete parser;
 };
 
+void	HTTPRequest::setPort(uint32_t port) {
+	_port = port;
+}
+
+void	HTTPRequest::setIPAddress(in_addr_t ip_address) {
+	_ip_address = ip_address;
+}
+
+std::string	HTTPRequest::getServerName() {
+	std::string host;
+	std::vector<std::string> split;
+
+	if (getAllParams().count("host") == 0)
+		return "";
+	host = getAllParams()["host"];
+	// Split param
+	int end = host.find(":"); 
+	while (end != -1) { // Loop until no delimiter is left in the string.
+		split.push_back(host.substr(0, end));
+		host.erase(host.begin(), host.begin() + end + 1);
+		end = host.find(":");
+	}
+	split.push_back(host.substr(0, end));
+
+	return split[0];
+}
+
 void	HTTPRequest::parse(){
 	try
 	{
@@ -39,7 +72,7 @@ void	HTTPRequest::parse(){
 	}
 }
 
-void	HTTPRequest::setup(){
+void	HTTPRequest::setup() {
 	std::string headers[] = \
 	{ 	"cache-control", "connection", "date", "'pragma", "trailer", \
 		"transfer-encoding", "upgrade", "via", "warning", \
@@ -49,7 +82,7 @@ void	HTTPRequest::setup(){
 		"proxy-authorization", "range", "referer", "referrer-policy", "te", "user-agent", \
 		"allow", "content-encoding", "content-language", "content-length", \
 		"content-location", "content-md5", "content-range", "content-type", \
-		"expires", "last-modified", "extension-header"};
+		"expires", "last-modified", "extension-header", "upgrade-insecure-requests" };
 	std::vector<std::string> validHeaders(headers, headers + sizeof(headers) / sizeof(std::string));
 
 	std::list<Node>::const_iterator it = parser->getNodes().begin();
@@ -165,6 +198,7 @@ void	HTTPRequest::displayRequest() {
 }
 
 void HTTPRequest::displayParsedRequest(){
+	std::cout << std::left << std::setw(25) << "Host: " << std::setw(20) << _ip_address << ":" << ntohs(_port) << std::endl;
 	std::cout << std::left << std::setw(25) << "Method: " << std::setw(20) << _method << std::endl;
 	std::cout << std::left << std::setw(25) << "Request URI:" << std::setw(20) << _requestURI << std::endl;
 	std::cout << std::left << std::setw(25) << "Protocol:" << std::setw(20) << _protocol << std::endl;

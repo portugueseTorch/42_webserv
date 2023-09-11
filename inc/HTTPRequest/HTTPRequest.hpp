@@ -15,13 +15,20 @@ class HTTPRequest {
 		~HTTPRequest();
 		void displayParsedRequest();
 
+		// Setters
+		void			setPort(uint32_t port);
+		void			setIPAddress(in_addr_t ip_address);
+
 		// Getters
+		std::string		getServerName();
 		std::string		getMethod() const { return _method; }
 		std::string		getRequestURI() const { return _requestURI; }
 		std::string		getProtocol() const { return _protocol; }
 		bool			getKeepAlive() const { return _keepAlive; }
 		int				getContentLength() const { return _contentLength; }
 		std::string		getBody() const { return _body; }
+		uint32_t		getPort() const { return _port; }
+		in_addr_t		getIPAddress() const { return _ip_address; }
 		//to be changed to enum
 		bool			success() const { return _processed; }
 
@@ -51,8 +58,8 @@ class HTTPRequest {
 		void checkIfConnection(std::string paramName, std::string paramContent);
 		void checkContentLength(std::string paramName, std::string paramContent);
 
-		HTTPParser * parser;
-		std::string _content;
+		HTTPParser							*parser;
+		std::string							_content;
 
 		std::string 						_method;
 		std::string							_requestURI;
@@ -62,6 +69,9 @@ class HTTPRequest {
 		bool								_keepAlive;
 		int									_contentLength;
 		std::string							_body;
+		uint32_t							_port;
+		in_addr_t							_ip_address;
+		std::string 						_server_name;
 
 		std::map<std::string, std::string>	_params;
 		bool								_parserCreated;

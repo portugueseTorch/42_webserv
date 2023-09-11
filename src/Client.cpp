@@ -12,6 +12,7 @@ Client::Client() {
 	_client_id = num_clients;
 	_file_buff = "";
 	_status_code = 0;
+	_cont_length = 0;
 }
 
 Client::~Client() {
@@ -23,7 +24,6 @@ void Client::reset() {
 	_file_buff = "";
 	_status_code = 0;
 	_response = "";
-	parent_server = NULL;
 	location_block = NULL;
 	request = NULL;
 }
@@ -74,15 +74,18 @@ int Client::setupClient() {
 int Client::parseHTTPRequest(std::string request_str) {
 	if (request)
 		delete request;
-	request = new Request;
-	_request_str = request_str;
-	std::string first_line = request_str.substr(0, request_str.find_first_of('\n'));
-	int first_space = first_line.find_first_of(' ') + 1;
-	int last_space = first_line.find_last_of(' ');
-	std::string uri = first_line.substr(first_space, last_space - first_space);
-	if (uri[uri.length() - 1] == '/')
-		uri = uri.substr(0, uri.length() - 1);
-	request->setURI(uri);
+	request = new HTTPRequest;
+	if (!parent_server) {
+		log(std::cout, ERROR, "Somehow parent server is not assiged...", "");
+		return 1;
+	}
+	request->setPort(parent_server->getPort());
+	request->setIPAddress(parent_server->getIPAddress());
+	try {
+		request->process(request_str);
+	} catch (std::exception &e) {
+		return 1;
+	}
 	return 0;
 }
 
@@ -188,11 +191,13 @@ int Client::searchRequestedContent(std::string uri) {
 	std::string root = "";
 
 	// Check if there is a root specified or not
-	if (location_block && location_block->getRoot() != "")
-		root = location_block->getRoot();
-	else if (parent_server && parent_server->getRoot() != "")
-		root = parent_server->getRoot();
-	else
+	if (location_block && location_block->getRoot() != "") {
+		if (location_block->getRoot() != "/")
+			root = location_block->getRoot();
+	} else if (parent_server && parent_server->getRoot() != "") {
+		if (parent_server->getRoot() != "/")
+			root = parent_server->getRoot();
+	} else
 		root = "/default";	// TODO: Decide what the fallback folder is
 
 	// If uri does not have '.', or the last character of uri is '/', it's a directory
@@ -240,6 +245,7 @@ int Client::searchRequestedContent(std::string uri) {
 						_uri = "/" + *it;
 						uri = _uri;
 						found = true;
+						in_file.close();
 					}
 				}
 			}
@@ -280,7 +286,7 @@ int Client::searchRequestedContent(std::string uri) {
 				if (!in_file.eof())
 					_file_buff += "\n";
 			}
-			std::cout << _file_buff << std::endl;
+			_cont_length = _file_buff.length();
 			this->setStatusCode(200);	// TODO: Check nuances here
 			in_file.close();
 		} else {	// If the file exists but we don't have access to it
@@ -303,15 +309,15 @@ int Client::searchRequestedContent(std::string uri) {
  */
 int Client::buildHTTPResponse() {
 	// Get HTTP protocol from the request
-	_response += request->getHTTPProtocol() + " ";
+	_response += request->getProtocol() + " ";
 
 
 	// If the requested uri is CGI, call the appropriate function
 	// TODO:
 
-	_uri = request->getURI();
+	_uri = request->getRequestURI();
 	// Otherwise if method is GET, read content of the requested file
-	if (request->getHTTPMethod() == GET) {
+	if (request->getMethod() == "GET") {
 		searchRequestedContent(_uri);
 	}
 
@@ -338,11 +344,12 @@ int Client::buildHTTPResponse() {
 	// Add Server info
 	_response += "Server: Webserver/42.0\r\n";
 
-	ss.clear();
+	ss.str("");
+	ss.clear(); // Clear state flags.
 	// Add Content-Length
-	int content_length = _file_buff.length();
-	ss << content_length;
+	ss << _cont_length;
 	_response += "Content-Length: " + ss.str() += "\r\n";
+	std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
 
 	// Add Content-Type
 	_response += "Content-Type: " + _file_type + "\r\n";
