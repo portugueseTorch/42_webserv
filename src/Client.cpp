@@ -81,9 +81,9 @@ int Client::parseHTTPRequest(std::string request_str) {
 	}
 	request->setPort(parent_server->getPort());
 	request->setIPAddress(parent_server->getIPAddress());
-	try {
-		request->process(request_str);
-	} catch (std::exception &e) {
+	request->process(request_str);
+	if (!request->success()) {
+		_status_code = 400;
 		return 1;
 	}
 	return 0;
