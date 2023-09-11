@@ -1,0 +1,13 @@
+name: webserv CI
+
+on:
+  push:
+    branches: [ ghactions-test ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: make
+    run: make
