@@ -1,7 +1,6 @@
 #include "Webserv.hpp"
 
 int main(int argc, char **argv) {
-	int test = 0;
 	// Check wrong usage
 	if (argc > 2) {
 		std::cout << "[ERROR]:\t\tUsage: ./webserv [config_file_path]" << std::endl;
