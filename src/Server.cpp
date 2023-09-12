@@ -452,7 +452,10 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
-	_root = stash.back();
+	if (stash.back() != "/" && stash.back()[stash.back().length() - 1] == '/')
+		_root = stash.back().substr(0, stash.back().length() - 1);
+	else
+		_root = stash.back();
 	return 0;
 }
 

@@ -19,7 +19,6 @@ class Client
 		void				reset();
 
 		int					parseHTTPRequest(std::string request_str);
-		int					searchRequestedContent(std::string content);
 		int					buildHTTPResponse();
 		std::string			statusCodeToMessage(int status_code);
 		std::string			getContentType(std::string uri);
@@ -44,6 +43,9 @@ class Client
 	
 
 	private:
+		std::string			getRoot();
+		int					searchErrorFiles();
+		int					searchRequestedContent(std::string content);
 		int					_client_id;		// ID of the client
 		int					_client_fd;		// file descriptor of the client socket
 		std::string			_request_str;	// request received from the client server

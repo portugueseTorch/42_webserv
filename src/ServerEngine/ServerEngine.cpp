@@ -241,23 +241,27 @@ int ServerEngine::assignServer(Client &client) {
 		clientStringID = ss.str();
 		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
 		ss.str("");
-ss.clear();;
+		ss.clear();;
 		ss << client.parent_server->getServerID();
 		parentStringID = ss.str();
 		log(std::cout, SUCCESS, client_id_string, parentStringID);
 		client.parent_server->displayServer();
 
+		std::string uri = client.request->getRequestURI();
+		if (uri.find_first_of('/') != uri.find_last_of('/'))
+			uri = uri.substr(0, getSlashIndex(uri, 2));
+
 		std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
 		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
-			if (it->getLocation() == client.request->getRequestURI()) {
+			if (it->getLocation() == uri) {
 				client.location_block = &(*it);
 				break ;
 			}
 		}
 
+		client_id_string = "Client '" + clientStringID + "' assigned to location block";
 		if (client.location_block) {
-			client_id_string = "Client '" + clientStringID + "' assigned to location block";
 			log(std::cout, SUCCESS, client_id_string, "");
 			client.location_block->displayLocationBlock();
 		} else {
@@ -484,16 +488,12 @@ int ServerEngine::sendErrResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
+	std::cout << "Trying to build response with code: " << client.request->getStatusCode() << std::endl;
+	// If it's an error, call sendErrResponse()
+
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
-
-	// If it's an error, call sendErrResponse()
-	if (client.getIsError()) {
-		if (sendErrResponse(client))
-			return 1;
-		return 0;
-	}
 
 	// If the request is for CGI
 	// if (client.request->getIsCGI()) {

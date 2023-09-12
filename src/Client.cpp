@@ -83,7 +83,7 @@ int Client::parseHTTPRequest(std::string request_str) {
 	request->setIPAddress(parent_server->getIPAddress());
 	request->process(request_str);
 	if (!request->success()) {
-		_status_code = 400;
+		// _status_code = 400;
 		return 1;
 	}
 	return 0;
@@ -178,16 +178,7 @@ std::string Client::getContentType(std::string uri) {
 		return "undefined";
 }
 
-/**
- * @brief searches for the content associated with the uri URI.
- * If the content exists and is accessible, the file is read and
- * stored in _file_buff, and the status code is set appropriately.
- * 
- * @param uri URI of the request associated with the client
- * @return int Returns 0 on success, and 1 on failure
- */
-int Client::searchRequestedContent(std::string uri) {
-
+std::string	Client::getRoot() {
 	std::string root = "";
 
 	// Check if there is a root specified or not
@@ -200,6 +191,22 @@ int Client::searchRequestedContent(std::string uri) {
 	} else
 		root = "/default";	// TODO: Decide what the fallback folder is
 
+	return root;
+}
+
+/**
+ * @brief searches for the content associated with the uri URI.
+ * If the content exists and is accessible, the file is read and
+ * stored in _file_buff, and the status code is set appropriately.
+ * 
+ * @param uri URI of the request associated with the client
+ * @return int Returns 0 on success, and 1 on failure
+ */
+int Client::searchRequestedContent(std::string uri) {
+	std::string root = getRoot();
+
+	std::cout << "The relevant root is: " << root << std::endl;
+	std::cout << "URI: " << uri << std::endl;
 	// If uri does not have '.', or the last character of uri is '/', it's a directory
 	_file_type = getContentType(uri);
 	if (_file_type == "undefined") {
@@ -215,16 +222,21 @@ int Client::searchRequestedContent(std::string uri) {
 				for (std::vector<std::string>::iterator it = possible_indexes.begin(); it != possible_indexes.end(); it++) {
 					struct stat sb;
 					std::ifstream in_file;
-					std::string tmp = "." + root + "/" + *it;
-					std::cout << "\tTesting " << tmp << std::endl;
+					std::string tmp;
+					if (location_block->getRoot() != "") tmp = "." + root + "/" + *it;
+					else tmp = "." + root + uri + "/" + *it;
+					std::cout << "\tTesting in location_block " << tmp << std::endl;
 					if (stat(tmp.c_str(), &sb) == 0 && access(tmp.c_str(), R_OK) == 0) {
 						in_file.open(tmp.c_str());
 						if (!in_file.is_open())
 							continue;
 						_file_type = getContentType(*it);
-						_uri = "/" + *it;
+						if (location_block->getRoot() != "") _uri = "/" + *it;
+						else _uri = uri + "/" + *it;
 						uri = _uri;
 						found = true;
+						in_file.close();
+						break;
 					}
 				}
 			}
@@ -235,17 +247,21 @@ int Client::searchRequestedContent(std::string uri) {
 				for (std::vector<std::string>::iterator it = possible_indexes.begin(); it != possible_indexes.end(); it++) {
 					struct stat sb;
 					std::ifstream in_file;
-					std::string tmp = "." + root + "/" + *it;
-					std::cout << "\tTesting " << tmp << std::endl;
+					std::string tmp;
+					if (uri == "/") tmp = "." + root + uri + *it;
+					else tmp = "." + root + uri + "/" + *it;
+					std::cout << "\tTesting in parent_server " << tmp << std::endl;
 					if (stat(tmp.c_str(), &sb) == 0 && access(tmp.c_str(), R_OK) == 0) {
 						in_file.open(tmp.c_str());
 						if (!in_file.is_open())
 							continue;
 						_file_type = getContentType(*it);
-						_uri = "/" + *it;
+						if (uri == "/") _uri = uri + *it;
+						else _uri = uri + "/" + *it;
 						uri = _uri;
 						found = true;
 						in_file.close();
+						break;
 					}
 				}
 			}
@@ -264,7 +280,7 @@ int Client::searchRequestedContent(std::string uri) {
 
 	// Create the full path and test that we have access to it
 	std::string full_path = '.' + root + uri;
-	std::cout << full_path << std::endl;
+	std::cout << "Trying to open " << full_path << std::endl;
 
 	// Check if the resource exists
 	struct stat sb;
@@ -300,6 +316,68 @@ int Client::searchRequestedContent(std::string uri) {
 	return 0;
 }
 
+int Client::searchErrorFiles() {
+	std::string	root = getRoot();
+	std::string file;
+
+	// If an location block was assigned, check for error pages
+	if (location_block && !location_block->getErrorPages().empty()) {
+		if (location_block->getErrorPages().count(getStatusCode()) == 1) {
+			std::vector<std::string> &err_pages = location_block->getErrorPages().at(getStatusCode());
+			for (std::vector<std::string>::iterator it = err_pages.begin(); it != err_pages.end(); it++) {
+				std::ifstream in_file;
+				struct stat sb;
+
+				if ((*it)[0] != '/' && root[root.length() - 1] != '/') file = "." + root + "/" + *it;
+				else file = "." + root + *it;
+				if (stat(file.c_str(), &sb) == 0 && access(file.c_str(), R_OK) == 0) {
+					in_file.open(file.c_str());
+					if (!in_file.is_open())
+						continue;
+					in_file.close();
+					break;
+				}
+			}
+		} else {
+			file = "./resources/error/index.html";
+		}
+	} else {
+		file = "./resources/error/index.html";
+	}
+
+	struct stat sb;
+	if (stat(file.c_str(), &sb) == 0) {
+		if (access(file.c_str(), R_OK) == 0) {	// If we have access to it
+			// Open the file and read it into a string
+			std::ifstream in_file;
+			std::string buff;
+
+			in_file.open(file.c_str());
+			// If we fail to open the file (knowing that it exists), set server error
+			if (!in_file.is_open()) {
+				log(std::cerr, ERROR, "Unable to open file", file);
+				this->setStatusCode(500);
+				return 1;
+			}
+			while (std::getline(in_file, buff)) {
+				_file_buff += buff;
+				if (!in_file.eof())
+					_file_buff += "\n";
+			}
+			_cont_length = _file_buff.length();
+			in_file.close();
+		} else {	// If the file exists but we don't have access to it
+			log(std::cerr, ERROR, "Requested URI does not have necessary permissions", file);
+			this->setStatusCode(403);
+		}
+	} else {	// If the resource does not exist
+		log(std::cerr, ERROR, "Requested URI does not exist", file);
+		this->setStatusCode(404);
+	}
+
+	return 0;
+}
+
 /**
  * @brief Builds the HTTP response based off of the attributes
  * populated during parseHTTPRequest() function in the Request
@@ -318,8 +396,11 @@ int Client::buildHTTPResponse() {
 	_uri = request->getRequestURI();
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
-		searchRequestedContent(_uri);
+		if (!getIsError())
+			searchRequestedContent(_uri);
 	}
+	if (getIsError())
+		searchErrorFiles();
 
 	// If the status_code is not set, something went wrong
 	if (_status_code == 0) {
@@ -352,7 +433,10 @@ int Client::buildHTTPResponse() {
 	std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
 
 	// Add Content-Type
-	_response += "Content-Type: " + _file_type + "\r\n";
+	if (!getIsError())
+		_response += "Content-Type: " + _file_type + "\r\n";
+	else
+		_response += "Content-Type: text/html\r\n";
 
 	// Add Body
 	_response += "\r\n" + _file_buff + "\r\n";

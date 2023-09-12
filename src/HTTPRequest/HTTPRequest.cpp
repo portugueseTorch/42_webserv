@@ -20,8 +20,13 @@ void HTTPRequest::process(std::string request) {
 		_statusCode = 400;
 		log(std::cerr, ERROR, "HTTPRequest", e.what());
 	} catch(HTTPParser::invalidSyntaxException &e) {
-		log(std::cerr, ERROR, "Parser", e.what());
-		_statusCode = 400;
+		log(std::cerr, ERROR, "HTTP Parser", e.what());
+
+		std::string err = e.what();
+		if (err == "wrong HTTP request method")
+			_statusCode = 405;
+		else
+			_statusCode = 400;
 	} catch(invalidHTTPRequest &e) {
 		_statusCode = 400;
 	}
@@ -99,7 +104,10 @@ void	HTTPRequest::setup() {
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
 					extractQuery(it->_content);
 				} else {
-					this->_requestURI = it->_content;
+					if (it->_content != "/" && it->_content[it->_content.length() - 1] == '/')
+						_requestURI = it->_content.substr(0, it->_content.length() - 1);
+					else
+						this->_requestURI = it->_content;
 				}
 				break ;
 			}

@@ -123,7 +123,7 @@ bool HTTPParser::validMethod() {
 			return true;
 		}
 	}
-	_errReason = "wrong HTTP request method " + it->content;
+	_errReason = "wrong HTTP request method";
 	return false;
 }
 
@@ -163,7 +163,7 @@ bool HTTPParser::validHTTPVersion() {
 			return true;
 		}
 	}
-	_errReason = "wrong HTTP protocol " + toKeep;
+	_errReason = "wrong HTTP protocol" + toKeep;
 	return false;
 }
 

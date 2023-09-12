@@ -75,6 +75,7 @@ enum MsgType {
 };
 
 /****** UTILS.CPP ******/
+int			getSlashIndex(std::string target, int n);
 int			damerauLevenshteinDistance(std::string input, std::string valid);
 bool		isindent(int i);
 void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);

@@ -128,3 +128,26 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 		stream << ": \'" << optional << "\'";
 	stream << RESET << std::endl;
 }
+
+/**
+ * @brief Returns the index of the nth occurence of a '/'
+ * in the target string
+ * 
+ * @param target string to search for '/'
+ * @param n occurence of '/'
+ * @return int Returns the index of '/' on success, and -1 on failure
+ */
+int getSlashIndex(std::string target, int n) {
+	int count = 0;
+
+	if (n <= 0)
+		return -1;
+	for (size_t i = 0; i < target.length(); i++) {
+		if (target[i] == '/') {
+			count++;
+			if (count == n)
+				return i;
+		}
+	}
+	return -1;
+}
