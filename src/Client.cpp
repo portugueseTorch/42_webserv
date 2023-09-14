@@ -319,6 +319,7 @@ int Client::searchRequestedContent(std::string uri) {
 int Client::searchErrorFiles() {
 	std::string	root = getRoot();
 	std::string file;
+	bool found = false;
 
 	// If an location block was assigned, check for error pages
 	if (location_block && !location_block->getErrorPages().empty()) {
@@ -335,14 +336,34 @@ int Client::searchErrorFiles() {
 					if (!in_file.is_open())
 						continue;
 					in_file.close();
+					found = true;
+					break;
+				}
+			}
+		}
+	}
+	if (!found && parent_server && !parent_server->getErrorPages().empty()) {
+		if (parent_server->getErrorPages().count(getStatusCode()) == 1) {
+			std::vector<std::string> &err_pages = parent_server->getErrorPages().at(getStatusCode());
+			for (std::vector<std::string>::iterator it = err_pages.begin(); it != err_pages.end(); it++) {
+				std::ifstream in_file;
+				struct stat sb;
+
+				if ((*it)[0] != '/' && root[root.length() - 1] != '/') file = "." + root + "/" + *it;
+				else file = "." + root + *it;
+				if (stat(file.c_str(), &sb) == 0 && access(file.c_str(), R_OK) == 0) {
+					in_file.open(file.c_str());
+					if (!in_file.is_open())
+						continue;
+					in_file.close();
 					break;
 				}
 			}
 		} else {
-			file = "./resources/error/index.html";
+			file = "./resources/error/def_error.html";
 		}
 	} else {
-		file = "./resources/error/index.html";
+		file = "./resources/error/def_error.html";
 	}
 
 	struct stat sb;
