@@ -5,3 +5,9 @@
 .success {
 	color: green;
 }
+
+.center {
+	text-align: center;
+	display: block;
+	text-decoration: none;
+}

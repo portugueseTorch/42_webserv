@@ -452,14 +452,14 @@ int ServerEngine::sendCGIResponse(Client &client) {
 		std::stringstream ss;
 
 		// char *msg = new char[256];
-		int bytes = read(pipe_fd[0], msg, 256);
+		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		while (bytes != 0) {
 			if (bytes == -1) {
 				log(std::cerr, ERROR, "read() call failed", "");
 				return 1;
 			}
 			body += msg;
-			bytes = read(pipe_fd[0], msg, 256);
+			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
 		// if (read(pipe_fd[0], msg, 256) == -1) {
 		// }
@@ -544,7 +544,7 @@ int ServerEngine::sendResponse(Client &client) {
 		// if (sendRegResponse(client))
 		// 	return 1;
 	// }
-	if (client.request->getQueryParams().size()) {
+	if (client.request->isCGI) {
 		// log(std::cout, INFO, "aqui", "");
 		// exit(0);
 		if (sendCGIResponse(client))

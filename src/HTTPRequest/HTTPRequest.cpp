@@ -2,6 +2,7 @@
 
 
 HTTPRequest::HTTPRequest():
+	isCGI(false),
 	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
@@ -97,6 +98,7 @@ void	HTTPRequest::setup() {
 			case URI: {
 				if (it->_content.find("cgi-bin") != std::string::npos && \
 					it->_content.find(".py") != std::string::npos) {
+					isCGI = true;
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
 					extractQuery(it->_content);
 				} else {
@@ -171,6 +173,8 @@ void	HTTPRequest::extractQuery(std::string URI) {
 	std::string param;
 	std::string value;
 
+	if (URI.find("?") == std::string::npos)
+		return ;
 	while (getline(squery, buf, '&')) {
 		size_t sep = buf.find('=');
 		//change to if !sep throw exception

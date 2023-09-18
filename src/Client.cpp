@@ -198,7 +198,7 @@ int Client::searchRequestedContent(std::string uri) {
 			// log(std::cerr, ERROR, "aqui", location_block->getRoot());
 			// exit(0);
 			log(std::cout, INFO, "root", location_block->getRoot());
-			root = request->getQueryParams().size() ? "./" : location_block->getRoot();
+			root = request->isCGI ? "./" : location_block->getRoot();
 		}
 	} else if (parent_server && parent_server->getRoot() != "") {
 		if (parent_server->getRoot() != "/")
@@ -356,7 +356,7 @@ int Client::buildHTTPResponse() {
 	ss.clear(); // Clear state flags.
 	// Add Content-Length
 	ss << _cont_length;
-	if (request->getQueryParams().empty())
+	if (!request->isCGI)
 		_response += "Content-Length: " + ss.str() += "\r\n";
 	std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
 
@@ -364,7 +364,7 @@ int Client::buildHTTPResponse() {
 	_response += "Content-Type: " + _file_type;
 
 	// Add Body
-	if (request->getQueryParams().empty()) {
+	if (!request->isCGI) {
 		_response += "\r\n\r\n";
 		_response += _file_buff + "\r\n";
 	} else {

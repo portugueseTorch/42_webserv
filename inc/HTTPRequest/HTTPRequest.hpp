@@ -31,6 +31,7 @@ class HTTPRequest {
 		in_addr_t		getIPAddress() const { return _ip_address; }
 		bool			success() const;
 		int				getStatusCode() const { return _statusCode; }
+		bool			isCGI;
 
 		std::vector<std::string>			&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
