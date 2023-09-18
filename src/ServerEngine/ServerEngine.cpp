@@ -364,7 +364,10 @@ int ServerEngine::readHTTPRequest(Client &client) {
 
 	// Parse HTTP Request
 	client.parseHTTPRequest(buf);
-
+	// if (client.request->getQueryParams().size()) {
+	// 	sendCGIResponse(client);
+	// 	return 0;
+	// }
 	// Assign the server according to the parsed request
 	if (assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
@@ -414,9 +417,6 @@ int ServerEngine::sendCGIResponse(Client &client) {
 	int pipe_fd[2];
 	int pid;
 
-	//to delete later
-	(void)client;
-
 	// Create the pipe
 	if (pipe(pipe_fd) == -1) {
 		log(std::cerr, ERROR, "pipe() call failed", "");
@@ -430,20 +430,61 @@ int ServerEngine::sendCGIResponse(Client &client) {
 
 	// In the child process, execute the cgi script
 	if (pid == 0) {
-		std::cout << "Hello, there!" << std::endl;
+		// std::cout << "Hello, there!" << std::endl;
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
 		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
-		execve("/usr/bin/python3", args, NULL);
+		char **envp = new char*[client.request->getQueryParams().size() + 1];
+		size_t i = 0;
+		for (; i < client.request->getQueryParams().size(); i++) {
+			envp[i] = new char[client.request->getQueryParams()[i].size() + 1];
+			strcpy(envp[i], client.request->getQueryParams()[i].c_str());
+		}
+		envp[i] = NULL;
+		// char *envp[] = { (char*)"name=teresa", NULL};
+		execve("/usr/bin/python3", args, envp);
 	} else {
 		close(pipe_fd[1]);
 		wait(NULL);
-		char *msg = new char[256];
-		if (read(pipe_fd[0], msg, 256) == -1) {
-			log(std::cerr, ERROR, "read() call failed", "");
-			return 1;
+		char msg[MAX_LENGTH] = "";
+		std::string response = client.getResponse();
+		std::string body;
+		std::stringstream ss;
+
+		// char *msg = new char[256];
+		int bytes = read(pipe_fd[0], msg, 256);
+		while (bytes != 0) {
+			if (bytes == -1) {
+				log(std::cerr, ERROR, "read() call failed", "");
+				return 1;
+			}
+			body += msg;
+			bytes = read(pipe_fd[0], msg, 256);
 		}
-		std::cout << msg << std::endl;
+		// if (read(pipe_fd[0], msg, 256) == -1) {
+		// }
+		// std::cout << response << std::endl;
+		ss << body.size();
+		response += "Content-Length: " + ss.str() += "\r\n\r\n";
+		response += body + "\r\n";
+		ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
+		if (ret != static_cast<ssize_t>(response.length())) {
+			if (ret == static_cast<ssize_t>(-1)) {
+				log(std::cerr, ERROR, "send() call failed", "");
+				// TODO: consider removing from the set and from the map
+				return 1;
+			} else
+				log(std::cout, WARNING, "Unable to send the full data", "");
+		}
+
+		// Modify fd to monitor read events instead of write
+		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+
+		// Reset Client
+		client.reset();
+
+		return 0;
+		// delete []msg;
 	}
 	return 0;
 }
@@ -503,7 +544,13 @@ int ServerEngine::sendResponse(Client &client) {
 		// if (sendRegResponse(client))
 		// 	return 1;
 	// }
-	if (sendRegResponse(client))
+	if (client.request->getQueryParams().size()) {
+		// log(std::cout, INFO, "aqui", "");
+		// exit(0);
+		if (sendCGIResponse(client))
+			return 1;
+	}
+	else if (sendRegResponse(client))
 		return 1;
 	return 0;
 }

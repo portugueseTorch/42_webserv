@@ -95,7 +95,8 @@ void	HTTPRequest::setup() {
 				break ;
 			}
 			case URI: {
-				if (it->_content.find(".py") != std::string::npos) {
+				if (it->_content.find("cgi-bin") != std::string::npos && \
+					it->_content.find(".py") != std::string::npos) {
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
 					extractQuery(it->_content);
 				} else {
@@ -181,7 +182,7 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		value = buf.substr(sep + 1, buf.size());
 		//add exception
 		if (param.size() && value.size())
-			_query[param] = value;
+			_query.push_back(buf);
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
 			throw invalidHTTPRequest();
@@ -205,15 +206,15 @@ void HTTPRequest::displayParsedRequest(){
 	std::cout << std::left << std::setw(25) << "Protocol:" << _protocol << std::endl;
 	std::map<std::string, std::string>::iterator it;
 	
-	if (_query.size()) {
-		std::cout << "\n###Query params###" << std::endl;
-		it = _query.begin();
-		for (; it != _query.end(); it++) {
-			std::string temp = it->first;
-			temp.append(":");
-			std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
-		}
-	}
+	// if (_query.size()) {
+	// 	std::cout << "\n###Query params###" << std::endl;
+	// 	it = _query.begin();
+	// 	for (; it != _query.end(); it++) {
+	// 		std::string temp = it->first;
+	// 		temp.append(":");
+	// 		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
+	// 	}
+	// }
 
 	std::cout << std::endl << std::left << std::setw(25) << "keep-alive:" << 
 		std::setw(20) << (_keepAlive ? "true" : "false")<< std::endl << std::endl;

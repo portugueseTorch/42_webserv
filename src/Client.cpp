@@ -174,6 +174,8 @@ std::string Client::getContentType(std::string uri) {
 		return "image/ico\r\n";
 	else if (ex == ".svg")
 		return "image/svg+xml\r\n";
+	else if (ex == ".py")
+		return "text/html\r\n";
 	else
 		return "undefined";
 }
@@ -192,8 +194,12 @@ int Client::searchRequestedContent(std::string uri) {
 
 	// Check if there is a root specified or not
 	if (location_block && location_block->getRoot() != "") {
-		if (location_block->getRoot() != "/")
-			root = location_block->getRoot();
+		if (location_block->getRoot() != "/") {
+			// log(std::cerr, ERROR, "aqui", location_block->getRoot());
+			// exit(0);
+			log(std::cout, INFO, "root", location_block->getRoot());
+			root = request->getQueryParams().size() ? "./" : location_block->getRoot();
+		}
 	} else if (parent_server && parent_server->getRoot() != "") {
 		if (parent_server->getRoot() != "/")
 			root = parent_server->getRoot();
@@ -206,6 +212,8 @@ int Client::searchRequestedContent(std::string uri) {
 		log(std::cerr, ERROR, "Media type not supported", uri);
 		this->setStatusCode(415);
 		return 0;
+	} else if (uri.find("/cgi-bin") == 0) {
+		root = "";
 	} else if (_file_type == "directory") {
 		// Check if an 'index' directive was provided
 		bool found = false;
@@ -348,14 +356,20 @@ int Client::buildHTTPResponse() {
 	ss.clear(); // Clear state flags.
 	// Add Content-Length
 	ss << _cont_length;
-	_response += "Content-Length: " + ss.str() += "\r\n";
+	if (request->getQueryParams().empty())
+		_response += "Content-Length: " + ss.str() += "\r\n";
 	std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
 
 	// Add Content-Type
-	_response += "Content-Type: " + _file_type + "\r\n";
+	_response += "Content-Type: " + _file_type;
 
 	// Add Body
-	_response += "\r\n" + _file_buff + "\r\n";
+	if (request->getQueryParams().empty()) {
+		_response += "\r\n\r\n";
+		_response += _file_buff + "\r\n";
+	} else {
+		
+	}
 
 	std::cout << _response << std::endl;
 	return 0;
