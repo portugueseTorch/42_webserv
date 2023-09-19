@@ -64,7 +64,6 @@ class ServerEngine {
 
 		int		sendErrResponse(Client &client);
 		int 	sendRegResponse(Client &client);
-		int 	sendCGIResponse(Client &client);
 };
 
 #endif

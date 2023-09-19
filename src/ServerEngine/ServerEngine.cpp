@@ -406,90 +406,6 @@ int ServerEngine::sendRegResponse(Client &client) {
 }
 
 /**
- * @brief Runs the CGI script in a child process, writes the output to
- * a pipe, and the parent process reads from the pipe and sends the response
- * to the client. It assumes that all requests fed to the function are valid
- * 
- * @param client Client to which the request reffers
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendCGIResponse(Client &client) {
-	int pipe_fd[2];
-	int pid;
-
-	// Create the pipe
-	if (pipe(pipe_fd) == -1) {
-		log(std::cerr, ERROR, "pipe() call failed", "");
-		return 1;
-	}
-	// Fork and execve the script on the child pr
-	if ((pid = fork()) == -1) {
-		log(std::cerr, ERROR, "fork() call failed", "");
-		return 1;
-	}
-
-	// In the child process, execute the cgi script
-	if (pid == 0) {
-		// std::cout << "Hello, there!" << std::endl;
-		dup2(pipe_fd[1], STDOUT_FILENO);
-		close(pipe_fd[0]);
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
-		char **envp = new char*[client.request->getQueryParams().size() + 1];
-		size_t i = 0;
-		for (; i < client.request->getQueryParams().size(); i++) {
-			envp[i] = new char[client.request->getQueryParams()[i].size() + 1];
-			strcpy(envp[i], client.request->getQueryParams()[i].c_str());
-		}
-		envp[i] = NULL;
-		// char *envp[] = { (char*)"name=teresa", NULL};
-		execve("/usr/bin/python3", args, envp);
-	} else {
-		close(pipe_fd[1]);
-		wait(NULL);
-		char msg[MAX_LENGTH] = "";
-		std::string response = client.getResponse();
-		std::string body;
-		std::stringstream ss;
-
-		// char *msg = new char[256];
-		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
-		while (bytes != 0) {
-			if (bytes == -1) {
-				log(std::cerr, ERROR, "read() call failed", "");
-				return 1;
-			}
-			body += msg;
-			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
-		}
-		// if (read(pipe_fd[0], msg, 256) == -1) {
-		// }
-		// std::cout << response << std::endl;
-		ss << body.size();
-		response += "Content-Length: " + ss.str() += "\r\n\r\n";
-		response += body + "\r\n";
-		ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
-		if (ret != static_cast<ssize_t>(response.length())) {
-			if (ret == static_cast<ssize_t>(-1)) {
-				log(std::cerr, ERROR, "send() call failed", "");
-				// TODO: consider removing from the set and from the map
-				return 1;
-			} else
-				log(std::cout, WARNING, "Unable to send the full data", "");
-		}
-
-		// Modify fd to monitor read events instead of write
-		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-
-		// Reset Client
-		client.reset();
-
-		return 0;
-		// delete []msg;
-	}
-	return 0;
-}
-
-/**
  * @brief Builds an error response and sends it back to the client
  * 
  * @param client Client to whom the response will be sent
@@ -536,21 +452,7 @@ int ServerEngine::sendResponse(Client &client) {
 		return 0;
 	}
 
-	// If the request is for CGI
-	// if (client.request->getIsCGI()) {
-	// 	if (sendCGIResponse(client))
-	// 		return 1;
-	// } else {
-		// if (sendRegResponse(client))
-		// 	return 1;
-	// }
-	if (client.request->isCGI) {
-		// log(std::cout, INFO, "aqui", "");
-		// exit(0);
-		if (sendCGIResponse(client))
-			return 1;
-	}
-	else if (sendRegResponse(client))
+	if (sendRegResponse(client))
 		return 1;
 	return 0;
 }

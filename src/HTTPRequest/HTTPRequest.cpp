@@ -97,7 +97,8 @@ void	HTTPRequest::setup() {
 			}
 			case URI: {
 				if (it->_content.find("cgi-bin") != std::string::npos && \
-					it->_content.find(".py") != std::string::npos) {
+					(it->_content.find(".py") != std::string::npos || \
+					it->_content == "/cgi-bin" || it->_content == "/cgi-bin/")) {
 					isCGI = true;
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
 					extractQuery(it->_content);

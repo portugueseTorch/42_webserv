@@ -214,6 +214,7 @@ int Client::searchRequestedContent(std::string uri) {
 		return 0;
 	} else if (uri.find("/cgi-bin") == 0) {
 		root = "";
+		_file_type = "text/html\r\n";
 	} else if (_file_type == "directory") {
 		// Check if an 'index' directive was provided
 		bool found = false;
@@ -319,10 +320,6 @@ int Client::buildHTTPResponse() {
 	// Get HTTP protocol from the request
 	_response += request->getProtocol() + " ";
 
-
-	// If the requested uri is CGI, call the appropriate function
-	// TODO:
-
 	_uri = request->getRequestURI();
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
@@ -364,13 +361,77 @@ int Client::buildHTTPResponse() {
 	_response += "Content-Type: " + _file_type;
 
 	// Add Body
-	if (!request->isCGI) {
+	if (request->isCGI) {
+		return buildCGIResponse();
+	} else {
 		_response += "\r\n\r\n";
 		_response += _file_buff + "\r\n";
-	} else {
-		
 	}
 
 	std::cout << _response << std::endl;
 	return 0;
+}
+
+/**
+ * The function `buildCGIResponse` creates a pipe, forks a child process, and executes a Python script
+ * to generate a CGI response, which is then read from the pipe and added to the response string.
+ * 
+ * @return an integer value.
+ */
+int	Client::buildCGIResponse() {
+	int pipe_fd[2];
+	int pid;
+
+	// Create the pipe
+	if (pipe(pipe_fd) == -1) {
+		log(std::cerr, ERROR, "pipe() call failed", "");
+		return 1;
+	}
+	// Fork and execve the script on the child pr
+	if ((pid = fork()) == -1) {
+		log(std::cerr, ERROR, "fork() call failed", "");
+		return 1;
+	}
+
+	if (pid == 0) {
+		dup2(pipe_fd[1], STDOUT_FILENO);
+		close(pipe_fd[0]);
+		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
+		char **envp = vectToArr(request->getQueryParams());
+		execve("/usr/bin/python3", args, envp);
+		//need error handling so request is not left pending
+		delete []envp;
+	} else {
+		close(pipe_fd[1]);
+		wait(NULL);
+		char msg[MAX_LENGTH] = "";
+		std::string body;
+		std::stringstream ss;
+
+		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+		while (bytes != 0) {
+			if (bytes == -1) {
+				log(std::cerr, ERROR, "read() call failed", "");
+				return 1;
+			}
+			body += msg;
+			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+		}
+
+		ss << body.size();
+		_response += "Content-Length: " + ss.str() += "\r\n\r\n";
+		_response += body + "\r\n";
+	}
+	return 0;
+}
+
+char**	Client::vectToArr(std::vector<std::string> vect) {
+	char **envp = new char*[vect.size() + 1];
+	size_t i = 0;
+	for (; i < vect.size(); i++) {
+		envp[i] = new char[vect[i].size() + 1];
+		strcpy(envp[i], vect[i].c_str());
+	}
+	envp[i] = NULL;
+	return envp;
 }
