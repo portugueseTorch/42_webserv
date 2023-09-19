@@ -1,0 +1,50 @@
+.failure {
+	color: red;
+}
+
+.success {
+	color: green;
+}
+
+.center {
+	text-align: center;
+	display: block;
+	text-decoration: none;
+}
+
+a:visited {
+	color: black;
+}
+
+.button {
+	width: 100px;
+	height: 20px;
+	background-color: bisque;
+	color: black;
+	padding: 10px;
+	border-radius: 5px;
+	margin: 0 auto;
+}
+
+body {
+	background-color: black;
+	color: white;
+}
+
+.navbar {
+	width: 200px;
+	margin: 50px auto 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+.navbar a {
+	color: white;
+	text-decoration: none;
+}
+
+.navbar a:visited {
+	color: white;
+}

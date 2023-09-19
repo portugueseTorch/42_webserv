@@ -364,7 +364,10 @@ int ServerEngine::readHTTPRequest(Client &client) {
 
 	// Parse HTTP Request
 	client.parseHTTPRequest(buf);
-
+	// if (client.request->getQueryParams().size()) {
+	// 	sendCGIResponse(client);
+	// 	return 0;
+	// }
 	// Assign the server according to the parsed request
 	if (assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
@@ -399,52 +402,6 @@ int ServerEngine::sendRegResponse(Client &client) {
 	// Reset Client
 	client.reset();
 
-	return 0;
-}
-
-/**
- * @brief Runs the CGI script in a child process, writes the output to
- * a pipe, and the parent process reads from the pipe and sends the response
- * to the client. It assumes that all requests fed to the function are valid
- * 
- * @param client Client to which the request reffers
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendCGIResponse(Client &client) {
-	int pipe_fd[2];
-	int pid;
-
-	//to delete later
-	(void)client;
-
-	// Create the pipe
-	if (pipe(pipe_fd) == -1) {
-		log(std::cerr, ERROR, "pipe() call failed", "");
-		return 1;
-	}
-	// Fork and execve the script on the child pr
-	if ((pid = fork()) == -1) {
-		log(std::cerr, ERROR, "fork() call failed", "");
-		return 1;
-	}
-
-	// In the child process, execute the cgi script
-	if (pid == 0) {
-		std::cout << "Hello, there!" << std::endl;
-		dup2(pipe_fd[1], STDOUT_FILENO);
-		close(pipe_fd[0]);
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
-		execve("/usr/bin/python3", args, NULL);
-	} else {
-		close(pipe_fd[1]);
-		wait(NULL);
-		char *msg = new char[256];
-		if (read(pipe_fd[0], msg, 256) == -1) {
-			log(std::cerr, ERROR, "read() call failed", "");
-			return 1;
-		}
-		std::cout << msg << std::endl;
-	}
 	return 0;
 }
 
@@ -495,14 +452,6 @@ int ServerEngine::sendResponse(Client &client) {
 		return 0;
 	}
 
-	// If the request is for CGI
-	// if (client.request->getIsCGI()) {
-	// 	if (sendCGIResponse(client))
-	// 		return 1;
-	// } else {
-		// if (sendRegResponse(client))
-		// 	return 1;
-	// }
 	if (sendRegResponse(client))
 		return 1;
 	return 0;

@@ -41,7 +41,6 @@
 # include "HTTPRequest/HTTPRequest.hpp"
 # include "HTTPRequest/Lexer.hpp"
 # include "HTTPRequest/Parser.hpp"
-# include "Request.hpp"
 
 # define RESET			"\x1B[0m"
 # define RED			"\x1B[31m"

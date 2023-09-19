@@ -31,8 +31,9 @@ class HTTPRequest {
 		in_addr_t		getIPAddress() const { return _ip_address; }
 		bool			success() const;
 		int				getStatusCode() const { return _statusCode; }
+		bool			isCGI;
 
-		std::map<std::string, std::string>	&getQueryParams() { return _query; }
+		std::vector<std::string>			&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
 
 		class invalidHTTPRequest : public std::exception {
@@ -65,7 +66,7 @@ class HTTPRequest {
 		std::string 						_method;
 		std::string							_requestURI;
 		std::string 						_protocol;
-		std::map<std::string, std::string>	_query;
+		std::vector<std::string>			_query;
 		bool								_keepAlive;
 		int									_contentLength;
 		std::string							_body;
