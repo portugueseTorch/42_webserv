@@ -5,6 +5,10 @@
 # include <iostream>
 # include <string>
 # include <fstream>
+# include <sstream>
+# include <iomanip>
+
+# include <ctime>
 
 # include <list>
 # include <vector>
@@ -28,12 +32,15 @@
 # include <sys/stat.h>
 # include <sys/time.h>
 
-# include "Lexer.hpp"
-# include "Parser.hpp"
-# include "Location.hpp"
-# include "Request.hpp"
+
 # include "Server.hpp"
-# include "ServerEngine.hpp"
+# include "ServerEngine/Lexer.hpp"
+# include "ServerEngine/Parser.hpp"
+# include "ServerEngine/Location.hpp"
+# include "ServerEngine/ServerEngine.hpp"
+# include "HTTPRequest/HTTPRequest.hpp"
+# include "HTTPRequest/Lexer.hpp"
+# include "HTTPRequest/Parser.hpp"
 
 # define RESET			"\x1B[0m"
 # define RED			"\x1B[31m"
@@ -48,9 +55,14 @@
 # define LIGHT_BLUE		"\x1B[94m"
 # define LIGHT_MAGENTA	"\x1B[95m"
 
-# define MAX_EVENTS 10
-# define EPOLL_TIMEOUT 1000
-# define MAX_LENGTH 4960
+# define MAX_EVENTS		10
+# define EPOLL_TIMEOUT	1000
+# define MAX_LENGTH		4960
+# define READ_SET		0
+# define WRITE_SET		1
+# define ADD_SET		2
+# define MOD_SET		4
+# define DEL_SET		8
 
 enum MsgType {
 	INFO,
@@ -59,14 +71,6 @@ enum MsgType {
 	WARNING,
 	SUCCESS,
 	ALL,
-};
-
-enum Method {
-	GET,
-	POST,
-	HEAD,
-	PUT,
-	DELETE,
 };
 
 /****** UTILS.CPP ******/

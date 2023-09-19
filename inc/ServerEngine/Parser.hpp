@@ -2,7 +2,7 @@
 #ifndef PARSER_HPP
 # define PARSER_HPP
 
-# include "Lexer.hpp"
+# include "ServerEngine/Lexer.hpp"
 # include "Webserv.hpp"
 
 /*************************************/
@@ -16,7 +16,13 @@ enum NodeType {
 	CloseBracket,
 	Semicolon,
 	ServerBlock,
-	LocationBlock
+	LocationBlock,
+	EmptyNode,
+	NLNode,
+	Method,
+	URI,
+	Protocol,
+	Body
 };
 
 // Base Node class

@@ -1,0 +1,22 @@
+body {
+	background-color: black;
+	color: white;
+}
+
+.navbar {
+	width: 200px;
+	margin: 50px auto 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+.navbar a {
+	color: white;
+	text-decoration: none;
+}
+
+.navbar a:visited {
+	color: white;
+}

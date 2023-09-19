@@ -1,4 +1,4 @@
-#include "../inc/Webserv.hpp"
+#include "Webserv.hpp"
 
 int main(int argc, char **argv) {
 	// Check wrong usage
@@ -6,7 +6,8 @@ int main(int argc, char **argv) {
 		std::cout << "[ERROR]:\t\tUsage: ./webserv [config_file_path]" << std::endl;
 		return 1;
 	}
-
+	// TO-DO
+	// implement sighandler
 	try {
 		std::string content = readConfigurationFile(argc, argv);
 
@@ -14,7 +15,6 @@ int main(int argc, char **argv) {
 		Lexer lex;
 		if (lex.tokenize(content))
 			return 1;
-		// lex.displayTokenList();
 
 		// Build pseudo-AST
 		Parser parser(lex.getTokens());
@@ -31,16 +31,14 @@ int main(int argc, char **argv) {
 		if (engine.setupServers())
 			return 1;
 
+		// Run servers
 		engine.displayServers();
-
-		// Run servers
-		if (engine.runServers())
-			return 1;
-		// Run servers
+		engine.runServers();
 
 	} catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
 	}
+
 	return 0;
 }
