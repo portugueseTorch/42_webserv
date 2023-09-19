@@ -2,10 +2,11 @@
 
 
 HTTPRequest::HTTPRequest():
+	isCGI(false),
+	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
-	_parserCreated(false),
-	_processed(true) {
+	_parserCreated(false) {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
@@ -15,14 +16,15 @@ void HTTPRequest::process(std::string request) {
 	try {
 		parse();
 		setup();
+		log(std::cout, SUCCESS, "HTTP Request successfully processed", "");
 	} catch (parserNotInitialized &e) {
+		_statusCode = 400;
 		log(std::cerr, ERROR, "HTTPRequest", e.what());
 	} catch(HTTPParser::invalidSyntaxException &e) {
 		log(std::cerr, ERROR, "Parser", e.what());
-		_processed = false;
+		_statusCode = 400;
 	} catch(invalidHTTPRequest &e) {
-		log(std::cerr, ERROR, "HTTPRequest", e.what());
-		_processed = false;
+		_statusCode = 400;
 	}
 }
 
@@ -67,7 +69,7 @@ void	HTTPRequest::parse(){
 		_parserCreated = true;
 		parser->parse();
 	} catch(HTTPLexer::emptyRequestException &e) {
-		log(std::cerr, ERROR, "Lexer", e.what());
+		log(std::cerr, ERROR, "HTTPLexer", e.what());
 		throw parserNotInitialized();
 	}
 }
@@ -94,7 +96,10 @@ void	HTTPRequest::setup() {
 				break ;
 			}
 			case URI: {
-				if (it->_content.find(".py") != std::string::npos) {
+				if (it->_content.find("cgi-bin") != std::string::npos && \
+					(it->_content.find(".py") != std::string::npos || \
+					it->_content == "/cgi-bin" || it->_content == "/cgi-bin/")) {
+					isCGI = true;
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
 					extractQuery(it->_content);
 				} else {
@@ -124,10 +129,10 @@ void	HTTPRequest::setup() {
 
 					_params[paramName] = paramContent;
 				} else {
-					//change to exception
 					std::string err = "Invalid header: ";
 					err.append(paramName);
 					log(std::cout, ERROR, err, "");
+					throw invalidHTTPRequest();
 				}
 				break ;
 			}
@@ -143,9 +148,9 @@ void	HTTPRequest::setup() {
 
 void	HTTPRequest::checkIfConnection(std::string paramName, std::string paramContent) {
 	if (paramName == "connection") {
-		//change to print error or throw exception
 		if (paramContent != "keep-alive" && paramContent != "closed") {
 			log(std::cerr, ERROR, "Connection invalid param", paramContent);
+			throw invalidHTTPRequest();
 		}
 		_keepAlive = (paramContent == "keep-alive") ? true : false;
 	}
@@ -169,6 +174,8 @@ void	HTTPRequest::extractQuery(std::string URI) {
 	std::string param;
 	std::string value;
 
+	if (URI.find("?") == std::string::npos)
+		return ;
 	while (getline(squery, buf, '&')) {
 		size_t sep = buf.find('=');
 		//change to if !sep throw exception
@@ -180,7 +187,7 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		value = buf.substr(sep + 1, buf.size());
 		//add exception
 		if (param.size() && value.size())
-			_query[param] = value;
+			_query.push_back(buf);
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
 			throw invalidHTTPRequest();
@@ -198,36 +205,23 @@ void	HTTPRequest::displayRequest() {
 }
 
 void HTTPRequest::displayParsedRequest(){
-	std::cout << std::left << std::setw(25) << "Host: " << std::setw(20) << _ip_address << ":" << ntohs(_port) << std::endl;
-	std::cout << std::left << std::setw(25) << "Method: " << std::setw(20) << _method << std::endl;
-	std::cout << std::left << std::setw(25) << "Request URI:" << std::setw(20) << _requestURI << std::endl;
-	std::cout << std::left << std::setw(25) << "Protocol:" << std::setw(20) << _protocol << std::endl;
+	std::cout << std::left << std::setw(25) << "Host: " << _ip_address << ":" << ntohs(_port) << std::endl;
+	std::cout << std::left << std::setw(25) << "Method: " << _method << std::endl;
+	std::cout << std::left << std::setw(25) << "Request URI:" << _requestURI << std::endl;
+	std::cout << std::left << std::setw(25) << "Protocol:" << _protocol << std::endl;
 	std::map<std::string, std::string>::iterator it;
 	
-	if (_query.size()) {
-		std::cout << "\n###Query params###" << std::endl;
-		it = _query.begin();
-		for (; it != _query.end(); it++) {
-			std::string temp = it->first;
-			temp.append(":");
-			std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
-		}
-		if (_accept.empty())
-			std::cout << std::endl;
-	}
+	// if (_query.size()) {
+	// 	std::cout << "\n###Query params###" << std::endl;
+	// 	it = _query.begin();
+	// 	for (; it != _query.end(); it++) {
+	// 		std::string temp = it->first;
+	// 		temp.append(":");
+	// 		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
+	// 	}
+	// }
 
-	if (_accept.size()) {
-		std::cout << "\n###Accept params###" << std::endl;
-		it = _accept.begin();
-		for (; it != _accept.end(); it++) {
-			std::string temp = it->first;
-			temp.append(":");
-			std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
-		}
-		std::cout << std::endl;
-	}
-
-	std::cout << std::left << std::setw(25) << "keep-alive:" << 
+	std::cout << std::endl << std::left << std::setw(25) << "keep-alive:" << 
 		std::setw(20) << (_keepAlive ? "true" : "false")<< std::endl << std::endl;
 
 	std::cout << std::left << std::setw(25) << "content-length" << 
@@ -243,4 +237,8 @@ void HTTPRequest::displayParsedRequest(){
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
+}
+
+bool	HTTPRequest::success() const {
+	return _statusCode < 400;
 }

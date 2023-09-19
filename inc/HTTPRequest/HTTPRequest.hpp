@@ -7,7 +7,7 @@
 class HTTPParser;
 
 //TO-DO
-//	implement err as enum
+//	improve protocol parsing
 class HTTPRequest {
 	public:
 		HTTPRequest();
@@ -29,10 +29,11 @@ class HTTPRequest {
 		std::string		getBody() const { return _body; }
 		uint32_t		getPort() const { return _port; }
 		in_addr_t		getIPAddress() const { return _ip_address; }
-		//to be changed to enum
-		bool			success() const { return _processed; }
+		bool			success() const;
+		int				getStatusCode() const { return _statusCode; }
+		bool			isCGI;
 
-		std::map<std::string, std::string>	&getQueryParams() { return _query; }
+		std::vector<std::string>			&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
 
 		class invalidHTTPRequest : public std::exception {
@@ -60,12 +61,12 @@ class HTTPRequest {
 
 		HTTPParser							*parser;
 		std::string							_content;
+		int									_statusCode;
 
 		std::string 						_method;
 		std::string							_requestURI;
 		std::string 						_protocol;
-		std::map<std::string, std::string>	_accept;
-		std::map<std::string, std::string>	_query;
+		std::vector<std::string>			_query;
 		bool								_keepAlive;
 		int									_contentLength;
 		std::string							_body;
@@ -75,9 +76,6 @@ class HTTPRequest {
 
 		std::map<std::string, std::string>	_params;
 		bool								_parserCreated;
-		//to be changed to enum
-		bool								_processed;
-
 };
 
 #endif
