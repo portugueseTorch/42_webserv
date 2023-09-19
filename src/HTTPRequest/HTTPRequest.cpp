@@ -189,8 +189,8 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		if (param.size() && value.size())
 			_query.push_back(buf);
 		else {
-			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			throw invalidHTTPRequest();
+			// log(std::cerr, ERROR, "Invalid proxy query", buf);
+			// throw invalidHTTPRequest();
 		}
 	}
 }
