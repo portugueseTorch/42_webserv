@@ -111,7 +111,7 @@ bool HTTPParser::validHeader() {
 
 
 bool HTTPParser::validMethod() {
-	std::string	methods[] = {"GET", "POST", "DELETE"}; 
+	std::string	methods[] = {"GET", "POST", "DELETE", "OPTIONS"}; 
 	std::vector<std::string> validMethods(methods, methods + sizeof(methods) / sizeof(std::string));
 
 	std::vector<std::string>::iterator methodIt = validMethods.begin(); 

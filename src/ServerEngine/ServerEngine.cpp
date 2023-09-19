@@ -403,6 +403,8 @@ int ServerEngine::sendRegResponse(Client &client) {
 	// Reset Client
 	client.reset();
 
+	std::cout << "Message sent!" << std::endl;
+
 	return 0;
 }
 
@@ -489,6 +491,7 @@ int ServerEngine::sendErrResponse(Client &client) {
  */
 int ServerEngine::sendResponse(Client &client) {
 	std::cout << "Trying to build response with code: " << client.request->getStatusCode() << std::endl;
+	client.setStatusCode(client.request->getStatusCode());
 	// If it's an error, call sendErrResponse()
 
 	// Attempt to build a response

@@ -7,6 +7,7 @@
 # include <fstream>
 # include <sstream>
 # include <iomanip>
+# include <iterator>
 
 # include <ctime>
 
@@ -58,7 +59,7 @@
 
 # define MAX_EVENTS		10
 # define EPOLL_TIMEOUT	1000
-# define MAX_LENGTH		4960
+# define MAX_LENGTH		6000
 # define READ_SET		0
 # define WRITE_SET		1
 # define ADD_SET		2
@@ -78,6 +79,7 @@ enum MsgType {
 int			getSlashIndex(std::string target, int n);
 int			damerauLevenshteinDistance(std::string input, std::string valid);
 bool		isindent(int i);
+bool		fileIsValid(std::string file_path, int permissions);
 void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
 std::string	readConfigurationFile(int argc, char **argv);
 

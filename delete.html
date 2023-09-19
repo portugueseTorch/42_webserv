@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP DELETE Request</title>
+</head>
+<body>
+    <h1>HTTP DELETE Request</h1>
+    
+    <!-- Input for Server URL -->
+    <label for="serverUrl">Server URL:</label>
+    <input type="text" id="serverUrl" placeholder="Enter server URL"><br><br>
+
+    <!-- Input for File Name -->
+    <label for="fileName">File Name:</label>
+    <input type="text" id="fileName" placeholder="Enter file name"><br><br>
+
+    <!-- DELETE Button -->
+    <button id="deleteButton">DELETE</button>
+
+    <div id="response"></div>
+
+    <script>
+        // Get references to the input elements and button
+        const serverUrlInput = document.getElementById('serverUrl');
+        const fileNameInput = document.getElementById('fileName');
+        const deleteButton = document.getElementById('deleteButton');
+        const responseDiv = document.getElementById('response');
+
+        // Add a click event listener to the DELETE button
+        deleteButton.addEventListener('click', () => {
+            const serverUrl = serverUrlInput.value;
+            const fileName = fileNameInput.value;
+
+            // Perform the HTTP DELETE request
+            fetch(`${serverUrl}/${fileName}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                }
+            })
+            .then(data => {
+                responseDiv.textContent = `DELETE request successful: ${data}`;
+            })
+            .catch(error => {
+                responseDiv.textContent = `Error: ${error.message}`;
+            });
+        });
+    </script>
+</body>
+</html>

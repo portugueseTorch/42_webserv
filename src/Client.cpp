@@ -204,6 +204,7 @@ std::string	Client::getRoot() {
  */
 int Client::searchRequestedContent(std::string uri) {
 	std::string root = getRoot();
+	std::string full_path;
 
 	std::cout << "The relevant root is: " << root << std::endl;
 	std::cout << "URI: " << uri << std::endl;
@@ -220,47 +221,42 @@ int Client::searchRequestedContent(std::string uri) {
 			std::vector<std::string> &possible_indexes = location_block->getIndex();
 			if (!possible_indexes.empty()) {
 				for (std::vector<std::string>::iterator it = possible_indexes.begin(); it != possible_indexes.end(); it++) {
-					struct stat sb;
-					std::ifstream in_file;
 					std::string tmp;
-					if (location_block->getRoot() != "") tmp = "." + root + "/" + *it;
+					// std::cout << "Evaluating possible_index in location: " << *it << std::endl;
+					// if (location_block->getRoot() != "") tmp = "." + location_block->getRoot() + "/" + *it;
+					if (uri == "/") tmp = "." + root + uri + *it;
 					else tmp = "." + root + uri + "/" + *it;
 					std::cout << "\tTesting in location_block " << tmp << std::endl;
-					if (stat(tmp.c_str(), &sb) == 0 && access(tmp.c_str(), R_OK) == 0) {
-						in_file.open(tmp.c_str());
-						if (!in_file.is_open())
-							continue;
+					std::cout << "\t" << location_block->getRoot() << std::endl;
+					if (fileIsValid(tmp, R_OK)) {
 						_file_type = getContentType(*it);
 						if (location_block->getRoot() != "") _uri = "/" + *it;
 						else _uri = uri + "/" + *it;
 						uri = _uri;
 						found = true;
-						in_file.close();
+						full_path = tmp;
 						break;
 					}
 				}
 			}
 		}
 		if (parent_server && !found) {
+			root = parent_server->getRoot();
 			std::vector<std::string> &possible_indexes = parent_server->getIndex();
 			if (!possible_indexes.empty()) {
 				for (std::vector<std::string>::iterator it = possible_indexes.begin(); it != possible_indexes.end(); it++) {
-					struct stat sb;
-					std::ifstream in_file;
 					std::string tmp;
+					// std::cout << "Evaluating possible_index in parent_server: " << *it << std::endl;
 					if (uri == "/") tmp = "." + root + uri + *it;
 					else tmp = "." + root + uri + "/" + *it;
 					std::cout << "\tTesting in parent_server " << tmp << std::endl;
-					if (stat(tmp.c_str(), &sb) == 0 && access(tmp.c_str(), R_OK) == 0) {
-						in_file.open(tmp.c_str());
-						if (!in_file.is_open())
-							continue;
+					if (fileIsValid(tmp, R_OK)) {
 						_file_type = getContentType(*it);
 						if (uri == "/") _uri = uri + *it;
 						else _uri = uri + "/" + *it;
 						uri = _uri;
 						found = true;
-						in_file.close();
+						full_path = tmp;
 						break;
 					}
 				}
@@ -273,13 +269,15 @@ int Client::searchRequestedContent(std::string uri) {
 			return 0;
 		}
 	} else {
+		std::cout << root << std::endl;
 		// Check if the URI starts with '/', and if it doesn't add it
 		if (uri[0] != '/' && root[root.length() - 1] != '/')
 			uri = '/' + uri;
+		full_path = "." + root + uri;
 	}
 
 	// Create the full path and test that we have access to it
-	std::string full_path = '.' + root + uri;
+	// std::string full_path = '.' + root + uri;
 	std::cout << "Trying to open " << full_path << std::endl;
 
 	// Check if the resource exists
@@ -326,16 +324,9 @@ int Client::searchErrorFiles() {
 		if (location_block->getErrorPages().count(getStatusCode()) == 1) {
 			std::vector<std::string> &err_pages = location_block->getErrorPages().at(getStatusCode());
 			for (std::vector<std::string>::iterator it = err_pages.begin(); it != err_pages.end(); it++) {
-				std::ifstream in_file;
-				struct stat sb;
-
 				if ((*it)[0] != '/' && root[root.length() - 1] != '/') file = "." + root + "/" + *it;
 				else file = "." + root + *it;
-				if (stat(file.c_str(), &sb) == 0 && access(file.c_str(), R_OK) == 0) {
-					in_file.open(file.c_str());
-					if (!in_file.is_open())
-						continue;
-					in_file.close();
+				if (fileIsValid(file, R_OK)) {
 					found = true;
 					break;
 				}
@@ -343,19 +334,14 @@ int Client::searchErrorFiles() {
 		}
 	}
 	if (!found && parent_server && !parent_server->getErrorPages().empty()) {
+		root = parent_server->getRoot();
 		if (parent_server->getErrorPages().count(getStatusCode()) == 1) {
 			std::vector<std::string> &err_pages = parent_server->getErrorPages().at(getStatusCode());
 			for (std::vector<std::string>::iterator it = err_pages.begin(); it != err_pages.end(); it++) {
-				std::ifstream in_file;
-				struct stat sb;
-
 				if ((*it)[0] != '/' && root[root.length() - 1] != '/') file = "." + root + "/" + *it;
 				else file = "." + root + *it;
-				if (stat(file.c_str(), &sb) == 0 && access(file.c_str(), R_OK) == 0) {
-					in_file.open(file.c_str());
-					if (!in_file.is_open())
-						continue;
-					in_file.close();
+				if (fileIsValid(file, R_OK)) {
+					found = true;
 					break;
 				}
 			}
@@ -399,6 +385,37 @@ int Client::searchErrorFiles() {
 	return 0;
 }
 
+int Client::deleteRequestedContent(std::string uri) {
+	std::string root = getRoot();
+	std::string file = "." + root + uri;
+
+	// If the file exists and has necessary permissions
+	if (fileIsValid(file, F_OK)) {
+		// Attempt to remove it
+		if (remove(file.c_str()) == 0) {
+			this->setStatusCode(200);
+			return 0;
+		} else {
+			this->setStatusCode(500);
+			return 1;
+		}
+	} else {
+		this->setStatusCode(404);
+		return 1;
+	}
+}
+
+int Client::handleOptionsRequest() {
+	std::string host = request->getAllParams()["host"];
+	std::cout << host << std::endl;
+	_response += "200 OK\r\n";
+	_response += "Access-Control-Allow-Origin: " + host + "\r\n";
+	_response += "Access-Control-Allow-Methods: GET, POST, DELETE\r\n\
+Access-Control-Allow-Headers: Content-Type, Authorization\r\n\
+Access-Control-Allow-Credentials: true\r\n";
+	return 0;
+}
+
 /**
  * @brief Builds the HTTP response based off of the attributes
  * populated during parseHTTPRequest() function in the Request
@@ -416,9 +433,18 @@ int Client::buildHTTPResponse() {
 
 	_uri = request->getRequestURI();
 	// Otherwise if method is GET, read content of the requested file
-	if (request->getMethod() == "GET") {
+	if (request->getMethod() == "OPTIONS") {
+		if (!getIsError()) {
+			handleOptionsRequest();
+			return 0;
+		}
+	}
+	else if (request->getMethod() == "GET") {
 		if (!getIsError())
 			searchRequestedContent(_uri);
+	} else if (request->getMethod() == "DELETE") {
+		if (!getIsError())
+			deleteRequestedContent(_uri);
 	}
 	if (getIsError())
 		searchErrorFiles();
@@ -460,7 +486,8 @@ int Client::buildHTTPResponse() {
 		_response += "Content-Type: text/html\r\n";
 
 	// Add Body
-	_response += "\r\n" + _file_buff + "\r\n";
+	if (_file_buff != "")
+		_response += "\r\n" + _file_buff + "\r\n";
 
 	std::cout << _response << std::endl;
 	return 0;

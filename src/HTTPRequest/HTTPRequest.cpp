@@ -8,6 +8,7 @@ HTTPRequest::HTTPRequest():
 	_parserCreated(false) {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
+	_protocol = "HTTP/1.1";
 }
 
 void HTTPRequest::process(std::string request) {
@@ -80,8 +81,8 @@ void	HTTPRequest::parse(){
 
 void	HTTPRequest::setup() {
 	std::string headers[] = \
-	{ 	"cache-control", "connection", "date", "'pragma", "trailer", \
-		"transfer-encoding", "upgrade", "via", "warning", \
+	{ 	"cache-control", "connection", "date", "'pragma", "trailer", "origin", \
+		"transfer-encoding", "upgrade", "via", "warning", "access-control-request-method", \
 		"accept", "accept-charset", "accept-encoding", "accept-language", \
 		"authorization", "expect", "from", "host", "if-match", "if-modified-since", \
 		"if-none-match", "if-range", "if-unmodified-since", "max-forwards", \

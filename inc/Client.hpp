@@ -25,6 +25,7 @@ class Client
 
 		// Getters
 		int					getClientFD() const { return _client_fd; }
+		int					getContentLength() const { return _cont_length; }
 		int					getClientID() const { return _client_id; }
 		int					getStatusCode() const { return _status_code; }
 		bool				getIsError() const { return _status_code >= 400 && _status_code <= 511; }
@@ -45,7 +46,9 @@ class Client
 	private:
 		std::string			getRoot();
 		int					searchErrorFiles();
+		int					handleOptionsRequest();
 		int					searchRequestedContent(std::string content);
+		int					deleteRequestedContent(std::string uri);
 		int					_client_id;		// ID of the client
 		int					_client_fd;		// file descriptor of the client socket
 		std::string			_request_str;	// request received from the client server

@@ -1,5 +1,5 @@
 {
-    "files.associations": {
+	"files.associations": {
 		"array": "cpp",
 		"atomic": "cpp",
 		"bit": "cpp",
@@ -51,23 +51,5 @@
 		"streambuf": "cpp",
 		"cinttypes": "cpp",
 		"typeinfo": "cpp"
-	},
-	"makefile.configurations": [
-		{
-			"name": "Default",
-			"makeArgs": []
-		}
-	],
-	"makefile.launchConfigurations": [
-		{
-			"cwd": "/Users/mansoter/Documents/Others/42_webserv",
-			"binaryPath": "/Users/mansoter/Documents/Others/42_webserv/webserv",
-			"binaryArgs": []
-		},
-		{
-			"cwd": "/home/touteiro/Documents/42_webserv",
-			"binaryPath": "/home/touteiro/Documents/42_webserv/webserv",
-			"binaryArgs": []
-		}
-	]
+	}
 }

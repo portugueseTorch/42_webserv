@@ -51,7 +51,10 @@ void Location::displayLocationBlock() {
  * @return 0
  */
 int Location::setLocation(std::string location) {
-	_location = location;
+	if (location != "/" && location[location.length() - 1] == '/')
+		_location = location.substr(0, location.length() - 1);
+	else
+		_location = location;
 	return 0;
 }
 
@@ -180,8 +183,19 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Location::setIndex(std::list<Node>::iterator &it) {
-	for (; it->_type == Parameter; it++)
-		_index.push_back(it->_content);
+	for (; it->_type == Parameter; it++) {
+		if (it->_content != "/" && it->_content[it->_content.length() - 1] == '/') {
+			if (it->_content[0] == '/')
+				_index.push_back(it->_content.substr(1, it->_content.length() - 2));
+			else
+				_index.push_back(it->_content.substr(0, it->_content.length() - 1));
+		} else {
+			if (it->_content[0] == '/')
+				_index.push_back(it->_content.substr(1, it->_content.length() - 1));
+			else
+				_index.push_back(it->_content);
+		}
+	}
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
@@ -250,6 +264,9 @@ int Location::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
-	_root = stash.back();
+	if (stash.back() != "/" && stash.back()[stash.back().length() - 1] == '/')
+		_root = stash.back().substr(0, stash.back().length() - 1);
+	else
+		_root = stash.back();
 	return 0;
 }

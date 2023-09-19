@@ -151,3 +151,24 @@ int getSlashIndex(std::string target, int n) {
 	}
 	return -1;
 }
+
+/**
+ * @brief Checks if file_path exists, and has the necessary
+ * permissions
+ * 
+ * @param file_path File to evaluate
+ * @param permissions Permissions of the file (for access())
+ * @return true File exists and has necessary permissions
+ * @return false File does not exist or doest not have necessary permissions
+ */
+bool fileIsValid(std::string file_path, int permissions) {
+	struct stat sb;
+
+	// Check if the file exists
+	if (stat(file_path.c_str(), &sb) != 0) {
+		return false;
+	}
+
+	// Check if the file has the specified permissions
+	return (access(file_path.c_str(), permissions) == 0);
+}

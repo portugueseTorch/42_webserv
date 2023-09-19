@@ -382,8 +382,12 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setIndex(std::list<Node>::iterator &it) {
-	for (; it->_type == Parameter; it++)
-		_index.push_back(it->_content);
+	for (; it->_type == Parameter; it++) {
+		if (it->_content != "/" && it->_content[it->_content.length() - 1] == '/')
+			_index.push_back(it->_content.substr(0, it->_content.length() - 1));
+		else
+			_index.push_back(it->_content);
+	}
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
@@ -392,7 +396,6 @@ int Server::setIndex(std::list<Node>::iterator &it) {
 		_index.clear();
 		return 1;
 	}
-
 	return 0;
 }
 
