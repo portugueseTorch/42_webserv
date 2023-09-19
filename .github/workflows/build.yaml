@@ -2,8 +2,7 @@ name: webserv CI
 run-name: Run make on ${{ github.ref_name	 }}
 
 on:
-  push:
-    branches: [ ghactions-test ]
+  push
 
 jobs:
   build:
