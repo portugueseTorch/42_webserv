@@ -4,6 +4,13 @@ import csv
 name = os.environ.get("name")
 
 print('<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>')
+print('<header>')
+print('<nav class="navbar">')
+print('<a href="/">Home</a>')
+print('<div class="separator">|</div>')
+print('<a href="/resources">Potatoes</a>')
+print('</nav>')
+print('</header>')
 if name:
 	name = name.replace('%20', ' ')
 	print('<h1 class="success center">We have a name!</h1>')
@@ -38,5 +45,5 @@ print('<ul>')
 for person in persons:
 	print(f'<li>{person.name}, {person.age}</li>')
 print('</ul>')
-print('<a href="/" class="center">Go back</a>')
+print('<a href="/" class="center button">Go back</a>')
 print("</body></html>")
