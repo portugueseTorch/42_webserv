@@ -351,6 +351,8 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		log(std::cout, WARNING, "Client closed the connection on fd", ss.str());
 		closeConnection(fd);
 		return 0;
+	} else {
+		buf[ret] = '\0';
 	}
 
 	// Update the client fd from reading to writing

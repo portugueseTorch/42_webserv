@@ -1,34 +1,33 @@
 import os
 import csv
 
-name = os.environ.get("name")
+print('<html>')
 
-print('<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>')
+print('<head>')
+print('<link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" />')
+print('<link type="text/css" rel="stylesheet" href="style.css" />')
+print('<meta charset="UTF-8">')
+print('<title>Reviews</title>')
+print('</head>')
+
+print('<body>')
+
 print('<header>')
 print('<nav class="navbar">')
 print('<a href="/">Home</a>')
 print('<div class="separator">|</div>')
-print('<a href="/resources">Potatoes</a>')
+print('<a href="/resources/index.html">Good times</a>')
+print('<div class="separator">|</div>')
+print('<a href="/resources">About</a>')
 print('</nav>')
 print('</header>')
-if name:
-	name = name.replace('%20', ' ')
-	print('<h1 class="success center">We have a name!</h1>')
-	print(f'<p class="center">Welcome, {str.title(name)}</p>')
-else:
-	print('<h2 class="center">No name found...</h2>')
-	print('<h1 class="failure center">For the love of god, just work!</h1>')
-
-user = os.environ.get("user")
-pwd = os.environ.get("pass")
-print(f'<p>User: {user}<br/>Password: {pwd}</p>')
 
 class Person:
-    def __init__(self, name, age, location, email):
-        self.name = name
-        self.age = age
-        self.location = location
-        self.email = email
+	def __init__(self, name, age, location, comment):
+		self.name = name
+		self.age = age
+		self.location = location
+		self.comment = comment
 
 #this needs to be more dynamic, database file needs to be param somehow
 persons = []
@@ -36,14 +35,35 @@ with open('./www/test.csv', 'r') as f:
 	reader = csv.reader(f)
 	next(reader)
 	for row in reader:
-		name, age, location, email = row
-		person = Person(name, age, location, email)
+		name, age, location, comment = row
+		person = Person(name, age, location, comment)
 		persons.append(person)
 
-print('<h2>Details:</h2>')
-print('<ul>')
+print('<h1 class="page-title">Reviews</h1>')
+print('<div class="reviews">')
+
+print('<div class="person reviews-header">')
+print('<span>Name</span>')
+print('<span>Age</span>')
+print('<span>Location</span>')
+print('<span>Comment</span>')
+print('</div>')
 for person in persons:
-	print(f'<li>{person.name}, {person.age}</li>')
-print('</ul>')
-print('<a href="/" class="center button">Go back</a>')
-print("</body></html>")
+	print('<div class="person">')
+	print(f'<span>{person.name}</span>')
+	print(f'<span>{person.age}</span>')
+	print(f'<span>{person.location}</span>')
+	print(f'<span>{person.comment}</span>')
+	print('</div>')
+print('</div>')
+
+print('<form action="append.py" method="post">')
+print('<label for="name">Name: <input type="text" name="name" required></label>')
+print('<label for="age">Age: <input type="number" name="age"></label>')
+print('<label for="location">Location: <input type="text" name="location"></label>')
+print('<label for="comment">Leave a comment: <textarea name="comment" required> </textarea></label>')
+print('<input id="submit-button" type="submit" value="Add review">')
+print('</form>')
+
+print("</body>")
+print("</html>")

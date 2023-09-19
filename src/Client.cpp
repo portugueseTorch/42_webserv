@@ -324,6 +324,12 @@ int Client::buildHTTPResponse() {
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
 		searchRequestedContent(_uri);
+	} else if (request->getMethod() == "POST") {
+		_status_code = 200;
+	}
+
+	if (request->isCGI) {
+		_file_type = "text/html\r\n";
 	}
 
 	// If the status_code is not set, something went wrong
@@ -387,6 +393,7 @@ int	Client::buildCGIResponse() {
 		log(std::cerr, ERROR, "pipe() call failed", "");
 		return 1;
 	}
+	log(std::cout, INFO, "body", request->getBody());
 	// Fork and execve the script on the child pr
 	if ((pid = fork()) == -1) {
 		log(std::cerr, ERROR, "fork() call failed", "");
@@ -396,10 +403,24 @@ int	Client::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
-		char **envp = vectToArr(request->getQueryParams());
+		const char *constScript = (_uri.find(".py") != std::string::npos) ? _uri.c_str() : "cgi-bin/cgi.py";
+		char *script = new char[strlen(constScript) + 1];
+		strcpy(script, constScript);
+		char *args[] = { (char *)"/usr/bin/python3", script, NULL };
+		std::vector<std::string> toProcess;
+		if (request->getMethod() == "GET") {
+			toProcess = request->getQueryParams();
+		} else {
+			std::istringstream ss(request->getBody());
+			std::string token;
+			while (std::getline(ss, token, '&')) {
+				toProcess.push_back(token);
+			}
+		}
+		char **envp = vectToArr(toProcess);
 		execve("/usr/bin/python3", args, envp);
 		//need error handling so request is not left pending
+		delete []script;
 		delete []envp;
 	} else {
 		close(pipe_fd[1]);
@@ -417,10 +438,14 @@ int	Client::buildCGIResponse() {
 			body += msg;
 			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
+		if (body.find("HTTP/1.1 303 See Other") == 0) {
+			_response = body;
+		} else {
+			ss << body.size();
+			_response += "Content-Length: " + ss.str() += "\r\n\r\n";
+			_response += body + "\r\n";
+		}
 
-		ss << body.size();
-		_response += "Content-Length: " + ss.str() += "\r\n\r\n";
-		_response += body + "\r\n";
 	}
 	return 0;
 }
