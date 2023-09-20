@@ -171,7 +171,7 @@ std::string Client::getContentType(std::string uri) {
 	else if (ex == ".png")
 		return "image/png\r\n";
 	else if (ex == ".ico")
-		return "image/ico\r\n";
+		return "image/x-icon\r\n";
 	else if (ex == ".svg")
 		return "image/svg+xml\r\n";
 	else if (ex == ".py")
@@ -295,7 +295,7 @@ int Client::searchRequestedContent(std::string uri) {
 				if (!in_file.eof())
 					_file_buff += "\n";
 			}
-			_cont_length = _file_buff.length();
+			_cont_length = _file_buff.length() + 2;
 			this->setStatusCode(200);	// TODO: Check nuances here
 			in_file.close();
 		} else {	// If the file exists but we don't have access to it
@@ -374,7 +374,7 @@ int Client::buildHTTPResponse() {
 		_response += _file_buff + "\r\n";
 	}
 
-	std::cout << _response << std::endl;
+	// std::cout << _response << std::endl;
 	return 0;
 }
 
@@ -403,7 +403,14 @@ int	Client::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
-		const char *constScript = (_uri.find(".py") != std::string::npos) ? _uri.c_str() : "cgi-bin/cgi.py";
+		std::string indexLocation = \
+			location_block ? \
+			"cgi-bin/" + location_block->getIndex()[0] :
+			"";
+		const char *constScript = \
+			(_uri.find(".py") != std::string::npos) ? \
+			_uri.c_str() : \
+			indexLocation.c_str();
 		char *script = new char[strlen(constScript) + 1];
 		strcpy(script, constScript);
 		char *args[] = { (char *)"/usr/bin/python3", script, NULL };
@@ -447,6 +454,7 @@ int	Client::buildCGIResponse() {
 		}
 
 	}
+	std::cout << _response << std::endl;
 	return 0;
 }
 
