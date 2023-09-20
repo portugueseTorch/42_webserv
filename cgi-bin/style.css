@@ -37,12 +37,12 @@ body {
 .person {
 	box-sizing: border-box;
 	display: grid;
-	grid-template-columns: repeat(auto-fill, 25%);
+	grid-template-columns: 2fr 2fr 2fr 2fr 1fr;
 	line-height: 1.8rem;
 }
 
 .person:nth-child(odd) {
-	background: lightgray;
+	background: rgb(44, 67, 67);
 }
 
 .person:first-of-type {
@@ -69,6 +69,10 @@ form label {
 	align-items: center;
 	white-space: nowrap;
 	/* height: 2rem; */
+}
+
+.toDelete {
+	cursor: pointer;
 }
 
 #submit-button {

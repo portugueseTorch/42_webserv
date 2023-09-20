@@ -1,0 +1,10 @@
+def printNavBar(urls, texts):
+    print('<h1><a class="main-title" href="/">Webserving Delight</a></h1>')
+    print('<p>Explore the Wonders of a web server</p>')
+    print('<nav class="navbar">')
+    print(f'<a href="{urls[0]}">{texts[0]}</a>')
+    print('<div class="separator">|</div>')
+    print(f'<a href="{urls[1]}">{texts[1]}</a>')
+    print('<div class="separator">|</div>')
+    print(f'<a href="{urls[2]}">{texts[2]}</a>')
+    print('</nav>')

@@ -245,7 +245,7 @@ ss.clear();;
 		ss << client.parent_server->getServerID();
 		parentStringID = ss.str();
 		log(std::cout, SUCCESS, client_id_string, parentStringID);
-		client.parent_server->displayServer();
+		// client.parent_server->displayServer();
 
 		std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
