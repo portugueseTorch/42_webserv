@@ -324,7 +324,7 @@ int Client::buildHTTPResponse() {
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
 		searchRequestedContent(_uri);
-	} else if (request->getMethod() == "POST") {
+	} else if (request->getMethod() == "POST" || request->getMethod() == "DELETE") {
 		_status_code = 200;
 	}
 
@@ -368,6 +368,9 @@ int Client::buildHTTPResponse() {
 
 	// Add Body
 	if (request->isCGI) {
+		_response += "Cache-Control: no-cache, no-store, must-revalidate\r\n";
+		_response += "Pragma: no-cache\r\n";
+		_response += "Expires: 0\r\n";
 		return buildCGIResponse();
 	} else {
 		_response += "\r\n\r\n";

@@ -1,4 +1,3 @@
-import os
 import csv
 import navbar
 
@@ -55,15 +54,15 @@ for person in persons:
 	print(f'<span>{person.age}</span>')
 	print(f'<span>{person.location}</span>')
 	print(f'<span>{person.comment}</span>')
-	print(f'<span class="toDelete">del</span>')
+	print(f'<img src="resources/trash.svg" class="toDelete" />')
 	print('</div>')
 print('</div>')
 
 print('<form action="append.py" method="post">')
-print('<label for="name">Name: <input type="text" name="name" required></label>')
-print('<label for="age">Age: <input type="number" name="age"></label>')
-print('<label for="location">Location: <input type="text" name="location"></label>')
-print('<label for="comment">Leave a comment: <textarea name="comment" required> </textarea></label>')
+print('<label for="name">Name *<input type="text" name="name" required></label>')
+print('<label for="age">Age <input type="number" name="age"></label>')
+print('<label for="location">Location <input type="text" name="location"></label>')
+print('<label for="comment">Leave a comment *<textarea name="comment" required></textarea></label>')
 print('<input id="submit-button" type="submit" value="Add review">')
 print('</form>')
 
