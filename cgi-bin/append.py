@@ -1,21 +1,26 @@
 from csv import writer
 import os
+from urllib.parse import unquote
 
-name = os.environ.get("name") if os.environ.get("name") else ""
-age = os.environ.get("age") if os.environ.get("age") else ""
-location = os.environ.get("location") if os.environ.get("location") else ""
-comment = os.environ.get("comment") if os.environ.get("comment") else ""
+def clean_input(input_str):
+    return unquote(input_str).replace('+', ' ')
 
-name = name.replace('+', ' ')
-location = location.replace('+', ' ')
-comment = comment.replace('+', ' ')
+name = os.environ.get("name", "")
+age = os.environ.get("age", "")
+location = os.environ.get("location", "")
+comment = os.environ.get("comment", "")
+
 List = [name, age, location, comment]
+
+List = [clean_input(item) for item in List]
+
+# Remove trailing whitespaces
+List = [item.rstrip() for item in List]
 
 if name:
 	with open('./www/test.csv', 'a', encoding='utf-8') as f_object:
 		writer_object = writer(f_object)
 		writer_object.writerow(List)
-		f_object.close()
 
 print("HTTP/1.1 303 See Other")
 print("Location: http://localhost:8080/cgi-bin")
