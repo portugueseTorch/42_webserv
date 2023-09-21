@@ -19,11 +19,17 @@ navbar.printNavBar(urls, texts)
 print('</header>')
 
 print('<main>')
-with os.scandir('./www') as entries:
+with os.scandir('./www/resources') as entries:
     for entry in entries:
         if (entry.is_file()):
             print(f'<p>{entry.name}, {entry.path}</p>')
-print('</main>')
 
+print('<form onsubmit="uploadFile(event)">')
+print('<label for="file-name">File name<input type="text" name="file-name" id="file-name" required></label>')
+print('<label for="file-content">File content<textarea name="file-content" id="file-content" required></textarea></label>')
+print('<input id="submit-button" type="submit" value="Add file">')
+print('</form>')
+print('</main>')
+print('<script src="/cgi-bin/goodTimes.js"></script>')
 print('</body>')
 print("</html>")

@@ -321,14 +321,49 @@ int Client::buildHTTPResponse() {
 	_response += request->getProtocol() + " ";
 
 	_uri = request->getRequestURI();
+	if (request->isCGI)
+		goto cgiProcessing;
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
 		searchRequestedContent(_uri);
-	} else if (request->getMethod() == "POST" || request->getMethod() == "DELETE") {
+	} else if (request->getMethod() == "POST") {
+		_status_code = 200;
+		log(std::cout, SUCCESS, "it is a post", request->getBody());
+		std::map<std::string, std::string> queryparams;
+		std::string body(request->getBody());
+		std::string part;
+		while (body.size()) {
+			size_t sep = body.find('&');
+			if (sep != std::string::npos) {
+				part = body.substr(0, sep);
+			} else {
+				part = body;
+			}
+			size_t toDel = sep != std::string::npos ? sep + 1 : body.size();
+			sep = part.find('=');
+			queryparams[part.substr(0, sep)] = part.substr(sep + 1);
+			body.erase(0, toDel);
+		}
+		char buffer[FILENAME_MAX];
+		getcwd(buffer, FILENAME_MAX);
+		log(std::cout, INFO, "my location", buffer);
+		log(std::cout, INFO, "location", location_block->getRoot() + "/" + queryparams["name"]);
+		// log(std::cout, INFO, "name", queryparams["name"]);
+		// log(std::cout, INFO, "content", queryparams["content"]);
+		std::ofstream	outfile(("." + location_block->getRoot() + "/" + queryparams["name"] + ".txt").c_str(), std::ofstream::trunc);
+		if (outfile.fail()) {
+			std::cerr << "Error: Unable to create file." << std::endl;
+		} else {
+			outfile << queryparams["content"];
+			outfile.close();
+		}
+	} else if (request->getMethod() == "DELETE") {
 		_status_code = 200;
 	}
 
+	cgiProcessing:
 	if (request->isCGI) {
+		_status_code = 200;
 		_file_type = "text/html\r\n";
 	}
 
@@ -343,6 +378,13 @@ int Client::buildHTTPResponse() {
 	// Set the first line of the Response
 	_response += ss.str() + " " + statusCodeToMessage(_status_code);
 
+	if (request->getMethod() == "POST" && !request->isCGI) {
+		_response += "Content-Length: 34\r\n";
+		_response += "Content-Type: text/html\r\n\r\n";
+		_response += "<html><body>Loading...</body></html>";
+
+		return 0;
+	}
 
 	// Add Date
 	std::time_t now = std::time(NULL);
