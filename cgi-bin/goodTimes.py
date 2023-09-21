@@ -22,7 +22,7 @@ print('<main>')
 with os.scandir('./www/resources') as entries:
     for entry in entries:
         if (entry.is_file()):
-            print(f'<p>{entry.name}, {entry.path}</p>')
+            print(f'<p onclick="deleteFile(this)" style="cursor: pointer">{entry.name}, {entry.path}</p>')
 
 print('<form onsubmit="uploadFile(event)">')
 print('<label for="file-name">File name<input type="text" name="file-name" id="file-name" required></label>')

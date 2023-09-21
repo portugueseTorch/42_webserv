@@ -359,6 +359,12 @@ int Client::buildHTTPResponse() {
 		}
 	} else if (request->getMethod() == "DELETE") {
 		_status_code = 200;
+		log(std::cout, SUCCESS, "it is a delete", request->getBody());
+		if (std::remove(request->getBody().c_str()) != 0) {
+			std::perror("Error deleting file");
+		} else {
+			std::puts("File deleted successfully");
+		}
 	}
 
 	cgiProcessing:
@@ -378,7 +384,8 @@ int Client::buildHTTPResponse() {
 	// Set the first line of the Response
 	_response += ss.str() + " " + statusCodeToMessage(_status_code);
 
-	if (request->getMethod() == "POST" && !request->isCGI) {
+	if ((request->getMethod() == "POST" || request->getMethod() == "DELETE") && \
+		!request->isCGI) {
 		_response += "Content-Length: 34\r\n";
 		_response += "Content-Type: text/html\r\n\r\n";
 		_response += "<html><body>Loading...</body></html>";
