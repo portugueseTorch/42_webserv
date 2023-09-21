@@ -171,7 +171,7 @@ std::string Client::getContentType(std::string uri) {
 	else if (ex == ".png")
 		return "image/png\r\n";
 	else if (ex == ".ico")
-		return "image/ico\r\n";
+		return "image/x-icon\r\n";
 	else if (ex == ".svg")
 		return "image/svg+xml\r\n";
 	else if (ex == ".py")
@@ -295,7 +295,7 @@ int Client::searchRequestedContent(std::string uri) {
 				if (!in_file.eof())
 					_file_buff += "\n";
 			}
-			_cont_length = _file_buff.length();
+			_cont_length = _file_buff.length() + 2;
 			this->setStatusCode(200);	// TODO: Check nuances here
 			in_file.close();
 		} else {	// If the file exists but we don't have access to it
@@ -321,9 +321,56 @@ int Client::buildHTTPResponse() {
 	_response += request->getProtocol() + " ";
 
 	_uri = request->getRequestURI();
+	if (request->isCGI)
+		goto cgiProcessing;
 	// Otherwise if method is GET, read content of the requested file
 	if (request->getMethod() == "GET") {
 		searchRequestedContent(_uri);
+	} else if (request->getMethod() == "POST") {
+		_status_code = 200;
+		log(std::cout, SUCCESS, "it is a post", request->getBody());
+		std::map<std::string, std::string> queryparams;
+		std::string body(request->getBody());
+		std::string part;
+		while (body.size()) {
+			size_t sep = body.find('&');
+			if (sep != std::string::npos) {
+				part = body.substr(0, sep);
+			} else {
+				part = body;
+			}
+			size_t toDel = sep != std::string::npos ? sep + 1 : body.size();
+			sep = part.find('=');
+			queryparams[part.substr(0, sep)] = part.substr(sep + 1);
+			body.erase(0, toDel);
+		}
+		char buffer[FILENAME_MAX];
+		getcwd(buffer, FILENAME_MAX);
+		log(std::cout, INFO, "my location", buffer);
+		log(std::cout, INFO, "location", location_block->getRoot() + "/" + queryparams["name"]);
+		// log(std::cout, INFO, "name", queryparams["name"]);
+		// log(std::cout, INFO, "content", queryparams["content"]);
+		std::ofstream	outfile(("." + location_block->getRoot() + "/" + queryparams["name"] + ".txt").c_str(), std::ofstream::trunc);
+		if (outfile.fail()) {
+			std::cerr << "Error: Unable to create file." << std::endl;
+		} else {
+			outfile << queryparams["content"];
+			outfile.close();
+		}
+	} else if (request->getMethod() == "DELETE") {
+		_status_code = 200;
+		log(std::cout, SUCCESS, "it is a delete", request->getBody());
+		if (std::remove(request->getBody().c_str()) != 0) {
+			std::perror("Error deleting file");
+		} else {
+			std::puts("File deleted successfully");
+		}
+	}
+
+	cgiProcessing:
+	if (request->isCGI) {
+		_status_code = 200;
+		_file_type = "text/html\r\n";
 	}
 
 	// If the status_code is not set, something went wrong
@@ -337,6 +384,14 @@ int Client::buildHTTPResponse() {
 	// Set the first line of the Response
 	_response += ss.str() + " " + statusCodeToMessage(_status_code);
 
+	if ((request->getMethod() == "POST" || request->getMethod() == "DELETE") && \
+		!request->isCGI) {
+		_response += "Content-Length: 34\r\n";
+		_response += "Content-Type: text/html\r\n\r\n";
+		_response += "<html><body>Loading...</body></html>";
+
+		return 0;
+	}
 
 	// Add Date
 	std::time_t now = std::time(NULL);
@@ -362,13 +417,16 @@ int Client::buildHTTPResponse() {
 
 	// Add Body
 	if (request->isCGI) {
+		_response += "Cache-Control: no-cache, no-store, must-revalidate\r\n";
+		_response += "Pragma: no-cache\r\n";
+		_response += "Expires: 0\r\n";
 		return buildCGIResponse();
 	} else {
 		_response += "\r\n\r\n";
 		_response += _file_buff + "\r\n";
 	}
 
-	std::cout << _response << std::endl;
+	// std::cout << _response << std::endl;
 	return 0;
 }
 
@@ -387,6 +445,7 @@ int	Client::buildCGIResponse() {
 		log(std::cerr, ERROR, "pipe() call failed", "");
 		return 1;
 	}
+	// log(std::cout, INFO, "body", request->getBody());
 	// Fork and execve the script on the child pr
 	if ((pid = fork()) == -1) {
 		log(std::cerr, ERROR, "fork() call failed", "");
@@ -396,10 +455,32 @@ int	Client::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
-		char **envp = vectToArr(request->getQueryParams());
+		std::string indexLocation = \
+			location_block ? \
+			"cgi-bin/" + location_block->getIndex()[0] :
+			"";
+		const char *constScript = \
+			(_uri.find(".py") != std::string::npos) ? \
+			_uri.c_str() : \
+			indexLocation.c_str();
+		char *script = new char[strlen(constScript) + 1];
+		strcpy(script, constScript);
+		char *args[] = { (char *)"/usr/bin/python3", script, NULL };
+		std::vector<std::string> toProcess;
+		if (request->getMethod() == "GET") {
+			toProcess = request->getQueryParams();
+		} else {
+			std::istringstream ss(request->getBody());
+			std::string token;
+			while (std::getline(ss, token, '&')) {
+				toProcess.push_back(token);
+			}
+			toProcess.push_back("REQUEST_METHOD=" + request->getMethod());
+		}
+		char **envp = vectToArr(toProcess);
 		execve("/usr/bin/python3", args, envp);
 		//need error handling so request is not left pending
+		delete []script;
 		delete []envp;
 	} else {
 		close(pipe_fd[1]);
@@ -417,11 +498,16 @@ int	Client::buildCGIResponse() {
 			body += msg;
 			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
+		if (body.find("HTTP/1.1") == 0) {
+			_response = body;
+		} else {
+			ss << body.size();
+			_response += "Content-Length: " + ss.str() += "\r\n\r\n";
+			_response += body + "\r\n";
+		}
 
-		ss << body.size();
-		_response += "Content-Length: " + ss.str() += "\r\n\r\n";
-		_response += body + "\r\n";
 	}
+	std::cout << _response << std::endl;
 	return 0;
 }
 

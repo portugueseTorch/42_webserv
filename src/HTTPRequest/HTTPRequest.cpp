@@ -84,7 +84,8 @@ void	HTTPRequest::setup() {
 		"proxy-authorization", "range", "referer", "referrer-policy", "te", "user-agent", \
 		"allow", "content-encoding", "content-language", "content-length", \
 		"content-location", "content-md5", "content-range", "content-type", \
-		"expires", "last-modified", "extension-header", "upgrade-insecure-requests" };
+		"expires", "last-modified", "extension-header", "upgrade-insecure-requests", \
+		"origin" };
 	std::vector<std::string> validHeaders(headers, headers + sizeof(headers) / sizeof(std::string));
 
 	std::list<Node>::const_iterator it = parser->getNodes().begin();
@@ -96,11 +97,15 @@ void	HTTPRequest::setup() {
 				break ;
 			}
 			case URI: {
-				if (it->_content.find("cgi-bin") != std::string::npos && \
+				if ((it->_content.find("cgi-bin") != std::string::npos && \
 					(it->_content.find(".py") != std::string::npos || \
-					it->_content == "/cgi-bin" || it->_content == "/cgi-bin/")) {
+					it->_content == "/cgi-bin" || it->_content == "/cgi-bin/")) || \
+					it->_content.find(".py") != std::string::npos) {
 					isCGI = true;
 					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
+					if (_requestURI.find("/cgi-bin") != 0) {
+						_requestURI = "cgi-bin" + _requestURI;
+					}
 					extractQuery(it->_content);
 				} else {
 					this->_requestURI = it->_content;
@@ -189,8 +194,8 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		if (param.size() && value.size())
 			_query.push_back(buf);
 		else {
-			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			throw invalidHTTPRequest();
+			// log(std::cerr, ERROR, "Invalid proxy query", buf);
+			// throw invalidHTTPRequest();
 		}
 	}
 }

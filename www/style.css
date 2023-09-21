@@ -12,8 +12,18 @@ header {
 	text-align: center;
 }
 
+.main-title {
+	text-decoration: none;
+	font-size: 2rem;
+	color: white;
+}
+
+.main-title:visited {
+	color: white;
+}
+
 .navbar {
-	width: 200px;
+	width: max-content;
 	margin: 0 auto;
 	display: flex;
 	align-items: center;

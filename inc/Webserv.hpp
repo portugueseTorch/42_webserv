@@ -9,6 +9,7 @@
 # include <iomanip>
 
 # include <ctime>
+# include <cstdio>
 
 # include <list>
 # include <vector>
