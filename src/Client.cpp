@@ -396,7 +396,7 @@ int	Client::buildCGIResponse() {
 		log(std::cerr, ERROR, "pipe() call failed", "");
 		return 1;
 	}
-	log(std::cout, INFO, "body", request->getBody());
+	// log(std::cout, INFO, "body", request->getBody());
 	// Fork and execve the script on the child pr
 	if ((pid = fork()) == -1) {
 		log(std::cerr, ERROR, "fork() call failed", "");
@@ -426,6 +426,7 @@ int	Client::buildCGIResponse() {
 			while (std::getline(ss, token, '&')) {
 				toProcess.push_back(token);
 			}
+			toProcess.push_back("REQUEST_METHOD=" + request->getMethod());
 		}
 		char **envp = vectToArr(toProcess);
 		execve("/usr/bin/python3", args, envp);
@@ -448,7 +449,7 @@ int	Client::buildCGIResponse() {
 			body += msg;
 			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
-		if (body.find("HTTP/1.1 303 See Other") == 0) {
+		if (body.find("HTTP/1.1") == 0) {
 			_response = body;
 		} else {
 			ss << body.size();

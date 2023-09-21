@@ -5,16 +5,23 @@ function toDel() {
 
     for (i = 0; i < elems.length; i++) {
         elems[i].removeEventListener('click', deleteItem);
-        elems[i].addEventListener('click', deleteItem);
+        elems[i].addEventListener('click', function (){
+			deleteItem(this);
+		});
     }
 }
 
-const deleteItem = (event) => {
-    const name = event.target.parentNode.children[0].innerHTML;
-    console.log(name);
+const deleteItem = (element) => {
+	const params = new URLSearchParams();
+
+	['name', 'age', 'location', 'comment'].forEach(attribute => {
+		const value = element.parentNode.querySelector(`.display-${attribute}`).textContent;
+		params.append(attribute, value);
+	});
+
     fetch('delete.py', {
         method: 'DELETE',
-        body: 'name=' + name
+        body: params.toString()
     })
 	.then(response => {
 		if (!response.ok){
