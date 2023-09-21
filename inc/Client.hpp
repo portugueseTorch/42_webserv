@@ -7,6 +7,7 @@
 
 class Server;
 class HTTPRequest;
+class HTTPResponse;
 
 class Client
 {
@@ -29,7 +30,6 @@ class Client
 		int					getClientID() const { return _client_id; }
 		int					getStatusCode() const { return _status_code; }
 		bool				getIsError() const { return _status_code >= 400 && _status_code <= 511; }
-		std::string			getResponse() const { return _response; }
 
 		// Setters
 		void				setClientFD(int client_fd);
@@ -39,6 +39,7 @@ class Client
 		Server				*parent_server;		// server who is serving the current client
 		Location			*location_block;	// location block that will handle the request - NULL if
 		HTTPRequest			*request;			// object to be populated during the parseHTTPRequest()
+		HTTPResponse		*response;			// response object
 
 		static int			num_clients;	// number of clients
 	
@@ -54,7 +55,6 @@ class Client
 		int					_cont_length;	// length of the requested content
 		std::string			_file_buff;		// buffer to where the file will be read
 		std::string			_file_type;		// type of the requested file
-		std::string			_response;		// response to be sent
 
 		char				**vectToArr(std::vector<std::string> vect);
 

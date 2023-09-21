@@ -5,10 +5,11 @@ int Client::num_clients = 0;
 Client::Client() {
 	num_clients++;
 	_client_fd = -1;
-	_response = "";
+	// _response = "";
 	parent_server = NULL;
 	location_block = NULL;
 	request = NULL;
+	response = NULL;
 	_client_id = num_clients;
 	_file_buff = "";
 	_status_code = 0;
@@ -23,7 +24,7 @@ Client::~Client() {
 void Client::reset() {
 	_file_buff = "";
 	_status_code = 0;
-	_response = "";
+	// _response = "";
 	location_block = NULL;
 	request = NULL;
 }
@@ -145,39 +146,8 @@ std::string Client::statusCodeToMessage(int status_code) {
 
 
 std::string Client::getContentType(std::string uri) {
-	// Get index of last '.' of uri
-	int lp = uri.find_last_of('.');
-	if (uri[uri.length() - 1] == '/' || lp == -1)
-		return "directory";
-
-	// Check the file extension
-	std::string ex = uri.substr(lp);	
-	if (ex == ".html")
-		return "text/html\r\n";
-	else if (ex == ".css" || uri.find("text/css") == 0)
-		return "text/css\r\n";
-	else if (ex == ".js")
-		return "application/javascript\r\n";
-	else if (ex == ".csv")
-		return "text/csv\r\n";
-	else if (ex == ".xml")
-		return "text/xml\r\n";
-	else if (ex == ".txt")
-		return "text/plain\r\n";
-	// else if (ex == ".gif")
-	// 	return "image/gif\r\n";
-	else if (ex == ".jpeg" || ex == ".jpg")
-		return "image/jpeg\r\n";
-	else if (ex == ".png")
-		return "image/png\r\n";
-	else if (ex == ".ico")
-		return "image/ico\r\n";
-	else if (ex == ".svg")
-		return "image/svg+xml\r\n";
-	else if (ex == ".py")
-		return "text/html\r\n";
-	else
-		return "undefined";
+	(void) uri;
+	return "";
 }
 
 /**
@@ -317,58 +287,63 @@ int Client::searchRequestedContent(std::string uri) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int Client::buildHTTPResponse() {
-	// Get HTTP protocol from the request
-	_response += request->getProtocol() + " ";
+	response = new HTTPResponse(request, parent_server);
+	response->build();
 
-	_uri = request->getRequestURI();
-	// Otherwise if method is GET, read content of the requested file
-	if (request->getMethod() == "GET") {
-		searchRequestedContent(_uri);
-	}
+/* ##################################################################### */
 
-	// If the status_code is not set, something went wrong
-	if (_status_code == 0) {
-		this->setStatusCode(500);
-		log(std::cerr, ERROR, "Something went wrong", "");
-	}
+	// // Get HTTP protocol from the request
+	// _response += request->getProtocol() + " ";
 
-	std::stringstream ss;
-	ss << _status_code;
-	// Set the first line of the Response
-	_response += ss.str() + " " + statusCodeToMessage(_status_code);
+	// _uri = request->getRequestURI();
+	// // Otherwise if method is GET, read content of the requested file
+	// if (request->getMethod() == "GET") {
+	// 	searchRequestedContent(_uri);
+	// }
+
+	// // If the status_code is not set, something went wrong
+	// if (_status_code == 0) {
+	// 	this->setStatusCode(500);
+	// 	log(std::cerr, ERROR, "Something went wrong", "");
+	// }
+
+	// std::stringstream ss;
+	// ss << _status_code;
+	// // Set the first line of the Response
+	// _response += ss.str() + " " + statusCodeToMessage(_status_code);
 
 
-	// Add Date
-	std::time_t now = std::time(NULL);
-	std::tm* timeinfo = std::localtime(&now);
-	const char* date = "%a, %d %b %Y %H:%M:%S %Z\r\n";
-	char buffer[80]; // Sufficient buffer size to hold the formatted string
-	std::strftime(buffer, sizeof(buffer), date, timeinfo);
-	_response += "Date: " + std::string(buffer);
+	// // Add Date
+	// std::time_t now = std::time(NULL);
+	// std::tm* timeinfo = std::localtime(&now);
+	// const char* date = "%a, %d %b %Y %H:%M:%S %Z\r\n";
+	// char buffer[80]; // Sufficient buffer size to hold the formatted string
+	// std::strftime(buffer, sizeof(buffer), date, timeinfo);
+	// _response += "Date: " + std::string(buffer);
 
-	// Add Server info
-	_response += "Server: Webserver/42.0\r\n";
+	// // Add Server info
+	// _response += "Server: Webserver/42.0\r\n";
 
-	ss.str("");
-	ss.clear(); // Clear state flags.
-	// Add Content-Length
-	ss << _cont_length;
-	if (!request->isCGI)
-		_response += "Content-Length: " + ss.str() += "\r\n";
-	std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
+	// ss.str("");
+	// ss.clear(); // Clear state flags.
+	// // Add Content-Length
+	// ss << _cont_length;
+	// if (!request->isCGI)
+	// 	_response += "Content-Length: " + ss.str() += "\r\n";
+	// std::cout << "###################\n" << "Content-Length: " + ss.str() << "\n###################\n";
 
-	// Add Content-Type
-	_response += "Content-Type: " + _file_type;
+	// // Add Content-Type
+	// _response += "Content-Type: " + _file_type;
 
-	// Add Body
-	if (request->isCGI) {
-		return buildCGIResponse();
-	} else {
-		_response += "\r\n\r\n";
-		_response += _file_buff + "\r\n";
-	}
+	// // Add Body
+	// if (request->isCGI) {
+	// 	return buildCGIResponse();
+	// } else {
+	// 	_response += "\r\n\r\n";
+	// 	_response += _file_buff + "\r\n";
+	// }
 
-	std::cout << _response << std::endl;
+	// std::cout << _response << std::endl;
 	return 0;
 }
 
@@ -419,8 +394,8 @@ int	Client::buildCGIResponse() {
 		}
 
 		ss << body.size();
-		_response += "Content-Length: " + ss.str() += "\r\n\r\n";
-		_response += body + "\r\n";
+		// _response += "Content-Length: " + ss.str() += "\r\n\r\n";
+		// _response += body + "\r\n";
 	}
 	return 0;
 }

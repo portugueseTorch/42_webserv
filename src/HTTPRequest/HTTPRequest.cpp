@@ -96,14 +96,19 @@ void	HTTPRequest::setup() {
 				break ;
 			}
 			case URI: {
-				if (it->_content.find("cgi-bin") != std::string::npos && \
-					(it->_content.find(".py") != std::string::npos || \
-					it->_content == "/cgi-bin" || it->_content == "/cgi-bin/")) {
+				std::string u;
+				if (it->_content != "/" && it->_content[it->_content.length() - 1] == '/')
+					u = it->_content.substr(0, it->_content.length() - 1);
+				else
+					u = it->_content;
+				if (u.find("cgi-bin") != std::string::npos && \
+					(u.find(".py") != std::string::npos || \
+					u == "/cgi-bin" || u == "/cgi-bin/")) {
 					isCGI = true;
-					this->_requestURI = it->_content.substr(0, it->_content.find('?'));
-					extractQuery(it->_content);
+					this->_requestURI = u.substr(0, u.find('?'));
+					extractQuery(u);
 				} else {
-					this->_requestURI = it->_content;
+					this->_requestURI = u;
 				}
 				break ;
 			}

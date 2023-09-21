@@ -177,8 +177,7 @@ bool ServerEngine::isServer(int fd) {
 }
 
 /**
- * @brief Assigns the client to the appropriate server and location block
- * if applicable
+ * @brief Assigns the client to the appropriate server
  * 
  * @param client Client to Assign 
  * @return int Returns 0 on success, and 1 on failure
@@ -187,6 +186,7 @@ int ServerEngine::assignServer(Client &client) {
 	bool exact_match_found = false;
 	std::vector<Server*> possible_servers;
 	std::vector<Server*> backup_servers;
+	std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 
 	/**
 	 * First check for the Port and IP Address of the request against each of the server block.
@@ -241,28 +241,11 @@ int ServerEngine::assignServer(Client &client) {
 		clientStringID = ss.str();
 		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
 		ss.str("");
-ss.clear();;
+		ss.clear();
 		ss << client.parent_server->getServerID();
 		parentStringID = ss.str();
 		log(std::cout, SUCCESS, client_id_string, parentStringID);
 		client.parent_server->displayServer();
-
-		std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
-		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
-		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
-			if (it->getLocation() == client.request->getRequestURI()) {
-				client.location_block = &(*it);
-				break ;
-			}
-		}
-
-		if (client.location_block) {
-			client_id_string = "Client '" + clientStringID + "' assigned to location block";
-			log(std::cout, SUCCESS, client_id_string, "");
-			client.location_block->displayLocationBlock();
-		} else {
-			log(std::cout, INFO, client_id_string, "NONE");
-		}
 
 	return 0;
 }
@@ -385,21 +368,6 @@ int ServerEngine::readHTTPRequest(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendRegResponse(Client &client) {
-	std::string response = client.getResponse();
-	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
-	if (ret != static_cast<ssize_t>(response.length())) {
-		if (ret == static_cast<ssize_t>(-1)) {
-			log(std::cerr, ERROR, "send() call failed", "");
-			// TODO: consider removing from the set and from the map
-			return 1;
-		} else
-			log(std::cout, WARNING, "Unable to send the full data", "");
-	}
-
-	// Modify fd to monitor read events instead of write
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-
-	// Reset Client
 	client.reset();
 
 	return 0;
@@ -412,21 +380,6 @@ int ServerEngine::sendRegResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendErrResponse(Client &client) {
-	std::string response = client.getResponse();
-	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
-	if (ret != static_cast<ssize_t>(response.length())) {
-		if (ret == static_cast<ssize_t>(-1)) {
-			log(std::cerr, ERROR, "send() call failed", "");
-			// TODO: consider removing from the set and from the map
-			return 1;
-		} else
-			log(std::cout, WARNING, "Unable to send the full data", "");
-	}
-
-	// Modify fd to monitor read events instead of write
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-
-	// Reset Client
 	client.reset();
 
 	return 0;
@@ -446,14 +399,17 @@ int ServerEngine::sendResponse(Client &client) {
 		return 1;
 
 	// If it's an error, call sendErrResponse()
-	if (client.getIsError()) {
-		if (sendErrResponse(client))
-			return 1;
-		return 0;
-	}
+	// if (client.getIsError()) {
+	// 	if (sendErrResponse(client))
+	// 		return 1;
+	// 	return 0;
+	// }
 
-	if (sendRegResponse(client))
-		return 1;
+	// if (sendRegResponse(client))
+	// 	return 1;
+	std::string resp = "HTTP/1.1 200 OK\r\n";
+	send(client.getClientFD(), resp.c_str(), resp.length(), 0);
+	closeConnection(client.getClientFD());
 	return 0;
 }
 
@@ -506,7 +462,7 @@ int ServerEngine::setupSets() {
 
 		std::string first_part = "Server " + ss.str() + " is listening on port";
 		ss.str("");
-ss.clear();;
+		ss.clear();
 		ss << ntohs(it->getPort());
 		log(std::cout, INFO, first_part, ss.str());
 		_server_map[it->getServerFD()] = *it;
@@ -547,7 +503,6 @@ int ServerEngine::runServers() {
 			if (FD_ISSET(fd, &read_cpy)) {
 				// If it's a server, accept new connection
 				if (_server_map.count(fd)) {
-
 					log(std::cout, INFO, "Incoming connection coming through fd", ss.str());
 					if (acceptNewConnection(_server_map[fd]))
 						return 1;
@@ -565,7 +520,7 @@ int ServerEngine::runServers() {
 				}
 			}
 			ss.str("");
-ss.clear();;
+			ss.clear();
 		}
 	}
 	return 0;

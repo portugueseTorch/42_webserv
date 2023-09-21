@@ -33,6 +33,7 @@
 # include <sys/time.h>
 
 
+# include "HTTPResponse.hpp"
 # include "Server.hpp"
 # include "ServerEngine/Lexer.hpp"
 # include "ServerEngine/Parser.hpp"
@@ -64,6 +65,8 @@
 # define MOD_SET		4
 # define DEL_SET		8
 
+# define DEFAULT_ROOT "/"
+
 enum MsgType {
 	INFO,
 	FATAL,
@@ -76,6 +79,7 @@ enum MsgType {
 /****** UTILS.CPP ******/
 int			damerauLevenshteinDistance(std::string input, std::string valid);
 bool		isindent(int i);
+bool		file_is_valid(std::string file_path, int permissions);
 void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
 std::string	readConfigurationFile(int argc, char **argv);
 

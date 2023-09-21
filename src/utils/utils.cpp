@@ -128,3 +128,14 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 		stream << ": \'" << optional << "\'";
 	stream << RESET << std::endl;
 }
+
+bool file_is_valid(std::string file_path, int permissions) {
+	struct stat s;
+
+	// Check if the file exists
+	if (stat(file_path.c_str(), &s) != 0)
+		return false;
+
+	// Check if the file has the specified permissions
+	return (access(file_path.c_str(), permissions) == 0);
+}
