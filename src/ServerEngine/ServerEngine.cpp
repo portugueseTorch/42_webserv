@@ -368,8 +368,9 @@ int ServerEngine::readHTTPRequest(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendRegResponse(Client &client) {
+	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
+	modifySet(client.getClientFD(), READ_SET, MOD_SET);
 	client.reset();
-
 	return 0;
 }
 
@@ -405,10 +406,8 @@ int ServerEngine::sendResponse(Client &client) {
 	// 	return 0;
 	// }
 
-	// if (sendRegResponse(client))
-	// 	return 1;
-	std::string resp = "HTTP/1.1 200 OK\r\n";
-	send(client.getClientFD(), resp.c_str(), resp.length(), 0);
+	if (sendRegResponse(client))
+		return 1;
 	closeConnection(client.getClientFD());
 	return 0;
 }

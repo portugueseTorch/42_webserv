@@ -9,8 +9,10 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_time = "";
 	_server = "";
 	_content_type = "";
-	_content_length = "";
 	_body = "";
+	_body_length = 0;
+	_header_length = 0;
+	_response_length = 0;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -51,6 +53,12 @@ std::string HTTPResponse::getTime() {
 	return std::string(buffer);
 }
 
+std::string formatTime(const struct tm* timeinfo) {
+	char buffer[80];
+	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S %Z", timeinfo);
+	return std::string(buffer);
+}
+
 std::string HTTPResponse::getContentType(std::string uri) {
 	// Get index of last '.' of uri
 	int lp = uri.find_last_of('.');
@@ -83,6 +91,52 @@ std::string HTTPResponse::getContentType(std::string uri) {
 		return "text/html";
 	else
 		return "undefined";
+}
+
+std::string HTTPResponse::statusCodeToMessage() {
+	switch (_status_code)
+	{
+		case 200:
+			return "OK";
+		case 201:
+			return "Created";
+		case 202:
+			return "Accepted";
+		case 204:
+			return "No Content";
+
+		case 400:
+			return "Bad Request";
+		case 403:
+			return "Forbidden";
+		case 404:
+			return "Not Found";
+		case 405:
+			return "Method Not Allowed";
+		case 406:
+			return "Not Acceptable";
+		case 410:
+			return "Gone";
+		case 411:
+			return "Length Required";
+		case 414:
+			return "URI Too Long";
+		case 415:
+			return "Unsupported Media Type";
+
+		case 500:
+			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
+		case 502:
+			return "Bad Gateway";
+		case 504:
+			return "Gateway Timeout";
+		case 505:
+			return "HTTP Version Not Supported";
+		default:
+			return "";
+	}
 }
 
 std::string HTTPResponse::getRelevantRoot() {
@@ -127,13 +181,13 @@ void HTTPResponse::readContent(std::string file_path) {
 	// Resize the string _body to fit the whole file, and read the content to the body
 	_body.resize(file_size);
 	file.read(const_cast<char *>(_body.data()), file_size);
-
-	// Set _body_length
 	_body_length = file_size + 2;
-	std::cout << _body << std::endl;
+	_status_code = 200;
+	_last_modified = formatTime(std::localtime(&s.st_mtime));
 }
 
-void HTTPResponse::searchContent(std::string uri) {
+void HTTPResponse::searchContent() {
+	std::string uri = request->getRequestURI();
 	std::string file_path;
 	std::string root = getRelevantRoot();
 	bool		found = false;
@@ -174,26 +228,40 @@ void HTTPResponse::searchContent(std::string uri) {
 	readContent(file_path);
 }
 
-int HTTPResponse::handleContentHeaders() {
-	searchContent(request->getRequestURI());
-	// _content_type = getContentType(request->getRequestURI()) + "\r\n";
-	return 0;
-}
-
 int	HTTPResponse::build() {
 	// Assign the location block for the response
 	this->assignLocationBlock();
 
 	// General Headers
-	_protocol = request->getProtocol() + "\r\n";
-	_time = getTime() + "\r\n";
-	_server = "Webserv/42.0\r\n";
+	_protocol = request->getProtocol();
+	_time = getTime();
+	_server = "Webserv/42.0";
 
 	// Content Headers
-	handleContentHeaders();
+	searchContent();
 
-	std::cout << "Protocol:\t" << _protocol;
-	std::cout << "Time:\t\t" << _time;
-	std::cout << "Server:\t\t" << _server;
+	std::stringstream ss;
+	ss << _status_code;
+	_response += _protocol + " "  + ss.str() + " " + statusCodeToMessage() + "\r\n";
+	ss.str("");
+	ss.clear();
+
+	_response += "Date: " + _time + "\r\n";
+	_response += "Server: " + _server + "\r\n";
+	_response += "Last-Modified: " + _last_modified + "\r\n";
+
+	ss << _body_length;
+	_response += "Content-Length: " + ss.str() + "\r\n";
+	ss.str("");
+	ss.clear();
+
+	_response += "Content-Type: " + _content_type + "\r\n";
+	_response += "\r\n";
+	_header_length = _response.length();
+	_response += _body + "\r\n";
+	_response_length = _header_length + _body_length;
+
+	// std::cout << _response << std::endl;
+	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
 	return 0;
 } 

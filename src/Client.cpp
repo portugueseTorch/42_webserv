@@ -27,6 +27,9 @@ void Client::reset() {
 	// _response = "";
 	location_block = NULL;
 	request = NULL;
+	if (response)
+		delete response;
+	response = NULL;
 }
 
 void Client::setClientFD(int client_fd) {
