@@ -43,29 +43,30 @@
 # include "HTTPRequest/Lexer.hpp"
 # include "HTTPRequest/Parser.hpp"
 
-# define RESET			"\x1B[0m"
-# define RED			"\x1B[31m"
-# define GREEN			"\x1B[32m"
-# define YELLOW			"\x1B[33m"
-# define CYAN			"\x1B[36m"
-# define WHITE			"\x1B[37m"
-# define DARK_GREY		"\x1B[90m"
-# define LIGHT_RED		"\x1B[91m"
-# define LIGHT_GREEN	"\x1B[92m"
-# define LIGHT_YELLOW	"\x1B[93m"
-# define LIGHT_BLUE		"\x1B[94m"
-# define LIGHT_MAGENTA	"\x1B[95m"
+# define RESET				"\x1B[0m"
+# define RED				"\x1B[31m"
+# define GREEN				"\x1B[32m"
+# define YELLOW				"\x1B[33m"
+# define CYAN				"\x1B[36m"
+# define WHITE				"\x1B[37m"
+# define DARK_GREY			"\x1B[90m"
+# define LIGHT_RED			"\x1B[91m"
+# define LIGHT_GREEN		"\x1B[92m"
+# define LIGHT_YELLOW		"\x1B[93m"
+# define LIGHT_BLUE			"\x1B[94m"
+# define LIGHT_MAGENTA		"\x1B[95m"
 
-# define MAX_EVENTS		10
-# define EPOLL_TIMEOUT	1000
-# define MAX_LENGTH		4960
-# define READ_SET		0
-# define WRITE_SET		1
-# define ADD_SET		2
-# define MOD_SET		4
-# define DEL_SET		8
+# define MAX_EVENTS			10
+# define EPOLL_TIMEOUT		1000
+# define MAX_LENGTH			4960
+# define READ_SET			0
+# define WRITE_SET			1
+# define ADD_SET			2
+# define MOD_SET			4
+# define DEL_SET			8
 
-# define DEFAULT_ROOT "/"
+# define DEFAULT_ROOT		"/"
+# define DEFAULT_ERROR_FILE	"./www/error_pages/40x.html"
 
 enum MsgType {
 	INFO,
