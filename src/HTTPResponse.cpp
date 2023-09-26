@@ -337,7 +337,6 @@ int	HTTPResponse::build() {
 
 	_response_length = _header_length + _body_length;
 
-	std::cout << _response;
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
 	return 0;
 } 

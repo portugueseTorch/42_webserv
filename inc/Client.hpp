@@ -30,11 +30,13 @@ class Client
 		int					getClientID() const { return _client_id; }
 		int					getStatusCode() const { return _status_code; }
 		bool				getIsError() const { return _status_code >= 400 && _status_code <= 511; }
+		std::string			getRequestString() const { return _request_str; }
 
 		// Setters
 		void				setClientFD(int client_fd);
 		void				setRequest(std::string request_str);
 		void				setStatusCode(int status_code);
+		void				appendToRequest(std::string req);
 
 		Server				*parent_server;		// server who is serving the current client
 		Location			*location_block;	// location block that will handle the request - NULL if

@@ -186,7 +186,7 @@ int ServerEngine::assignServer(Client &client) {
 	bool exact_match_found = false;
 	std::vector<Server*> possible_servers;
 	std::vector<Server*> backup_servers;
-	std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
+	// std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 
 	/**
 	 * First check for the Port and IP Address of the request against each of the server block.
@@ -210,42 +210,42 @@ int ServerEngine::assignServer(Client &client) {
 		//	If only one was find, assign it to the client and go to location assignment
 		if (possible_servers.size() == 1) {
 			client.parent_server = possible_servers[0];
-			goto location_assignment;
+			goto display_info;
 		}
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = possible_servers.begin(); it != possible_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto location_assignment;
+				goto display_info;
 			}
 		}
 	} else {
 		// If no appropriate server was found, the default server will handle the request
 		if (backup_servers.size() == 0)
-			goto location_assignment;
+			goto display_info;
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = backup_servers.begin(); it != backup_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto location_assignment;
+				goto display_info;
 			}
 		}
 	}
 
-	location_assignment:
+	display_info:
 		std::stringstream ss;
 		std::string clientStringID;
 		std::string parentStringID;
 
 		ss << client.getClientID();
 		clientStringID = ss.str();
-		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
+		// std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
 		ss.str("");
 		ss.clear();
 		ss << client.parent_server->getServerID();
 		parentStringID = ss.str();
-		log(std::cout, SUCCESS, client_id_string, parentStringID);
-		client.parent_server->displayServer();
+		// log(std::cout, SUCCESS, client_id_string, parentStringID);
+		// client.parent_server->displayServer();
 
 	return 0;
 }
@@ -319,13 +319,11 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[MAX_LENGTH];
+	char buf[MAX_LENGTH + 1];
 	int	ret;
 	int	fd = client.getClientFD();
 	std::stringstream ss;
 	ss << fd;
-
-	std::cout << "\tENTERED" << std::endl;
 
 	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
@@ -339,25 +337,16 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	}
 
 	// Update the client fd from reading to writing
-	modifySet(fd, READ_SET, MOD_SET);
+	if (ret != MAX_LENGTH)
+		modifySet(fd, READ_SET, MOD_SET);
 
 	ss.str("");
 	ss.clear();;
 	ss << client.getClientFD();
-	log(std::cout, SUCCESS, "Message received on client socket", ss.str());
+	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
 	std::cout << buf << std::endl;
 
-	// Parse HTTP Request
-	client.parseHTTPRequest(buf);
-	// if (client.request->getQueryParams().size()) {
-	// 	sendCGIResponse(client);
-	// 	return 0;
-	// }
-	// Assign the server according to the parsed request
-	if (assignServer(client)) {
-		log(std::cerr, ERROR, "Failure assigning server", "");
-		return 1;
-	}
+	client.appendToRequest(buf);
 
 	return 0;
 }
@@ -371,20 +360,9 @@ int ServerEngine::readHTTPRequest(Client &client) {
  */
 int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
+	std::cout << "Message Sent!" << std::endl;
 	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 	client.reset();
-	return 0;
-}
-
-/**
- * @brief Builds an error response and sends it back to the client
- * 
- * @param client Client to whom the response will be sent
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendErrResponse(Client &client) {
-	client.reset();
-
 	return 0;
 }
 
@@ -397,21 +375,23 @@ int ServerEngine::sendErrResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	std::cout << "\t\tReached this part!!\t\t" << std::endl;
+	// Parse HTTP Request
+	client.parseHTTPRequest(client.getRequestString());
+
+	if (assignServer(client)) {
+		log(std::cerr, ERROR, "Failure assigning server", "");
+		return 1;
+	}
+
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
 
-	// If it's an error, call sendErrResponse()
-	// if (client.getIsError()) {
-	// 	if (sendErrResponse(client))
-	// 		return 1;
-	// 	return 0;
-	// }
-
 	if (sendRegResponse(client))
 		return 1;
-	// closeConnection(client.getClientFD());
+
+	// if (!client.request->getKeepAlive())
+		// closeConnection(client.getClientFD());
 	return 0;
 }
 
@@ -511,7 +491,7 @@ int ServerEngine::runServers() {
 				}
 				// If it's a client, accept new connection
 				else if (_client_map.count(fd)) {
-					log(std::cout, INFO, "Change of status in fd", ss.str());
+					// log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}

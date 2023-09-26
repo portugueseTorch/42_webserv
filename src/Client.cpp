@@ -22,6 +22,7 @@ Client::~Client() {
 }
 
 void Client::reset() {
+	_request_str = "";
 	_file_buff = "";
 	_status_code = 0;
 	// _response = "";
@@ -38,6 +39,10 @@ void Client::setClientFD(int client_fd) {
 
 void Client::setRequest(std::string request_str) {
 	_request_str = request_str;
+}
+
+void Client::appendToRequest(std::string req) {
+	_request_str += req;
 }
 
 void Client::setStatusCode(int status_code) {
