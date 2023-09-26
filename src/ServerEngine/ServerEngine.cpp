@@ -319,13 +319,13 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[MAX_LENGTH + 1];
+	char buf[200];
 	int	ret;
 	int	fd = client.getClientFD();
 	std::stringstream ss;
 	ss << fd;
-
-	ret = read(fd, buf, MAX_LENGTH);
+	memset(buf, 0, 200);
+	ret = read(fd, buf, 199);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
 		closeConnection(fd);
@@ -337,16 +337,19 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	}
 
 	// Update the client fd from reading to writing
-	if (ret != MAX_LENGTH)
-		modifySet(fd, READ_SET, MOD_SET);
+	// if (ret != MAX_LENGTH)
+	// std::cout << ret << std::endl;
 
 	ss.str("");
-	ss.clear();;
+	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	std::cout << buf << std::endl;
+	// std::cout << buf << std::endl;
 
-	client.appendToRequest(buf);
+	// client.appendToRequest(buf);
+	client.parseHTTPRequest(buf);
+	if (client.request->fullyParsed)
+		modifySet(fd, READ_SET, MOD_SET);
 
 	return 0;
 }
@@ -376,13 +379,14 @@ int ServerEngine::sendRegResponse(Client &client) {
  */
 int ServerEngine::sendResponse(Client &client) {
 	// Parse HTTP Request
-	client.parseHTTPRequest(client.getRequestString());
+	// client.parseHTTPRequest(client.getRequestString());
 
 	if (assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
-
+	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+	return 0;
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;

@@ -33,6 +33,7 @@ class HTTPRequest {
 		bool			success() const;
 		int				getStatusCode() const { return _statusCode; }
 		bool			isCGI;
+		bool			fullyParsed;
 
 		std::vector<std::string>			&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
@@ -69,7 +70,7 @@ class HTTPRequest {
 		std::string 						_protocol;
 		std::vector<std::string>			_query;
 		bool								_keepAlive;
-		int									_contentLength;
+		size_t									_contentLength;
 		std::string							_body;
 		uint32_t							_port;
 		in_addr_t							_ip_address;
@@ -77,6 +78,7 @@ class HTTPRequest {
 
 		std::map<std::string, std::string>	_params;
 		bool								_parserCreated;
+		bool								_emptyLine;
 };
 
 #endif

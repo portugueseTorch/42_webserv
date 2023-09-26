@@ -3,29 +3,73 @@
 
 HTTPRequest::HTTPRequest():
 	isCGI(false),
+	fullyParsed(false),
 	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
-	_parserCreated(false) {
+	_parserCreated(false),
+	_emptyLine(false) {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
 
 void HTTPRequest::process(std::string request) {
-	_content = request;
-	try {
-		parse();
-		setup();
-		log(std::cout, SUCCESS, "HTTP Request successfully processed", "");
-	} catch (parserNotInitialized &e) {
-		_statusCode = 400;
-		log(std::cerr, ERROR, "HTTPRequest", e.what());
-	} catch(HTTPParser::invalidSyntaxException &e) {
-		log(std::cerr, ERROR, "Parser", e.what());
-		_statusCode = 400;
-	} catch(invalidHTTPRequest &e) {
-		_statusCode = 400;
+	_content += request;
+	std::string headerLine;
+	size_t newLine = _content.find("\r\n");
+	while (newLine != std::string::npos) {
+		if (!_emptyLine) {
+			headerLine = _content.substr(0, newLine);
+			std::cout << "'" << headerLine << "'" << std::endl;
+			if (headerLine.empty())
+				_emptyLine = true;
+			//function to process header
+			if (headerLine.find("Content-Length:") == 0)
+				_contentLength = 46;
+		} else {
+			//check if content length header present
+			if (_contentLength != 46) {
+
+				std::cerr << "missing cont length" << std::endl;
+			} else {
+				std::cout << "oi" << std::endl;
+			_body += _content;
+			}
+		}
+		_content = _content.substr(newLine + 2);
+		// std::cout << "cenas\t" << _content << std::endl;
+		newLine = _content.find("\r\n");
 	}
+	if (_emptyLine) {
+		if (_contentLength != 46) {
+
+				std::cerr << "missing cont length" << std::endl;
+			} else {
+				std::cout << "oi" << std::endl;
+			_body += _content;
+			}
+		_content = "";
+		if (!_contentLength && _body.empty()) {
+			std::cout << "good enough" << std::endl;
+			fullyParsed = true;
+		} else if (_body.length() == _contentLength) {
+			fullyParsed = true;
+			std::cout << "'" << _body << "'" << std::endl;
+		}
+	}
+	// try {
+	// 	parse();
+	// 	setup();
+	// 	log(std::cout, SUCCESS, "HTTP Request successfully processed", "");
+	// } catch (parserNotInitialized &e) {
+	// 	_statusCode = 400;
+	// 	log(std::cerr, ERROR, "HTTPRequest", e.what());
+	// } catch(HTTPParser::invalidSyntaxException &e) {
+	// 	log(std::cerr, ERROR, "Parser", e.what());
+	// 	_statusCode = 400;
+	// } catch(invalidHTTPRequest &e) {
+	// 	_statusCode = 400;
+	// }
 }
 
 HTTPRequest::~HTTPRequest() {

@@ -81,18 +81,20 @@ int Client::setupClient() {
  * @return int Returns 0 on success, and 1 on failure
  */
 int Client::parseHTTPRequest(std::string request_str) {
-	if (request)
-		delete request;
-	request = new HTTPRequest;
-	log(std::cout, INFO, "Creating request", "");
-	if (!parent_server) {
-		log(std::cout, ERROR, "Somehow parent server is not assiged...", "");
-		return 1;
+	// if (request)
+	// 	delete request;
+	if (!request) {
+		log(std::cout, INFO, "Creating request", "");
+		request = new HTTPRequest;
+		if (!parent_server) {
+			log(std::cout, ERROR, "Somehow parent server is not assiged...", "");
+			return 1;
+		}
+		request->setPort(parent_server->getPort());
+		request->setIPAddress(parent_server->getIPAddress());
 	}
-	request->setPort(parent_server->getPort());
-	request->setIPAddress(parent_server->getIPAddress());
 	request->process(request_str);
-	if (!request->success()) {
+	if (request->fullyParsed && !request->success()) {
 		_status_code = 400;
 		return 1;
 	}
