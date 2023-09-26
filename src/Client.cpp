@@ -79,6 +79,7 @@ int Client::parseHTTPRequest(std::string request_str) {
 	if (request)
 		delete request;
 	request = new HTTPRequest;
+	log(std::cout, INFO, "Creating request", "");
 	if (!parent_server) {
 		log(std::cout, ERROR, "Somehow parent server is not assiged...", "");
 		return 1;

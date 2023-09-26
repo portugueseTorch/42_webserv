@@ -41,6 +41,10 @@ void	HTTPRequest::setIPAddress(in_addr_t ip_address) {
 	_ip_address = ip_address;
 }
 
+void HTTPRequest::setURI(std::string uri) {
+	_requestURI = uri;
+}
+
 std::string	HTTPRequest::getServerName() {
 	std::string host;
 	std::vector<std::string> split;

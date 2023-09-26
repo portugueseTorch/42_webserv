@@ -325,6 +325,8 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	std::stringstream ss;
 	ss << fd;
 
+	std::cout << "\tENTERED" << std::endl;
+
 	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
@@ -369,7 +371,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
  */
 int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
-	modifySet(client.getClientFD(), READ_SET, MOD_SET);
+	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 	client.reset();
 	return 0;
 }
@@ -395,6 +397,7 @@ int ServerEngine::sendErrResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
+	std::cout << "\t\tReached this part!!\t\t" << std::endl;
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
@@ -408,7 +411,7 @@ int ServerEngine::sendResponse(Client &client) {
 
 	if (sendRegResponse(client))
 		return 1;
-	closeConnection(client.getClientFD());
+	// closeConnection(client.getClientFD());
 	return 0;
 }
 

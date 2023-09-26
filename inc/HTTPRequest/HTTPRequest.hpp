@@ -18,6 +18,7 @@ class HTTPRequest {
 		// Setters
 		void			setPort(uint32_t port);
 		void			setIPAddress(in_addr_t ip_address);
+		void			setURI(std::string uri);
 
 		// Getters
 		std::string		getServerName();

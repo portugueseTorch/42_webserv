@@ -38,6 +38,7 @@ void HTTPResponse::assignLocationBlock() {
 			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
 			location_block->displayLocationBlock();
+			request->setURI(uri.substr(loc_length));
 			return ;
 		}
 	}
@@ -218,7 +219,8 @@ void HTTPResponse::searchContent() {
 						break;
 					}
 				}
-			} else {
+			}
+			if (!found) {
 				log(std::cerr, ERROR, "Invalid fallback files specified in 'index'", "");
 				_status_code = 500;
 				return ;
@@ -237,7 +239,8 @@ void HTTPResponse::searchContent() {
 						break;
 					}
 				}
-			} else {
+			}
+			if (!found) {
 				log(std::cerr, ERROR, "Invalid fallback files specified in 'index'", "");
 				_status_code = 500;
 				return ;
@@ -318,7 +321,7 @@ int	HTTPResponse::build() {
 
 	_response += "Date: " + _time + "\r\n";
 	_response += "Server: " + _server + "\r\n";
-	_response += "Last-Modified: " + _last_modified + "\r\n";
+	// _response += "Last-Modified: " + _last_modified + "\r\n";
 
 	ss << _body_length;
 	_response += "Content-Length: " + ss.str() + "\r\n";
