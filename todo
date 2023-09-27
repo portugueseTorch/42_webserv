@@ -1,7 +1,0 @@
-- parse by chunks
-  - headers by /r/n
-  - have unparsed remainder available to parse in next iteration
-  - flag indicating parsing has ended
-- include max client size
-- check cont length
-
