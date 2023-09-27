@@ -28,6 +28,8 @@ class HTTPResponse
 		std::string		getContentType(std::string);			// returns a string with the type of the content to be server
 		std::string		getRelevantRoot();						// returns a string with the root that is relevant to the request
 		std::string		statusCodeToMessage();					// returns a string with the message related with the status code
+		bool			validClientBodySize();					// checks if the length of the client body is within bounds
+		bool			isAllowedMethod();						// checks if the current method is allowed
 		void			assignLocationBlock();					// assigns the relevant location block (if any)
 		void			readFile(std::string, struct stat *);	// reads the content of the argument file
 		void			searchContent();						// searches the requested content

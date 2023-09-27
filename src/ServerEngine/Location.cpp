@@ -12,7 +12,14 @@ std::string	Location::_possibleDirectives[] = {
 std::vector<std::string> Location::directives(Location::_possibleDirectives, \
 	Location::_possibleDirectives + sizeof(Location::_possibleDirectives) / sizeof(std::string));
 
-Location::Location() {}
+Location::Location() {
+	std::string method_array[] = { "GET", "POST", "DELETE" };
+	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
+	_http_method = http_method;
+	_body_size_specified = false;
+	_client_max_body_size = 1000000;
+	_root = "";
+}
 
 Location::~Location() {}
 
@@ -37,6 +44,17 @@ void Location::displayLocationBlock() {
 				std::cout << *k << " ";
 			std::cout << "]\n";
 		}
+	}
+	{
+		std::cout << "\t\tHTTP Methods: ";
+		std::vector<std::string> http_Method = getHTTPMethod();
+		for (std::vector<std::string>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+	}
+	{
+		if (_body_size_specified)
+			std::cout << "\t\tClient max body size: " << getClientMaxBodySize() << std::endl;
 	}
 }
 
@@ -114,6 +132,43 @@ int Location::setErrorPages(std::list<Node>::iterator &it) {
 }
 
 /**
+ * @brief Sets the HTTP Method allowed for the location block by iterating
+ * over IT, storing the result in [_http_method] as a vector of strings
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
+int Location::setHTTPMethod(std::list<Node>::iterator &it) {
+	// Clear default allowed methods
+	_http_method.clear();
+
+	for (; it->_type == Parameter; it++) {
+		if (it->_content == "GET")
+			_http_method.push_back("GET");
+		else if (it->_content == "POST")
+			_http_method.push_back("POST");
+		else if (it->_content == "DELETE")
+			_http_method.push_back("DELETE");
+		else {
+			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
+			_http_method.clear();
+			return 1;
+		}
+	}
+	it--;
+
+	// Check valid number of parameters
+	if (_http_method.empty()) {
+		log(std::cerr, ERROR, "Too few arguments for", "http_method");
+		return 1;
+	}
+	return 0;
+}
+
+
+/**
  * @brief Sets the client_max_body_size by iterating over IT, storing 
  * it as a size_t in [_client_max_body_size]. The functions handles
  * numbers, as well as the k, m, and g abbreviations (case-insensitive)
@@ -175,6 +230,7 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
 		cmbs *= 1000000000;
 
 	_client_max_body_size = cmbs;
+	_body_size_specified = true;
 	return 0;
 }
 

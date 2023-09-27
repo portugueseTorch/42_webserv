@@ -120,6 +120,8 @@ std::string HTTPResponse::statusCodeToMessage() {
 			return "Gone";
 		case 411:
 			return "Length Required";
+		case 413:
+			return "Payload Too Large";
 		case 414:
 			return "URI Too Long";
 		case 415:
@@ -196,6 +198,8 @@ int HTTPResponse::readContent(std::string file_path) {
 }
 
 void HTTPResponse::searchContent() {
+	if (isError())
+		return ;
 	std::string uri = request->getRequestURI();
 	std::string file_path;
 	std::string root = getRelevantRoot();
@@ -299,6 +303,33 @@ void HTTPResponse::searchErrorContent() {
 	}
 }
 
+bool HTTPResponse::validClientBodySize() {
+	size_t max_body_size;
+
+	if (location_block && location_block->clientBodySizeSet())
+		max_body_size = location_block->getClientMaxBodySize();
+	else if (parent_server)
+		max_body_size = parent_server->getClientMaxBodySize();
+	else
+		max_body_size = 1000000;
+
+	return request->getBody().size() <= max_body_size;
+}
+
+bool HTTPResponse::isAllowedMethod() {
+	std::vector<std::string> allowed_methods;
+
+	if (location_block)
+		allowed_methods = location_block->getHTTPMethod();
+	else if (parent_server)
+		allowed_methods = parent_server->getHTTPMethod();
+	for (std::vector<std::string>::iterator it = allowed_methods.begin(); it != allowed_methods.end(); it++) {
+		if (request->getMethod() == *it)
+			return true;
+	}
+	return false;
+}
+
 int	HTTPResponse::build() {
 	// Assign the location block for the response
 	this->assignLocationBlock();
@@ -309,6 +340,10 @@ int	HTTPResponse::build() {
 	_server = "Webserv/42.0";
 
 	// Content Headers
+	if (!validClientBodySize())
+		_status_code = 413;
+	if (!isAllowedMethod())
+		_status_code = 405;
 	searchContent();
 	if (isError())
 		searchErrorContent();
