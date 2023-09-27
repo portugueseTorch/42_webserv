@@ -362,7 +362,6 @@ int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
 	std::cout << "Message Sent!" << std::endl;
 	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-	client.reset();
 	return 0;
 }
 
@@ -390,8 +389,9 @@ int ServerEngine::sendResponse(Client &client) {
 	if (sendRegResponse(client))
 		return 1;
 
-	// if (!client.request->getKeepAlive())
-		// closeConnection(client.getClientFD());
+	if (!client.request->getKeepAlive())
+		closeConnection(client.getClientFD());
+	client.reset();
 	return 0;
 }
 

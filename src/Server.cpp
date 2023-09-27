@@ -8,10 +8,14 @@ Server::Server() {
 	_ip_address = inet_addr("0.0.0.0");
 	_server_fd = -1;
 	_client_max_body_size = 1000000;
+	_body_size_specified = false;
 	_autoindex = false;
 	_server_id = num_servers;
 	_is_setup = false;
 	_root = "";
+	std::string method_array[] = { "GET", "POST", "DELETE" };
+	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
+	_http_method = http_method;
 }
 
 Server::~Server() {
@@ -95,7 +99,8 @@ void Server::displayServer() {
 			std::cout << "]\n";
 		}
 
-		std::cout << "\tClient max body size: " << getClientMaxBodySize() << std::endl;
+		if (_body_size_specified)
+			std::cout << "\tClient max body size: " << getClientMaxBodySize() << std::endl;
 
 		std::cout << "\tIndex: [ ";
 		std::vector<std::string> index = getIndex();
@@ -106,9 +111,9 @@ void Server::displayServer() {
 		std::cout << "\tRoot: " << getRoot() << "\n";
 		std::cout << "\tAutoindex: " << getAutoindex() << "\n";
 
-		std::cout << "\tHTTP Method: ";
-		std::vector<int> http_Method = getHTTPMethod();
-		for (std::vector<int>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
+		std::cout << "\tHTTP Methods: ";
+		std::vector<std::string> http_Method = getHTTPMethod();
+		for (std::vector<std::string>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 
@@ -369,6 +374,7 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 		cmbs *= 1000000000;
 
 	_client_max_body_size = cmbs;
+	_body_size_specified = true;
 	return 0;
 }
 
@@ -478,15 +484,15 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 	for (; it->_type == Parameter; it++) {
 		if (it->_content == "GET")
-			_http_method.push_back(GET);
+			_http_method.push_back("GET");
 		else if (it->_content == "POST")
-			_http_method.push_back(POST);
+			_http_method.push_back("POST");
 		else if (it->_content == "DELETE")
-			_http_method.push_back(DELETE);
-		else if (it->_content == "HEAD")
-			_http_method.push_back(HEAD);
-		else if (it->_content == "PUT")
-			_http_method.push_back(PUT);
+			_http_method.push_back("DELETE");
+		// else if (it->_content == "HEAD")
+		// 	_http_method.push_back(HEAD);
+		// else if (it->_content == "PUT")
+		// 	_http_method.push_back(PUT);
 		else {
 			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
 			_http_method.clear();
@@ -554,7 +560,14 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		} else if (it->_content == "autoindex") {
 			if (location.setAutoindex(++it))
 				return 1;
+		} else if (it->_content == "http_method") {
+			if (location.setHTTPMethod(++it))
+				return 1;
+		} else if (it->_content == "client_max_body_size") {
+			if (location.setClientMaxBodySize(++it))
+				return 1;
 		} else {
+			log(std::cerr, ERROR, "Invalid directive in location block", it->_content);
 			return 1;
 		}
 	}

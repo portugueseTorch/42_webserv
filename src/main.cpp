@@ -27,6 +27,8 @@ int main(int argc, char **argv) {
 		if (engine.configureServers())
 			return 1;
 
+		engine.displayServers();
+
 		// Boot servers
 		if (engine.setupServers())
 			return 1;

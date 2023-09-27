@@ -15,8 +15,11 @@ class Location
 
 		std::string								getLocation() { return _location; }
 		std::string								getRoot() { return _root; }
+		size_t									getClientMaxBodySize() { return _client_max_body_size; }
 		bool									getAutoindex() { return _autoindex; }
+		bool									clientBodySizeSet() { return _body_size_specified; }
 		std::vector<std::string>				&getIndex() { return _index; }
+		std::vector<std::string>				&getHTTPMethod() { return _http_method; }
 		std::map<int,std::vector<std::string> >	&getErrorPages() { return _error_pages; }
 
 		int setLocation(std::string);
@@ -34,8 +37,9 @@ class Location
 		std::vector<std::string>				_index;					// index list according to config_file
 		std::string								_root;					// root of the files as provided by the config_file
 		bool									_autoindex;				// autoindex as per config_file
-		std::vector<int>						_http_method;			// allowed http_Method as per config_file
+		std::vector<std::string>				_http_method;			// allowed http_Method as per config_file
 		size_t									_client_max_body_size;	// lmax size (in bytes) of the client body according to config_file
+		bool									_body_size_specified;	// flag to signal if a max body size was specified in the confug_file
 };
 
 #endif
