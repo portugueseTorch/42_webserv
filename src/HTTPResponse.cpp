@@ -13,6 +13,7 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
+	_status_code = 200;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -201,7 +202,6 @@ void HTTPResponse::searchContent() {
 	if (isError())
 		return ;
 	std::string uri = request->getRequestURI();
-	std::string file_path;
 	std::string root = getRelevantRoot();
 	bool		found = false;
 
@@ -215,10 +215,10 @@ void HTTPResponse::searchContent() {
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
 				for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); it++) {
-					file_path = root + uri + "/" + *it;
-					std::cout << "Trying to assign in location block " << file_path << std::endl;
-					if (file_is_valid(file_path, F_OK)) {
-						log(std::cout, SUCCESS, "File exists in location block", file_path);
+					_file_path = root + uri + "/" + *it;
+					std::cout << "Trying to assign in location block " << _file_path << std::endl;
+					if (file_is_valid(_file_path, F_OK)) {
+						log(std::cout, SUCCESS, "File exists in location block", _file_path);
 						found = true;
 						break;
 					}
@@ -235,10 +235,10 @@ void HTTPResponse::searchContent() {
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
 				for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); it++) {
-					file_path = root + uri + "/" + *it;
-					std::cout << "Trying to assign in server block " << file_path << std::endl;
-					if (file_is_valid(file_path, F_OK)) {
-						log(std::cout, SUCCESS, "File exists in parent server", file_path);
+					_file_path = root + uri + "/" + *it;
+					std::cout << "Trying to assign in server block " << _file_path << std::endl;
+					if (file_is_valid(_file_path, F_OK)) {
+						log(std::cout, SUCCESS, "File exists in parent server", _file_path);
 						found = true;
 						break;
 					}
@@ -251,11 +251,11 @@ void HTTPResponse::searchContent() {
 			}
 		}
 	} else {
-		file_path = root + uri;
+		_file_path = root + uri;
 	}
 
 	// Attempt to read the contents of the file
-	if (!readContent(file_path))
+	if (!readContent(_file_path))
 		_status_code = 200;
 }
 
@@ -331,6 +331,7 @@ bool HTTPResponse::isAllowedMethod() {
 }
 
 int	HTTPResponse::build() {
+	int res = 0;
 	// Assign the location block for the response
 	this->assignLocationBlock();
 
@@ -358,20 +359,89 @@ int	HTTPResponse::build() {
 	_response += "Server: " + _server + "\r\n";
 	// _response += "Last-Modified: " + _last_modified + "\r\n";
 
-	ss << _body_length;
-	_response += "Content-Length: " + ss.str() + "\r\n";
-	ss.str("");
-	ss.clear();
+
+
+	if (!request->isCGI || isError()) {
+		ss << _body_length;
+		_response += "Content-Length: " + ss.str() + "\r\n";
+		ss.str("");
+		ss.clear();
+	}
 
 	_response += "Content-Type: " + _content_type + "\r\n";
-	_response += "\r\n";
-	_header_length = _response.length();
+	if (!request->isCGI || isError())
+		_response += "\r\n";
 
-	if (_body != "")
+	_header_length = _response.length();
+	if (request->isCGI && !isError()) {
+		res = buildCGIResponse();
+	} else if (_body != "")
 		_response += _body + "\r\n";
 
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	return 0;
+	// std::cout << _response;
+	return res;
 } 
+
+int HTTPResponse::buildCGIResponse() {
+	int pipe_fd[2];
+	int pid;
+
+	_response.clear();
+	// Create the pipe
+	if (pipe(pipe_fd) == -1) {
+		log(std::cerr, ERROR, "pipe() call failed", "");
+		return 1;
+	}
+	// Fork and execve the script on the child pr
+	if ((pid = fork()) == -1) {
+		log(std::cerr, ERROR, "fork() call failed", "");
+		return 1;
+	}
+
+	if (pid == 0) {
+		dup2(pipe_fd[1], STDOUT_FILENO);
+		close(pipe_fd[0]);
+		char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
+		char **envp = vectToArr(request->getQueryParams());
+		execve("/usr/bin/python3", args, envp);
+		//need error handling so request is not left pending
+		delete []envp;
+	} else {
+		close(pipe_fd[1]);
+		wait(NULL);
+		char msg[MAX_LENGTH] = "";
+		if (_body != "")
+			_body.clear();
+		std::stringstream ss;
+
+		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+		while (bytes != 0) {
+			if (bytes == -1) {
+				log(std::cerr, ERROR, "read() call failed", "");
+				return 1;
+			}
+			_body += msg;
+			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+		}
+
+		_header_length = _response.size();
+		_body_length = _body.size() + 2;
+		_response += _body + "\r\n";
+		_response_length = _header_length + _body_length;
+	}
+	return 0;
+}
+
+char**	HTTPResponse::vectToArr(std::vector<std::string> vect) {
+	char **envp = new char*[vect.size() + 1];
+	size_t i = 0;
+	for (; i < vect.size(); i++) {
+		envp[i] = new char[vect[i].size() + 1];
+		strcpy(envp[i], vect[i].c_str());
+	}
+	envp[i] = NULL;
+	return envp;
+}

@@ -35,6 +35,8 @@ class HTTPResponse
 		void			searchContent();						// searches the requested content
 		void			searchErrorContent();					// searches the appropriate error file, if needed
 		int				readContent(std::string);				// attempts to read the requested file, setting status codes appropriately
+		int				buildCGIResponse();						// builds the CGI response
+		char**			vectToArr(std::vector<std::string> vect);
 
 		std::string		_response;								// response to be sent
 		std::string		_protocol;								// protocol of the request
@@ -43,6 +45,7 @@ class HTTPResponse
 		std::string		_content_type;							// type of the content that will be served
 		std::string		_body;									// holds the contents of the requested content, if any
 		std::string		_last_modified;							// time when the file was last modified
+		std::string		_file_path;								// path of the file to read
 		int				_body_length;							// length of the body (includes the terminating "\r\n")
 		int				_header_length;							// length of the headers portion of the response
 		int				_response_length;						// total length of the HTTP response

@@ -21,7 +21,6 @@ class Client
 		int					parseHTTPRequest(std::string request_str);
 		int					searchRequestedContent(std::string content);
 		int					buildHTTPResponse();
-		int					buildCGIResponse();
 		std::string			statusCodeToMessage(int status_code);
 		std::string			getContentType(std::string uri);
 
@@ -57,8 +56,6 @@ class Client
 		int					_cont_length;	// length of the requested content
 		std::string			_file_buff;		// buffer to where the file will be read
 		std::string			_file_type;		// type of the requested file
-
-		char				**vectToArr(std::vector<std::string> vect);
 
 };
 
