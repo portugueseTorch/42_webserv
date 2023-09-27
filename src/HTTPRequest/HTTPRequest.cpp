@@ -149,7 +149,7 @@ bool HTTPRequest::validRequestURI(std::string & headerLine) {
 	ss >> word;
 	if (word == "*" || word.find('/') == 0 || validAbsoluteURI(word)) {
 		cleanUpURI(word);
-		if (_statusCode != 200)
+		if (!success())
 			return false;
 		headerLine.erase(0, headerLine.find(" ") + 1);
 		return true;

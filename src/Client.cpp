@@ -93,7 +93,7 @@ int Client::parseHTTPRequest(std::string request_str) {
 	}
 	request->process(request_str);
 	if (request->fullyParsed && !request->success()) {
-		_status_code = 400;
+		_status_code = request->getStatusCode();
 		return 1;
 	}
 	return 0;
