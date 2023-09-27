@@ -38,19 +38,6 @@ class HTTPRequest {
 		std::vector<std::string>			&getQueryParams() { return _query; }
 		std::map<std::string, std::string>	&getAllParams() { return _params; }
 
-		class invalidHTTPRequest : public std::exception {
-			public:
-				virtual const char* what() const throw() {
-					return "could not create object";
-					}
-		};
-		class parserNotInitialized : public std::exception {
-			public:
-				virtual const char* what() const throw() {
-					return "parser not initialized";
-					}
-		};
-
 	private:
 
 		void displayRequest();
