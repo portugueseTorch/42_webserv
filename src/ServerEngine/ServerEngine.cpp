@@ -319,13 +319,14 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[200];
+	char buf[2];
 	int	ret;
 	int	fd = client.getClientFD();
+
 	std::stringstream ss;
 	ss << fd;
-	memset(buf, 0, 200);
-	ret = read(fd, buf, 199);
+	memset(buf, 0, 2);
+	ret = read(fd, buf, 1);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
 		closeConnection(fd);
@@ -336,17 +337,14 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		return 0;
 	}
 
-	// Update the client fd from reading to writing
-	// if (ret != MAX_LENGTH)
-	// std::cout << ret << std::endl;
+	if (client.request && client.request->fullyParsed)
+		return 0;
 
 	ss.str("");
 	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	// std::cout << buf << std::endl;
 
-	// client.appendToRequest(buf);
 	client.parseHTTPRequest(buf);
 	if (client.request->fullyParsed)
 		modifySet(fd, READ_SET, MOD_SET);
@@ -364,8 +362,6 @@ int ServerEngine::readHTTPRequest(Client &client) {
 int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
 	std::cout << "Message Sent!" << std::endl;
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-	client.reset();
 	return 0;
 }
 
@@ -378,15 +374,11 @@ int ServerEngine::sendRegResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	// Parse HTTP Request
-	// client.parseHTTPRequest(client.getRequestString());
 
 	if (assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-	return 0;
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
@@ -394,8 +386,13 @@ int ServerEngine::sendResponse(Client &client) {
 	if (sendRegResponse(client))
 		return 1;
 
-	// if (!client.request->getKeepAlive())
-		// closeConnection(client.getClientFD());
+	if (client.request->getKeepAlive())
+		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+	else
+		closeConnection(client.getClientFD());
+
+	client.reset();
+
 	return 0;
 }
 
@@ -501,6 +498,7 @@ int ServerEngine::runServers() {
 				}
 			} else if (FD_ISSET(fd, &write_cpy)) {
 				if (_client_map.count(fd)) {
+					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (sendResponse(_client_map[fd]))
 						return 1;
 				}

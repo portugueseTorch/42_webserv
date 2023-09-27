@@ -81,8 +81,6 @@ int Client::setupClient() {
  * @return int Returns 0 on success, and 1 on failure
  */
 int Client::parseHTTPRequest(std::string request_str) {
-	// if (request)
-	// 	delete request;
 	if (!request) {
 		log(std::cout, INFO, "Creating request", "");
 		request = new HTTPRequest;
