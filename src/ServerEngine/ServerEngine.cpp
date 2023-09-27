@@ -319,14 +319,14 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[2];
+	char buf[MAX_LENGTH + 1];
 	int	ret;
 	int	fd = client.getClientFD();
 
 	std::stringstream ss;
 	ss << fd;
-	memset(buf, 0, 2);
-	ret = read(fd, buf, 1);
+	memset(buf, 0, MAX_LENGTH + 1);
+	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
 		closeConnection(fd);
