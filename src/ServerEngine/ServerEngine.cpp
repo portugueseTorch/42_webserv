@@ -322,9 +322,10 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	char buf[MAX_LENGTH + 1];
 	int	ret;
 	int	fd = client.getClientFD();
+
 	std::stringstream ss;
 	ss << fd;
-
+	memset(buf, 0, MAX_LENGTH + 1);
 	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
@@ -336,17 +337,17 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		return 0;
 	}
 
-	// Update the client fd from reading to writing
-	if (ret != MAX_LENGTH)
-		modifySet(fd, READ_SET, MOD_SET);
+	if (client.request && client.request->fullyParsed)
+		return 0;
 
 	ss.str("");
-	ss.clear();;
+	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	std::cout << buf << std::endl;
 
-	client.appendToRequest(buf);
+	client.parseHTTPRequest(buf);
+	if (client.request->fullyParsed)
+		modifySet(fd, READ_SET, MOD_SET);
 
 	return 0;
 }
@@ -361,7 +362,6 @@ int ServerEngine::readHTTPRequest(Client &client) {
 int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
 	std::cout << "Message Sent!" << std::endl;
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 	return 0;
 }
 
@@ -374,14 +374,11 @@ int ServerEngine::sendRegResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	// Parse HTTP Request
-	client.parseHTTPRequest(client.getRequestString());
 
 	if (assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
-
 	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
@@ -389,9 +386,13 @@ int ServerEngine::sendResponse(Client &client) {
 	if (sendRegResponse(client))
 		return 1;
 
-	if (!client.request->getKeepAlive())
+	if (client.request->getKeepAlive())
+		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+	else
 		closeConnection(client.getClientFD());
+
 	client.reset();
+
 	return 0;
 }
 
@@ -497,6 +498,7 @@ int ServerEngine::runServers() {
 				}
 			} else if (FD_ISSET(fd, &write_cpy)) {
 				if (_client_map.count(fd)) {
+					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (sendResponse(_client_map[fd]))
 						return 1;
 				}

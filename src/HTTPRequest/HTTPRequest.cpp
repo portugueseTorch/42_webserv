@@ -1,37 +1,66 @@
 #include "HTTPRequest/HTTPRequest.hpp"
 
+enum possibleLineTypes {
+	REQUEST_LINE,
+	CONTENT_LENGTH,
+	CONNECTION,
+	GENERAL_HEADER
+};
 
 HTTPRequest::HTTPRequest():
 	isCGI(false),
+	fullyParsed(false),
 	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
-	_parserCreated(false) {
+	_emptyLine(false) {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
 
+HTTPRequest::~HTTPRequest() {};
+
 void HTTPRequest::process(std::string request) {
-	_content = request;
-	try {
-		parse();
-		setup();
-		log(std::cout, SUCCESS, "HTTP Request successfully processed", "");
-	} catch (parserNotInitialized &e) {
-		_statusCode = 400;
-		log(std::cerr, ERROR, "HTTPRequest", e.what());
-	} catch(HTTPParser::invalidSyntaxException &e) {
-		log(std::cerr, ERROR, "Parser", e.what());
-		_statusCode = 400;
-	} catch(invalidHTTPRequest &e) {
-		_statusCode = 400;
+	std::string headerLine;
+	
+	_content += request;
+
+	size_t newLine = _content.find("\r\n");
+	while (newLine != std::string::npos) {
+		if (!_emptyLine) {
+			headerLine = _content.substr(0, newLine);
+			if (headerLine.empty())
+				_emptyLine = true;
+			else
+				processHeaderLine(headerLine);
+		} else {
+			if (_contentLength == 0 && (_content.size() || _body.size())) {
+				_statusCode = 411;
+			} else {
+				_body += _content;
+			}
+		}
+		_content = _content.substr(newLine + 2);
+		newLine = _content.find("\r\n");
+	}
+
+	if (_emptyLine) {
+		if (_contentLength == 0 && (_content.size() || _body.size())) {
+			_statusCode = 411;
+		} else {
+			_body += _content;
+		}
+		_content = "";
+		if (!_contentLength && _body.empty()) {
+			fullyParsed = true;
+		} else if (_body.length() >= _contentLength) {
+			_body = _body.length() > _contentLength ? \
+					_body.substr(0, _contentLength): \
+					_body;
+			fullyParsed = true;
+		}
 	}
 }
-
-HTTPRequest::~HTTPRequest() {
-	if (_parserCreated)
-		delete parser;
-};
 
 void	HTTPRequest::setPort(uint32_t port) {
 	_port = port;
@@ -64,116 +93,171 @@ std::string	HTTPRequest::getServerName() {
 	return split[0];
 }
 
-void	HTTPRequest::parse(){
-	try
-	{
-		HTTPLexer	lex;
-		lex.tokenize(_content);
-		parser = new HTTPParser(lex.getTokens());
-		_parserCreated = true;
-		parser->parse();
-	} catch(HTTPLexer::emptyRequestException &e) {
-		log(std::cerr, ERROR, "HTTPLexer", e.what());
-		throw parserNotInitialized();
+bool	HTTPRequest::processHeaderLine(std::string headerLine) {
+	bool validLine = true;
+	int lineType = getLineType(headerLine);
+
+	switch(lineType) {
+		case REQUEST_LINE:
+			validLine = checkRequestLine(headerLine);
+			break;
+		case CONTENT_LENGTH:
+			validLine = checkContentLength(headerLine.substr(headerLine.find(":") + 1));
+			break;
+		case CONNECTION:
+			validLine = checkConnection(headerLine.substr(headerLine.find(":") + 1));
+			break;
+		default:
+			validLine = addParam(headerLine);
+	}
+
+	return validLine;
+}
+
+bool	HTTPRequest::checkRequestLine(std::string & headerLine) {
+	if (!validMethod(headerLine))
+		return false;
+	if (!validRequestURI(headerLine))
+		return false;
+	if (!validHTTPVersion(headerLine))
+		return false;
+	return true;
+}
+
+bool HTTPRequest::validMethod(std::string & headerLine) {
+	if (alreadyExists(_method))
+		return false;
+
+	if (headerLine.find("GET") == 0 || \
+		headerLine.find("POST") == 0 || \
+		headerLine.find("DELETE") == 0) {
+		_method = headerLine.substr(0, headerLine.find(" "));
+		headerLine.erase(0, headerLine.find(" ") + 1);
+		return true;
+	}
+	_statusCode = 400;
+	return false;
+}
+
+bool HTTPRequest::validRequestURI(std::string & headerLine) {
+	std::stringstream	ss(headerLine);
+	std::string			word;
+
+	if (alreadyExists(_requestURI))
+		return false;
+
+	ss >> word;
+	if (word == "*" || word.find('/') == 0 || validAbsoluteURI(word)) {
+		cleanUpURI(word);
+		if (!success())
+			return false;
+		headerLine.erase(0, headerLine.find(" ") + 1);
+		return true;
+	}
+	_statusCode = 400;
+	return false;
+}
+
+void HTTPRequest::cleanUpURI(std::string req) {
+	std::string u;
+	if (req != "/" && req[req.length() - 1] == '/')
+		u = req.substr(0, req.length() - 1);
+	else
+		u = req;
+	if (u.find("cgi-bin") != std::string::npos && \
+		(u.find(".py") != std::string::npos || \
+		u == "/cgi-bin" || u == "/cgi-bin/")) {
+		isCGI = true;
+		_requestURI = u.substr(0, u.find('?'));
+		extractQuery(u);
+	} else {
+		_requestURI = u;
 	}
 }
 
-void	HTTPRequest::setup() {
-	std::string headers[] = \
-	{ 	"cache-control", "connection", "date", "'pragma", "trailer", \
-		"transfer-encoding", "upgrade", "via", "warning", \
-		"accept", "accept-charset", "accept-encoding", "accept-language", \
-		"authorization", "expect", "from", "host", "if-match", "if-modified-since", \
-		"if-none-match", "if-range", "if-unmodified-since", "max-forwards", \
-		"proxy-authorization", "range", "referer", "referrer-policy", "te", "user-agent", \
-		"allow", "content-encoding", "content-language", "content-length", \
-		"content-location", "content-md5", "content-range", "content-type", \
-		"expires", "last-modified", "extension-header", "upgrade-insecure-requests" };
-	std::vector<std::string> validHeaders(headers, headers + sizeof(headers) / sizeof(std::string));
+bool HTTPRequest::validAbsoluteURI(std::string req) {
+	std::transform(req.begin(), req.end(), req.begin(), ::tolower);
+	std::size_t isHTTP = req.find("http://");
+	if (isHTTP == 0 && \
+		req.find_last_of("http://") == 6 && \
+		req.size() > 7 && \
+		std::isalnum(req.at(7)))
+		return true;
+	return false;
+}
 
-	std::list<Node>::const_iterator it = parser->getNodes().begin();
+bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
+	std::string toKeep(headerLine);
 
-	for (; it != parser->getNodes().end(); it++) {
-		switch (it->_type) {
-			case Method: {
-				this->_method = it->_content;
-				break ;
-			}
-			case URI: {
-				std::string u;
-				if (it->_content != "/" && it->_content[it->_content.length() - 1] == '/')
-					u = it->_content.substr(0, it->_content.length() - 1);
-				else
-					u = it->_content;
-				if (u.find("cgi-bin") != std::string::npos && \
-					(u.find(".py") != std::string::npos || \
-					u == "/cgi-bin" || u == "/cgi-bin/")) {
-					isCGI = true;
-					this->_requestURI = u.substr(0, u.find('?'));
-					extractQuery(u);
-				} else {
-					this->_requestURI = u;
-				}
-				break ;
-			}
-			case Protocol: {
-				this->_protocol = it->_content;
-				break ;
-			}
-			case Name: {
-				std::string paramName = it->_content;
-				std::transform(paramName.begin(), paramName.end(), paramName.begin(), ::tolower);
-				it++;
-				/* The `if` statement is checking if the `paramName` is a valid header name. It does this by
-				checking if the `paramName` is present in the `validHeaders` list, or if it starts with "sec-",
-				or if it starts and ends with a colon. If any of these conditions are true, then the header is
-				considered valid and its content is stored in the `_params` map. */
-				if (std::count(validHeaders.begin(), validHeaders.end(), paramName) || \
-					paramName.find("sec-") == 0 || \
-					(paramName.find_first_of(':') == 0 && paramName.find_last_of(':') == paramName.size() - 1)) {
-					std::string paramContent = it->_content;
-					std::transform(paramContent.begin(), paramContent.end(), paramContent.begin(), ::tolower);
-					checkIfConnection(paramName, paramContent);
-					checkContentLength(paramName, paramContent);
+	if (alreadyExists(_protocol))
+		return false;
 
-					_params[paramName] = paramContent;
-				} else {
-					std::string err = "Invalid header: ";
-					err.append(paramName);
-					log(std::cout, ERROR, err, "");
-					throw invalidHTTPRequest();
-				}
-				break ;
-			}
-			case Body: {
-				this->_body = it->_content;
-				break ;
-			}
-			default:
-				break ;
+	size_t isHTTP = headerLine.find("HTTP/");
+	if (isHTTP == 0) {
+		headerLine.erase(0, 5);
+		double version = std::atof(headerLine.c_str());
+		if (version == 1 || version == 1.1 || version == 2 || version == 3) {
+			_protocol = toKeep;
+			return true;
 		}
 	}
+	_statusCode = 400;
+	return false;
 }
 
-void	HTTPRequest::checkIfConnection(std::string paramName, std::string paramContent) {
-	if (paramName == "connection") {
-		if (paramContent != "keep-alive" && paramContent != "closed") {
-			log(std::cerr, ERROR, "Connection invalid param", paramContent);
-			throw invalidHTTPRequest();
-		}
-		_keepAlive = (paramContent == "keep-alive") ? true : false;
+bool HTTPRequest::checkContentLength(std::string headerLine) {
+	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos) {
+		_statusCode = 400;
+		return false;
 	}
+	_contentLength = std::atoi(headerLine.c_str());
+	return true;
 }
 
-/* 
-Ja nao sei o que queria fazer com esta funcao :)
-O content-length e verificado em que momento? request? response? ambos?
- */
-void	HTTPRequest::checkContentLength(std::string paramName, std::string paramContent) {
-	if (paramName == "content-length") {
-		//change to print error or throw exception
-		_contentLength = std::atoi(paramContent.c_str());
+bool HTTPRequest::checkConnection(std::string headerLine) {
+	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
+	if (headerLine != "keep-alive" && headerLine != "closed") {
+		_statusCode = 400;
+		return false;
 	}
+	_keepAlive = (headerLine == "keep-alive") ? true : false;
+	return true;
+}
+
+bool HTTPRequest::addParam(std::string headerLine) {
+	std::string param;
+	std::string value;
+	size_t		sep;
+
+	sep = headerLine.find(":");
+	if (sep == std::string::npos) {
+		_statusCode = 400;
+		return false;
+	}
+
+	param = headerLine.substr(0, sep);
+	std::transform(param.begin(), param.end(), param.begin(), ::tolower);
+
+	value = headerLine.substr(sep + 2);
+	
+	if (param.size() && value.size()) {
+		_params[param] = value;
+		return true;
+	}
+	_statusCode = 400;
+	return false;
+}
+
+int	HTTPRequest::getLineType(std::string headerLine) {
+	if (headerLine.find("GET") == 0 || \
+		headerLine.find("POST") == 0 || \
+		headerLine.find("DELETE") == 0)
+		return REQUEST_LINE;
+	if (headerLine.find("Content-Length:") == 0)
+		return CONTENT_LENGTH;
+	if (headerLine.find("Connection:") == 0)
+		return CONNECTION;
+	return GENERAL_HEADER;
 }
 
 void	HTTPRequest::extractQuery(std::string URI) {
@@ -187,19 +271,17 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		return ;
 	while (getline(squery, buf, '&')) {
 		size_t sep = buf.find('=');
-		//change to if !sep throw exception
 		if (sep == std::string::npos) {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			throw invalidHTTPRequest();
+			_statusCode = 400;
 		}
 		param = buf.substr(0, sep);
 		value = buf.substr(sep + 1, buf.size());
-		//add exception
 		if (param.size() && value.size())
 			_query.push_back(buf);
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			throw invalidHTTPRequest();
+			_statusCode = 400;
 		}
 	}
 }
@@ -219,16 +301,7 @@ void HTTPRequest::displayParsedRequest(){
 	std::cout << std::left << std::setw(25) << "Request URI:" << _requestURI << std::endl;
 	std::cout << std::left << std::setw(25) << "Protocol:" << _protocol << std::endl;
 	std::map<std::string, std::string>::iterator it;
-	
-	// if (_query.size()) {
-	// 	std::cout << "\n###Query params###" << std::endl;
-	// 	it = _query.begin();
-	// 	for (; it != _query.end(); it++) {
-	// 		std::string temp = it->first;
-	// 		temp.append(":");
-	// 		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
-	// 	}
-	// }
+	std::vector<std::string>::iterator queryIt;
 
 	std::cout << std::endl << std::left << std::setw(25) << "keep-alive:" << 
 		std::setw(20) << (_keepAlive ? "true" : "false")<< std::endl << std::endl;
@@ -243,6 +316,11 @@ void HTTPRequest::displayParsedRequest(){
 		std::cout << std::left << std::setw(25) << temp << std::setw(20) << it->second << std::endl;
 	}
 
+	queryIt = _query.begin();
+	for (; queryIt != _query.end(); queryIt++) {
+		std::cout << *queryIt << std::endl;
+	}
+
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
@@ -250,4 +328,12 @@ void HTTPRequest::displayParsedRequest(){
 
 bool	HTTPRequest::success() const {
 	return _statusCode < 400;
+}
+
+bool	HTTPRequest::alreadyExists(std::string param) {
+	if (param.size()) {
+		_statusCode = 400;
+		return true;
+	}
+	return false;
 }
