@@ -13,7 +13,7 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
-	_status_code = 200;
+	_status_code = request->success() ? 200 : request->getStatusCode();
 	_content_type = "text/plain";
 }
 

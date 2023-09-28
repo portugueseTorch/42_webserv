@@ -336,7 +336,6 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		closeConnection(fd);
 		return 0;
 	}
-	std::cout << "aqui '" << buf << "'" << std::endl;
 
 	if (client.request && client.request->fullyParsed)
 		return 0;

@@ -16,7 +16,9 @@ HTTPRequest::HTTPRequest():
 	_contentLength(0),
 	_emptyLine(false),
 	_chunked(false),
-	_finalChunk(false) {
+	_finalChunk(false),
+	_chunkSize(-1),
+	_chunkBuf("") {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
@@ -27,8 +29,8 @@ void HTTPRequest::process(std::string request) {
 	std::string headerLine;
 	
 	_content += request;
-	// std::cout << request;
 	size_t newLine = _content.find("\r\n");
+
 	while (newLine != std::string::npos) {
 		if (!_emptyLine) {
 			headerLine = _content.substr(0, newLine);
@@ -47,7 +49,9 @@ void HTTPRequest::process(std::string request) {
 				_body += _content;
 			}
 		}
-		_content = _content.substr(newLine + 2);
+		if (_content.size()) {
+			_content = _content.substr(newLine + 2);
+		}
 		newLine = _content.find("\r\n");
 	}
 
@@ -61,7 +65,7 @@ void HTTPRequest::process(std::string request) {
 		} else {
 			_body += _content;
 		}
-		_content = "";
+
 		if (!_contentLength && _body.empty() && !_chunked && headersSet()) {
 			log(std::cout, SUCCESS, "first", "");
 			fullyParsed = true;
@@ -93,48 +97,71 @@ bool	HTTPRequest::headersSet() {
 void	HTTPRequest::processChunked() {
 	if (_content.empty() || _content.find("\r") == 0)
 		return ;
-	std::cout << "content: --" << _content << "--" << std::endl;
 	std::stringstream ss(_content);
-	// std::string word;
-	size_t chunkSize;
-	bool firstRound = true;
+	std::stringstream sizeSS;
+	std::string buf;
+	int chunkSize = -1;
 
-	ss >> std::hex >> chunkSize;
-	std::cout << "chunk size: " << chunkSize << std::endl;
-	while (1) {
-		std::string buf;
-		if (firstRound) {
-			std::getline(ss, buf);
-			firstRound = false;
-		}
+	while (_content.size()) {
+
+		/* If there is no newline character, the current chunk of data does not contain a complete line, 
+		so the code jumps to the `exit` label and exits the loop. This is done to ensure that the processing 
+		of the chunked data is done only when a complete line is available. */
+		if (_content.find("\n") == std::string::npos)
+			goto exit;
+
+		/* The above code is written in C++. */
 		std::getline(ss, buf);
-		if (buf.empty() || buf == "0") {
+		_content.erase(0, _content.find("\n") + 1);
+		if (buf.empty()) {
+			continue ;
+		}
+
+		/* If the current line is '0', then this is the final chunk.
+		chunkSize is set to 0 and we break out of the loop.
+		If there is still data in _chunkBuf, that means an earlier chunk was not fully processed,
+		and status code is set to 400 (Bad Request). */
+		if (buf == "0") {
+			if (_chunkBuf.size())
+				_statusCode = 400;
 			chunkSize = 0;
-			break ;
+			break;
 		}
-		std::cout << "one " << buf << std::endl;
-		chunkSize = std::atoi(buf.c_str());
-		std::getline(ss, buf);
-		std::cout << "two " << buf << std::endl;
-		if (buf.size() == chunkSize)
-			_body += buf + "\r\n";
-		else
-			_statusCode = 400;
-		// exit(0);
+
+		/* If buf contains only hexadecimal characters and CRLF, and the "_chunkBuf"
+		string is empty, this line is setting the chunkSize. */
+		if (buf.find_first_not_of("0123456789abcdefABCDEF\r\n") == std::string::npos && _chunkBuf.empty()) {
+			sizeSS << std::hex << buf;
+			sizeSS >> chunkSize;
+			sizeSS.clear();
+		}
+
+		/* If chunkSize is -1, buf contains chunk data and is appended to _chunkBuf. 
+		If chunkBuf is the same size as _chunkSize, we have reached the end of the chunk and it is appended to the body. */
+		if (chunkSize == -1) {
+			_chunkBuf += buf;
+			if (static_cast<int>(_chunkBuf.size()) == _chunkSize) {
+				_body += _chunkBuf + "\r\n";
+				_chunkSize = -1;
+				_chunkBuf = "";
+			} else if (static_cast<int>(_chunkBuf.size()) > _chunkSize) {
+				_statusCode = 400;
+			}
+		}
+		/* If chunkSize is greater than 0, this value is assigned to _chunkSize. */
+		if (chunkSize > 0) {
+			_chunkSize = chunkSize;
+			chunkSize = -1;
+		}
 	}
-	// chunkSize = std::atol(word.c_str(), 16);
-	// word.clear();
-	// ss >> word;
-	// std::cout << "word: " << word << std::endl;
-	if (!chunkSize) {
+
+	_content = "";
+
+	exit:
+	if (chunkSize == 0) {
 		_finalChunk = true;
 		return ;
 	}
-	// if (chunkSize && word.size() == chunkSize)
-	// 	_body += word + "\r\n";
-	// else
-	// 	_statusCode = 400;
-	// std::cout << "chunk size: '" << chunkSize << "'" << std::endl;
 }
 
 void	HTTPRequest::setPort(uint32_t port) {
@@ -284,7 +311,7 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 }
 
 bool HTTPRequest::checkContentLength(std::string headerLine) {
-	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos) {
+	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos || _chunked) {
 		_statusCode = 400;
 		return false;
 	}
@@ -304,7 +331,7 @@ bool HTTPRequest::checkConnection(std::string headerLine) {
 
 bool HTTPRequest::checkEncoding(std::string headerLine) {
 	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
-	if (headerLine.empty()) {
+	if (headerLine.empty() || _contentLength > 0) {
 		_statusCode = 400;
 		return false;
 	}
