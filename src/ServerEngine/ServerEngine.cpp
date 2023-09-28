@@ -349,7 +349,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	if (client.request->fullyParsed) {
 		// client.request->displayParsedRequest();
 		modifySet(fd, READ_SET, MOD_SET);
-
+	}
 	return 0;
 }
 
