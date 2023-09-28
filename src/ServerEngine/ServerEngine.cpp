@@ -348,7 +348,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	// std::cout << buf;
 	client.parseHTTPRequest(buf);
 	if (client.request->fullyParsed) {
-		client.request->displayParsedRequest();
+		// client.request->displayParsedRequest();
 		modifySet(fd, READ_SET, MOD_SET);
 	}
 
