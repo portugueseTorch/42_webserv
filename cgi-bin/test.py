@@ -1,6 +1,5 @@
 import os
 
-
 response = '<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>'
 response += '<h2>Hello, world</h2>'
 response += '<a href="/" class="center button">Go back</a>'

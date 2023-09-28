@@ -166,12 +166,14 @@ void HTTPResponse::readFile(std::string file_path, struct stat *s) {
 	}
 
 	// Resize the string _body to fit the whole file, and read the content to the body
-	if (_body != "")
-		_body.clear();
-	_body.resize(file_size);
-	file.read(const_cast<char *>(_body.data()), file_size);
-	_body_length = file_size + 2;
-	_last_modified = formatTime(std::localtime(&s->st_mtime));
+	if (request->getMethod() == "GET") {
+		if (_body != "")
+			_body.clear();
+		_body.resize(file_size);
+		file.read(const_cast<char *>(_body.data()), file_size);
+		_body_length = file_size + 2;
+		_last_modified = formatTime(std::localtime(&s->st_mtime));
+	}
 	file.close();
 }
 
@@ -358,8 +360,6 @@ int	HTTPResponse::build() {
 	_response += "Date: " + _time + "\r\n";
 	_response += "Server: " + _server + "\r\n";
 	// _response += "Last-Modified: " + _last_modified + "\r\n";
-
-
 
 	if (!request->isCGI || isError()) {
 		ss << _body_length;
