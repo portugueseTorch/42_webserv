@@ -1,27 +1,28 @@
 import os
 import csv
 
-name = os.environ.get("name")
+response = '<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>'
+response += '<header>'
+response += '<nav class="navbar">'
+response += '<a href="/">Home</a>'
+response += '<div class="separator">|</div>'
+response += '<a href="/resources">Potatoes</a>'
+response += '</nav>'
+response += '</header>'
 
-print('<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>')
-print('<header>')
-print('<nav class="navbar">')
-print('<a href="/">Home</a>')
-print('<div class="separator">|</div>')
-print('<a href="/resources">Potatoes</a>')
-print('</nav>')
-print('</header>')
+name = os.environ.get("name")
 if name:
 	name = name.replace('%20', ' ')
-	print('<h1 class="success center">We have a name!</h1>')
-	print(f'<p class="center">Welcome, {str.title(name)}</p>')
+	response += '<h1 class="success center">We have a name!</h1>'
+	response += '<p class="center">Welcome, ' + str.title(name) + '</p>'
 else:
-	print('<h2 class="center">No name found...</h2>')
-	print('<h1 class="failure center">For the love of god, just work!</h1>')
+	response += '<h2 class="center">No name found...</h2>'
+	response += '<h1 class="failure center">For the love of god, just work!</h1>'
 
 user = os.environ.get("user")
 pwd = os.environ.get("pass")
-print(f'<p>User: {user}<br/>Password: {pwd}</p>')
+if user and pwd:
+	response += '<p>User: ' + user + '<br/>Password: ' + pwd + '</p>'
 
 class Person:
     def __init__(self, name, age, location, email):
@@ -40,10 +41,16 @@ with open('./www/test.csv', 'r') as f:
 		person = Person(name, age, location, email)
 		persons.append(person)
 
-print('<h2>Details:</h2>')
-print('<ul>')
+response += '<h2>Details:</h2>'
+response += '<ul>'
 for person in persons:
-	print(f'<li>{person.name}, {person.age}</li>')
-print('</ul>')
-print('<a href="/" class="center button">Go back</a>')
-print("</body></html>")
+	response += '<li>' + person.name + ', ' + person.age + '</li>'
+response += '</ul>'
+response += '<a href="/" class="center button">Go back</a>'
+response += "</body></html>"
+
+print('HTTP/1.1 200 OK')
+print('Content-type: text/html')
+print(f'Content-Length: {len(response)}')
+print('')
+print(response)
