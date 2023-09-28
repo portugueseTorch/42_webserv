@@ -58,8 +58,11 @@ class HTTPRequest {
 
 		bool checkContentLength(std::string headerLine);
 		bool checkConnection(std::string headerLine);
+		bool checkEncoding(std::string headerLine);
 
 		bool addParam(std::string headerLine);
+		void processChunked();
+		bool headersSet();
 
 		std::string							_content;
 		int									_statusCode;
@@ -77,6 +80,8 @@ class HTTPRequest {
 
 		std::map<std::string, std::string>	_params;
 		bool								_emptyLine;
+		bool								_chunked;
+		bool								_finalChunk;
 };
 
 #endif

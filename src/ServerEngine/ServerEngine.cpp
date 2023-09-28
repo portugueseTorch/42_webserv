@@ -336,6 +336,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		closeConnection(fd);
 		return 0;
 	}
+	std::cout << "aqui '" << buf << "'" << std::endl;
 
 	if (client.request && client.request->fullyParsed)
 		return 0;
@@ -344,10 +345,12 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-
+	// std::cout << buf;
 	client.parseHTTPRequest(buf);
-	if (client.request->fullyParsed)
+	if (client.request->fullyParsed) {
+		client.request->displayParsedRequest();
 		modifySet(fd, READ_SET, MOD_SET);
+	}
 
 	return 0;
 }

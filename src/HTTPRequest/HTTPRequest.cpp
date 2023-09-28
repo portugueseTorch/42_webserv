@@ -4,6 +4,7 @@ enum possibleLineTypes {
 	REQUEST_LINE,
 	CONTENT_LENGTH,
 	CONNECTION,
+	TRANSFER_ENCODING,
 	GENERAL_HEADER
 };
 
@@ -13,7 +14,9 @@ HTTPRequest::HTTPRequest():
 	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
-	_emptyLine(false) {
+	_emptyLine(false),
+	_chunked(false),
+	_finalChunk(false) {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
@@ -24,7 +27,7 @@ void HTTPRequest::process(std::string request) {
 	std::string headerLine;
 	
 	_content += request;
-
+	// std::cout << request;
 	size_t newLine = _content.find("\r\n");
 	while (newLine != std::string::npos) {
 		if (!_emptyLine) {
@@ -34,8 +37,12 @@ void HTTPRequest::process(std::string request) {
 			else
 				processHeaderLine(headerLine);
 		} else {
-			if (_contentLength == 0 && (_content.size() || _body.size())) {
-				_statusCode = 411;
+			if (_contentLength == 0) {
+				if (_chunked) {
+					processChunked();
+				} else if (_content.size() || _body.size()) {
+					_statusCode = 411;
+				}
 			} else {
 				_body += _content;
 			}
@@ -45,21 +52,89 @@ void HTTPRequest::process(std::string request) {
 	}
 
 	if (_emptyLine) {
-		if (_contentLength == 0 && (_content.size() || _body.size())) {
-			_statusCode = 411;
+		if (_contentLength == 0) {
+			if (_chunked) {
+				processChunked();
+			} else if (_content.size() || _body.size()) {
+				_statusCode = 411;
+			}
 		} else {
 			_body += _content;
 		}
 		_content = "";
-		if (!_contentLength && _body.empty()) {
+		if (!_contentLength && _body.empty() && !_chunked && headersSet()) {
+			log(std::cout, SUCCESS, "first", "");
 			fullyParsed = true;
-		} else if (_body.length() >= _contentLength) {
+		} else if (_finalChunk) {
+			log(std::cout, SUCCESS, "second", "");
+			fullyParsed = true;
+		} else if (_contentLength && _body.length() >= _contentLength) {
 			_body = _body.length() > _contentLength ? \
 					_body.substr(0, _contentLength): \
 					_body;
+			log(std::cout, SUCCESS, "third", "");
 			fullyParsed = true;
 		}
 	}
+}
+
+bool	HTTPRequest::headersSet() {
+	if (_method.empty())
+		return false;
+	if (_requestURI.empty())
+		return false;
+	if (_protocol.empty())
+		return false;
+	if (!_emptyLine)
+		return false;
+	return true;
+}
+
+void	HTTPRequest::processChunked() {
+	if (_content.empty() || _content.find("\r") == 0)
+		return ;
+	std::cout << "content: --" << _content << "--" << std::endl;
+	std::stringstream ss(_content);
+	// std::string word;
+	size_t chunkSize;
+	bool firstRound = true;
+
+	ss >> std::hex >> chunkSize;
+	std::cout << "chunk size: " << chunkSize << std::endl;
+	while (1) {
+		std::string buf;
+		if (firstRound) {
+			std::getline(ss, buf);
+			firstRound = false;
+		}
+		std::getline(ss, buf);
+		if (buf.empty() || buf == "0") {
+			chunkSize = 0;
+			break ;
+		}
+		std::cout << "one " << buf << std::endl;
+		chunkSize = std::atoi(buf.c_str());
+		std::getline(ss, buf);
+		std::cout << "two " << buf << std::endl;
+		if (buf.size() == chunkSize)
+			_body += buf + "\r\n";
+		else
+			_statusCode = 400;
+		// exit(0);
+	}
+	// chunkSize = std::atol(word.c_str(), 16);
+	// word.clear();
+	// ss >> word;
+	// std::cout << "word: " << word << std::endl;
+	if (!chunkSize) {
+		_finalChunk = true;
+		return ;
+	}
+	// if (chunkSize && word.size() == chunkSize)
+	// 	_body += word + "\r\n";
+	// else
+	// 	_statusCode = 400;
+	// std::cout << "chunk size: '" << chunkSize << "'" << std::endl;
 }
 
 void	HTTPRequest::setPort(uint32_t port) {
@@ -106,6 +181,9 @@ bool	HTTPRequest::processHeaderLine(std::string headerLine) {
 			break;
 		case CONNECTION:
 			validLine = checkConnection(headerLine.substr(headerLine.find(":") + 1));
+			break;
+		case TRANSFER_ENCODING:
+			validLine = checkEncoding(headerLine.substr(headerLine.find(":") + 1));
 			break;
 		default:
 			validLine = addParam(headerLine);
@@ -224,6 +302,16 @@ bool HTTPRequest::checkConnection(std::string headerLine) {
 	return true;
 }
 
+bool HTTPRequest::checkEncoding(std::string headerLine) {
+	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
+	if (headerLine.empty()) {
+		_statusCode = 400;
+		return false;
+	}
+	_chunked = headerLine == "chunked" ? true : false;
+	return true;
+}
+
 bool HTTPRequest::addParam(std::string headerLine) {
 	std::string param;
 	std::string value;
@@ -241,6 +329,10 @@ bool HTTPRequest::addParam(std::string headerLine) {
 	value = headerLine.substr(sep + 2);
 	
 	if (param.size() && value.size()) {
+		if (_params.count(param)) {
+			_statusCode = 400;
+			return false;
+		}
 		_params[param] = value;
 		return true;
 	}
@@ -249,14 +341,18 @@ bool HTTPRequest::addParam(std::string headerLine) {
 }
 
 int	HTTPRequest::getLineType(std::string headerLine) {
-	if (headerLine.find("GET") == 0 || \
-		headerLine.find("POST") == 0 || \
-		headerLine.find("DELETE") == 0)
+	std::string temp(headerLine);
+	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
+	if (temp.find("get") == 0 || \
+		temp.find("post") == 0 || \
+		temp.find("delete") == 0)
 		return REQUEST_LINE;
-	if (headerLine.find("Content-Length:") == 0)
+	if (temp.find("content-length:") == 0)
 		return CONTENT_LENGTH;
-	if (headerLine.find("Connection:") == 0)
+	if (temp.find("connection:") == 0)
 		return CONNECTION;
+	if (temp.find("transfer-encoding") == 0)
+		return TRANSFER_ENCODING;
 	return GENERAL_HEADER;
 }
 
@@ -305,6 +401,9 @@ void HTTPRequest::displayParsedRequest(){
 
 	std::cout << std::endl << std::left << std::setw(25) << "keep-alive:" << 
 		std::setw(20) << (_keepAlive ? "true" : "false")<< std::endl << std::endl;
+	
+	std::cout << std::endl << std::left << std::setw(25) << "chunked:" << 
+		std::setw(20) << (_chunked ? "true" : "false")<< std::endl << std::endl;
 
 	std::cout << std::left << std::setw(25) << "content-length" << 
 		std::setw(20) << _contentLength << std::endl << std::endl;

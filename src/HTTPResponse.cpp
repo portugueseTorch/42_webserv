@@ -13,6 +13,8 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
+	_status_code = 200;
+	_content_type = "text/plain";
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -324,8 +326,10 @@ bool HTTPResponse::isAllowedMethod() {
 	else if (parent_server)
 		allowed_methods = parent_server->getHTTPMethod();
 	for (std::vector<std::string>::iterator it = allowed_methods.begin(); it != allowed_methods.end(); it++) {
-		if (request->getMethod() == *it)
+		if (request->getMethod() == *it) {
+			log(std::cout, INFO, "Method", *it);
 			return true;
+		}
 	}
 	return false;
 }
@@ -344,7 +348,8 @@ int	HTTPResponse::build() {
 		_status_code = 413;
 	if (!isAllowedMethod())
 		_status_code = 405;
-	searchContent();
+	if (request->getMethod() == "GET")
+		searchContent();
 	if (isError())
 		searchErrorContent();
 
@@ -359,6 +364,7 @@ int	HTTPResponse::build() {
 	// _response += "Last-Modified: " + _last_modified + "\r\n";
 
 	ss << _body_length;
+	// if (request->getMethod() == "GET")
 	_response += "Content-Length: " + ss.str() + "\r\n";
 	ss.str("");
 	ss.clear();
@@ -373,5 +379,6 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
+	// std::cout << _response;
 	return 0;
 } 
