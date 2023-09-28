@@ -350,7 +350,6 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		// client.request->displayParsedRequest();
 		modifySet(fd, READ_SET, MOD_SET);
 	}
-
 	return 0;
 }
 
