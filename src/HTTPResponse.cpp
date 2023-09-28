@@ -352,6 +352,43 @@ int	HTTPResponse::build() {
 		_status_code = 405;
 	// if (request->getMethod() == "GET")
 	searchContent();
+	if (request->getMethod() == "POST") {
+		log(std::cout, SUCCESS, "it is a post", request->getBody());
+		std::map<std::string, std::string> queryparams;
+		std::string body(request->getBody());
+		std::string part;
+		while (body.size()) {
+			size_t sep = body.find('&');
+			if (sep != std::string::npos) {
+				part = body.substr(0, sep);
+			} else {
+				part = body;
+			}
+			size_t toDel = sep != std::string::npos ? sep + 1 : body.size();
+			sep = part.find('=');
+			queryparams[part.substr(0, sep)] = part.substr(sep + 1);
+			body.erase(0, toDel);
+		}
+		if (!queryparams.count("name"))
+			queryparams["name"] = "testando";
+		char buffer[FILENAME_MAX];
+		getcwd(buffer, FILENAME_MAX);
+		log(std::cout, INFO, "my location", buffer);
+		log(std::cout, INFO, "location", getRelevantRoot() + "/" + queryparams["name"]);
+		std::string fileName = getRelevantRoot() + "/" + queryparams["name"];
+		log(std::cout, INFO, "file name", fileName);
+
+		// log(std::cout, INFO, "name", queryparams["name"]);
+		// log(std::cout, INFO, "content", queryparams["content"]);
+		std::ofstream	outfile(
+			fileName.c_str(), std::ofstream::trunc);
+		if (outfile.fail()) {
+			std::cerr << "Error: Unable to create file." << std::endl;
+		} else {
+			outfile << queryparams["content"];
+			outfile.close();
+		}
+	}
 	if (isError())
 		searchErrorContent();
 

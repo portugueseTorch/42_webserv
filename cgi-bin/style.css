@@ -48,3 +48,87 @@ body {
 .navbar a:visited {
 	color: white;
 }
+
+body {
+	background-color: black;
+	color: white;
+}
+
+.navbar {
+	width: 200px;
+	margin: 50px auto 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+}
+
+.navbar a {
+	color: white;
+	text-decoration: none;
+}
+
+.navbar a:visited {
+	color: white;
+}
+
+.page-title {
+	text-align: center;
+	margin: 10px auto 20px;
+}
+
+.reviews {
+	width: 70%;
+	margin: 0 auto;
+	text-align: center;
+	/* border: 2px solid blue; */
+	/* border-top: none; */
+}
+
+.person {
+	box-sizing: border-box;
+	display: grid;
+	grid-template-columns: 2fr 2fr 2fr 2fr 1fr;
+	line-height: 1.8rem;
+}
+
+.person:nth-child(odd) {
+	background: rgb(44, 67, 67);
+}
+
+.person:first-of-type {
+	background: blue;
+	line-height: 2.5rem;
+	font-weight: bold;
+}
+
+form {
+	width: max-content;
+	margin: 20px auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	row-gap: 5px;
+	/* align-items: center; */
+}
+
+form label {
+	width: 300px;
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	align-items: center;
+	white-space: nowrap;
+	/* height: 2rem; */
+}
+
+.toDelete {
+	cursor: pointer;
+	align-self: center;
+	justify-self: center;
+}
+
+#submit-button {
+	width: 50%;
+	cursor: pointer;
+}
