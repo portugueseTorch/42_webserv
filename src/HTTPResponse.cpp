@@ -405,7 +405,17 @@ int HTTPResponse::buildCGIResponse() {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
 		char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
-		char **envp = vectToArr(request->getQueryParams());
+		std::vector<std::string> queryAndBody = request->getQueryParams();
+
+		std::stringstream ss(request->getBody());
+		std::vector<std::string> splitBody;
+		std::string buf;
+		while (std::getline(ss, buf, '&')) {
+			splitBody.push_back(buf);
+		}
+		queryAndBody.insert(queryAndBody.end(), splitBody.begin(), splitBody.end());
+		
+		char **envp = vectToArr(queryAndBody);
 		execve("/usr/bin/python3", args, envp);
 		//need error handling so request is not left pending
 		delete []envp;
