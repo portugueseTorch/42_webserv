@@ -4,6 +4,7 @@ enum possibleLineTypes {
 	REQUEST_LINE,
 	CONTENT_LENGTH,
 	CONNECTION,
+	TRANSFER_ENCODING,
 	GENERAL_HEADER
 };
 
@@ -13,7 +14,11 @@ HTTPRequest::HTTPRequest():
 	_statusCode(200),
 	_keepAlive(true),
 	_contentLength(0),
-	_emptyLine(false) {
+	_emptyLine(false),
+	_chunked(false),
+	_finalChunk(false),
+	_chunkSize(-1),
+	_chunkBuf("") {
 	_port = htons(8080);
 	_ip_address = inet_addr("0.0.0.0");
 }
@@ -24,8 +29,8 @@ void HTTPRequest::process(std::string request) {
 	std::string headerLine;
 	
 	_content += request;
-
 	size_t newLine = _content.find("\r\n");
+
 	while (newLine != std::string::npos) {
 		if (!_emptyLine) {
 			headerLine = _content.substr(0, newLine);
@@ -34,31 +39,128 @@ void HTTPRequest::process(std::string request) {
 			else
 				processHeaderLine(headerLine);
 		} else {
-			if (_contentLength == 0 && (_content.size() || _body.size())) {
-				_statusCode = 411;
+			if (_contentLength == 0) {
+				if (_chunked) {
+					processChunked();
+				} else if (_content.size() || _body.size()) {
+					_statusCode = 411;
+				}
 			} else {
 				_body += _content;
 			}
 		}
-		_content = _content.substr(newLine + 2);
+		if (_content.size()) {
+			_content = _content.substr(newLine + 2);
+		}
 		newLine = _content.find("\r\n");
 	}
 
 	if (_emptyLine) {
-		if (_contentLength == 0 && (_content.size() || _body.size())) {
-			_statusCode = 411;
+		if (_contentLength == 0) {
+			if (_chunked) {
+				processChunked();
+			} else if (_content.size() || _body.size()) {
+				_statusCode = 411;
+			}
 		} else {
 			_body += _content;
 		}
-		_content = "";
-		if (!_contentLength && _body.empty()) {
+
+		if (!_contentLength && _body.empty() && !_chunked && headersSet()) {
+			log(std::cout, SUCCESS, "first", "");
 			fullyParsed = true;
-		} else if (_body.length() >= _contentLength) {
+		} else if (_finalChunk) {
+			log(std::cout, SUCCESS, "second", "");
+			fullyParsed = true;
+		} else if (_contentLength && _body.length() >= _contentLength) {
 			_body = _body.length() > _contentLength ? \
 					_body.substr(0, _contentLength): \
 					_body;
+			log(std::cout, SUCCESS, "third", "");
 			fullyParsed = true;
 		}
+	}
+}
+
+bool	HTTPRequest::headersSet() {
+	if (_method.empty())
+		return false;
+	if (_requestURI.empty())
+		return false;
+	if (_protocol.empty())
+		return false;
+	if (!_emptyLine)
+		return false;
+	return true;
+}
+
+void	HTTPRequest::processChunked() {
+	if (_content.empty() || _content.find("\r") == 0)
+		return ;
+	std::stringstream ss(_content);
+	std::stringstream sizeSS;
+	std::string buf;
+	int chunkSize = -1;
+
+	while (_content.size()) {
+
+		/* If there is no newline character, the current chunk of data does not contain a complete line, 
+		so the code jumps to the `exit` label and exits the loop. This is done to ensure that the processing 
+		of the chunked data is done only when a complete line is available. */
+		if (_content.find("\n") == std::string::npos)
+			goto exit;
+
+		/* The above code is written in C++. */
+		std::getline(ss, buf);
+		_content.erase(0, _content.find("\n") + 1);
+		if (buf.empty()) {
+			continue ;
+		}
+
+		/* If the current line is '0', then this is the final chunk.
+		chunkSize is set to 0 and we break out of the loop.
+		If there is still data in _chunkBuf, that means an earlier chunk was not fully processed,
+		and status code is set to 400 (Bad Request). */
+		if (buf == "0") {
+			if (_chunkBuf.size())
+				_statusCode = 400;
+			chunkSize = 0;
+			break;
+		}
+
+		/* If buf contains only hexadecimal characters and CRLF, and the "_chunkBuf"
+		string is empty, this line is setting the chunkSize. */
+		if (buf.find_first_not_of("0123456789abcdefABCDEF\r\n") == std::string::npos && _chunkBuf.empty()) {
+			sizeSS << std::hex << buf;
+			sizeSS >> chunkSize;
+			sizeSS.clear();
+		}
+
+		/* If chunkSize is -1, buf contains chunk data and is appended to _chunkBuf. 
+		If chunkBuf is the same size as _chunkSize, we have reached the end of the chunk and it is appended to the body. */
+		if (chunkSize == -1) {
+			_chunkBuf += buf;
+			if (static_cast<int>(_chunkBuf.size()) == _chunkSize) {
+				_body += _chunkBuf + "\r\n";
+				_chunkSize = -1;
+				_chunkBuf = "";
+			} else if (static_cast<int>(_chunkBuf.size()) > _chunkSize) {
+				_statusCode = 400;
+			}
+		}
+		/* If chunkSize is greater than 0, this value is assigned to _chunkSize. */
+		if (chunkSize > 0) {
+			_chunkSize = chunkSize;
+			chunkSize = -1;
+		}
+	}
+
+	_content = "";
+
+	exit:
+	if (chunkSize == 0) {
+		_finalChunk = true;
+		return ;
 	}
 }
 
@@ -106,6 +208,9 @@ bool	HTTPRequest::processHeaderLine(std::string headerLine) {
 			break;
 		case CONNECTION:
 			validLine = checkConnection(headerLine.substr(headerLine.find(":") + 1));
+			break;
+		case TRANSFER_ENCODING:
+			validLine = checkEncoding(headerLine.substr(headerLine.find(":") + 1));
 			break;
 		default:
 			validLine = addParam(headerLine);
@@ -206,7 +311,7 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 }
 
 bool HTTPRequest::checkContentLength(std::string headerLine) {
-	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos) {
+	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos || _chunked) {
 		_statusCode = 400;
 		return false;
 	}
@@ -221,6 +326,16 @@ bool HTTPRequest::checkConnection(std::string headerLine) {
 		return false;
 	}
 	_keepAlive = (headerLine == "keep-alive") ? true : false;
+	return true;
+}
+
+bool HTTPRequest::checkEncoding(std::string headerLine) {
+	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
+	if (headerLine.empty() || _contentLength > 0) {
+		_statusCode = 400;
+		return false;
+	}
+	_chunked = headerLine == "chunked" ? true : false;
 	return true;
 }
 
@@ -241,6 +356,10 @@ bool HTTPRequest::addParam(std::string headerLine) {
 	value = headerLine.substr(sep + 2);
 	
 	if (param.size() && value.size()) {
+		if (_params.count(param)) {
+			_statusCode = 400;
+			return false;
+		}
 		_params[param] = value;
 		return true;
 	}
@@ -249,14 +368,18 @@ bool HTTPRequest::addParam(std::string headerLine) {
 }
 
 int	HTTPRequest::getLineType(std::string headerLine) {
-	if (headerLine.find("GET") == 0 || \
-		headerLine.find("POST") == 0 || \
-		headerLine.find("DELETE") == 0)
+	std::string temp(headerLine);
+	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
+	if (temp.find("get") == 0 || \
+		temp.find("post") == 0 || \
+		temp.find("delete") == 0)
 		return REQUEST_LINE;
-	if (headerLine.find("Content-Length:") == 0)
+	if (temp.find("content-length:") == 0)
 		return CONTENT_LENGTH;
-	if (headerLine.find("Connection:") == 0)
+	if (temp.find("connection:") == 0)
 		return CONNECTION;
+	if (temp.find("transfer-encoding") == 0)
+		return TRANSFER_ENCODING;
 	return GENERAL_HEADER;
 }
 
@@ -305,6 +428,9 @@ void HTTPRequest::displayParsedRequest(){
 
 	std::cout << std::endl << std::left << std::setw(25) << "keep-alive:" << 
 		std::setw(20) << (_keepAlive ? "true" : "false")<< std::endl << std::endl;
+	
+	std::cout << std::endl << std::left << std::setw(25) << "chunked:" << 
+		std::setw(20) << (_chunked ? "true" : "false")<< std::endl << std::endl;
 
 	std::cout << std::left << std::setw(25) << "content-length" << 
 		std::setw(20) << _contentLength << std::endl << std::endl;

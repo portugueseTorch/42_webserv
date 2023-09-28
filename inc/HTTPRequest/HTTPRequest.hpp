@@ -2,12 +2,7 @@
 # define HTTPREQUEST_HPP
 
 #include "Webserv.hpp"
-// #include "HTTPRequest/Parser.hpp"
 
-// class HTTPParser;
-
-//TO-DO
-//	improve protocol parsing
 class HTTPRequest {
 	public:
 		HTTPRequest();
@@ -58,8 +53,11 @@ class HTTPRequest {
 
 		bool checkContentLength(std::string headerLine);
 		bool checkConnection(std::string headerLine);
+		bool checkEncoding(std::string headerLine);
 
 		bool addParam(std::string headerLine);
+		void processChunked();
+		bool headersSet();
 
 		std::string							_content;
 		int									_statusCode;
@@ -77,6 +75,10 @@ class HTTPRequest {
 
 		std::map<std::string, std::string>	_params;
 		bool								_emptyLine;
+		bool								_chunked;
+		bool								_finalChunk;
+		int									_chunkSize;
+		std::string							_chunkBuf;
 };
 
 #endif

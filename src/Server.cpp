@@ -482,6 +482,8 @@ int Server::setRoot(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setHTTPMethod(std::list<Node>::iterator &it) {
+	_http_method.clear();
+
 	for (; it->_type == Parameter; it++) {
 		if (it->_content == "GET")
 			_http_method.push_back("GET");
