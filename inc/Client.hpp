@@ -50,6 +50,7 @@ class Client
 		int					_client_fd;		// file descriptor of the client socket
 		std::string			_request_str;	// request received from the client server
 		std::string			_uri;			// requested content after changes
+		// bool				_is_in_ai;		// flag to signal if the request is on autoindex
 
 		int					_status_code;	// status code associated with the request
 

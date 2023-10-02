@@ -139,3 +139,7 @@ bool file_is_valid(std::string file_path, int permissions) {
 	// Check if the file has the specified permissions
 	return (access(file_path.c_str(), permissions) == 0);
 }
+
+bool is_file(std::string fname) {
+	return fname != "." && fname != ".." && (fname[0] != '.' && (fname.find('.') != std::string::npos));
+}

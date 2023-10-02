@@ -15,6 +15,7 @@
 # include <map>
 # include <algorithm>
 
+# include <dirent.h>
 # include <fcntl.h>
 # include <unistd.h>
 # include <signal.h>
@@ -78,6 +79,7 @@ enum MsgType {
 int			damerauLevenshteinDistance(std::string input, std::string valid);
 bool		isindent(int i);
 bool		file_is_valid(std::string file_path, int permissions);
+bool		is_file(std::string fname);
 void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
 std::string	readConfigurationFile(int argc, char **argv);
 

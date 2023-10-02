@@ -48,7 +48,7 @@ int Server::setupServer() {
 	// Set socket to be non-blocking
 	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
 	if (flags == -1) {
-		log(std::cerr, ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call 	engine.displayServers();failed", "");
 		return 1;
 	}
 

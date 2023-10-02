@@ -67,16 +67,16 @@ void HTTPRequest::process(std::string request) {
 		}
 
 		if (!_contentLength && _body.empty() && !_chunked && headersSet()) {
-			log(std::cout, SUCCESS, "first", "");
+			// log(std::cout, SUCCESS, "first", "");
 			fullyParsed = true;
 		} else if (_finalChunk) {
-			log(std::cout, SUCCESS, "second", "");
+			// log(std::cout, SUCCESS, "second", "");
 			fullyParsed = true;
 		} else if (_contentLength && _body.length() >= _contentLength) {
 			_body = _body.length() > _contentLength ? \
 					_body.substr(0, _contentLength): \
 					_body;
-			log(std::cout, SUCCESS, "third", "");
+			// log(std::cout, SUCCESS, "third", "");
 			fullyParsed = true;
 		}
 	}

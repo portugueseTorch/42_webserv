@@ -56,6 +56,7 @@ void Location::displayLocationBlock() {
 		if (_body_size_specified)
 			std::cout << "\t\tClient max body size: " << getClientMaxBodySize() << std::endl;
 	}
+	std::cout << "\t\tAuntoindex: " << getAutoindex() << std::endl;
 }
 
 /*************************************/

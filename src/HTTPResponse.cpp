@@ -201,6 +201,66 @@ int HTTPResponse::readContent(std::string file_path) {
 	return 0;
 }
 
+void HTTPResponse::handle_autoindex() {
+	std::string		root;
+	std::string		dir_name;
+	std::string		full_path;
+	struct dirent	*entry;
+	DIR				*dir;
+
+	if (getRelevantRoot() == "./")
+		root = ".";
+	else
+		root = getRelevantRoot();
+	dir_name = root.substr(1, root.length()) + request->getRequestURI();
+	std::cout << "Relevant root for autoindex: " << dir_name << std::endl;
+	dir = opendir(std::string("." + dir_name).c_str());
+	if (!dir) {
+		_status_code = 500;
+		return ;
+	}
+
+	_body = "<!DOCTYPE html>\n<html>\n<head>\n<title>Directory Listing</title>\n<style>\n\
+body {\nfont-family: Arial, sans-serif;\nmargin: 20px;\nbackground-color: #f5f5f5;\n}\nh1 {\n\
+color: #333;\n}\ntable {\nwidth: 100%;\nborder-collapse: collapse;\nborder: 1px solid #ccc;\n\
+}\n\nth, td {\npadding: 10px;\ntext-align: left;\nborder-bottom: 1px solid #ccc;\n}\nth {\n\
+background-color: #a5c8f2;\n}\na {\ntext-decoration: none;\n}\na:hover {\ntext-decoration: underline;\n\
+}\n</style>\n</head>\n<body>\n<h1>Directory Listing</h1>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n\
+<th>Size</th>\n<th>Last Modified</th>\n</tr>\n</thead>\n<tbody>\n";
+
+	std::vector<std::string> entries;
+	while ((entry = readdir(dir)) != NULL) {
+		std::string to_push;
+		struct stat sb;
+		std::stringstream ss;
+
+		if (stat(std::string("." + dir_name + "/" + entry->d_name).c_str(), &sb) == -1) {
+			_status_code = 500;
+			return;
+		}
+
+		ss << ((float) (sb.st_size / 1000));
+		if (dir_name != "/")
+			full_path = dir_name + "/" + entry->d_name;
+		else
+			full_path = dir_name + entry->d_name;
+		std::cout << full_path << std::endl;
+		to_push += "<tr>\n<td><a href=\"" + full_path + "\">" + entry->d_name + "</a></td>\n";
+		to_push += "<td>" + ss.str() + " Kb" + "</td>\n";
+		to_push += "<td>" + formatTime(std::localtime(&sb.st_mtime)) + "</td>\n";
+		entries.push_back(to_push);
+	}
+	
+	std::sort(entries.begin(), entries.end());
+	for (std::vector<std::string>::iterator it = entries.begin(); it != entries.end(); it++)
+		_body += *it;
+	_body += "</tbody>\n<table>\n</body>\n</html>\n";
+	_body_length = _body.length();
+	_status_code = 200;
+	_content_type = "text/html";
+	closedir(dir);
+}
+
 void HTTPResponse::searchContent() {
 	if (isError())
 		return ;
@@ -214,6 +274,10 @@ void HTTPResponse::searchContent() {
 		return ;
 	} else if (getContentType(uri) == "directory") {
 		if (location_block) {
+			if (location_block->getAutoindex() == true) {
+				handle_autoindex();
+				return ;
+			}
 			std::vector<std::string> &indexes = location_block->getIndex();
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
@@ -234,6 +298,10 @@ void HTTPResponse::searchContent() {
 			}
 		}
 		if (parent_server && !found) {
+			if (parent_server->getAutoindex() == true) {
+				handle_autoindex();
+				return ;
+			}
 			std::vector<std::string> &indexes = parent_server->getIndex();
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
@@ -385,7 +453,7 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	// std::cout << _response;
+	std::cout << _response;
 	return res;
 } 
 

@@ -344,7 +344,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	// std::cout << buf;
+	std::cout << buf;
 	client.parseHTTPRequest(buf);
 	if (client.request->fullyParsed) {
 		// client.request->displayParsedRequest();

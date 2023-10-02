@@ -32,6 +32,7 @@ class HTTPResponse
 		bool			isAllowedMethod();						// checks if the current method is allowed
 		void			assignLocationBlock();					// assigns the relevant location block (if any)
 		void			readFile(std::string, struct stat *);	// reads the content of the argument file
+		void			handle_autoindex();						// handles cases where autoindex is on
 		void			searchContent();						// searches the requested content
 		void			searchErrorContent();					// searches the appropriate error file, if needed
 		int				readContent(std::string);				// attempts to read the requested file, setting status codes appropriately
