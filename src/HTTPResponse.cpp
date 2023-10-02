@@ -204,12 +204,12 @@ int HTTPResponse::readContent(std::string file_path) {
 void HTTPResponse::searchContent() {
 	if (isError())
 		return ;
-	std::string uri = request->getRequestURI();
+		std::string uri = request->getRequestURI();
 	std::string root = getRelevantRoot();
 	bool		found = false;
 
 	// If we have a directory, the file path will need to first check for the index file
-	if (getContentType(uri) == "undefined") {
+		if (getContentType(uri) == "undefined") {
 		_status_code = 415;
 		return ;
 	} else if (getContentType(uri) == "directory") {
@@ -350,44 +350,111 @@ int	HTTPResponse::build() {
 		_status_code = 413;
 	if (!isAllowedMethod())
 		_status_code = 405;
-	// if (request->getMethod() == "GET")
-	searchContent();
+	if (request->getMethod() == "GET")
+		searchContent();
 	if (request->getMethod() == "POST") {
-		log(std::cout, SUCCESS, "it is a post", request->getBody());
-		std::map<std::string, std::string> queryparams;
-		std::string body(request->getBody());
-		std::string part;
-		while (body.size()) {
-			size_t sep = body.find('&');
-			if (sep != std::string::npos) {
-				part = body.substr(0, sep);
-			} else {
-				part = body;
+		// log(std::cout, SUCCESS, "it is a post", request->getBody());
+
+		std::string contentType = request->getAllParams()["content-type"];
+		std::string fileName;
+		std::string fileContent;
+		std::string body = request->getBody();
+		if (contentType.find("multipart/form-data") != 0)
+			_status_code = 400;
+		else {
+			size_t sep;
+			sep = contentType.find("boundary=");
+			if (sep == std::string::npos)
+				_status_code = 400;
+			else {
+				std::string boundary = contentType.substr(sep + 9);
+				std::string buf;
+				int	charsToCut = 0;
+
+				sep = body.find(boundary);
+
+				if (sep == 2) {
+					body = body.substr(boundary.size() + 4);
+					std::stringstream ss(body);
+					std::getline(ss, buf);
+					charsToCut += buf.size();
+
+					if (buf.find("name=\"name\"") != std::string::npos) {
+						std::getline(ss, buf);
+						charsToCut += buf.size();
+						std::getline(ss, buf);
+						fileName = buf.substr(0, buf.size() - 1);
+						charsToCut += buf.size();
+						body.erase(0, charsToCut + 3);
+						charsToCut = 0;
+						std::getline(ss, buf);
+						charsToCut += buf.size();
+					}
+					size_t startPos = 0;
+					size_t endPos = 0;
+					std::vector<std::string> parts;
+
+					while ((endPos = body.find(boundary, startPos)) != std::string::npos) {
+						std::string part = body.substr(startPos, endPos - startPos);
+						parts.push_back(part);
+						startPos = endPos + boundary.length();
+					}
+
+					for (std::vector<std::string>::const_iterator it = parts.begin(); it != parts.end(); ++it) {
+						const std::string& part = *it;
+						
+						// Process each part here (e.g., extract content, filename, etc.)
+						std::cout << "Part:" << std::endl << part << std::endl << "-------------------" << std::endl;
+
+						// Find the position of the second occurrence of '\n'
+						std::string::size_type pos = part.find("Content-Type: application/octet-stream");
+						// std::cout << "pos is " << pos << std::endl;
+
+						while (pos != std::string::npos) {
+							size_t newLine = part.find('\n', pos);
+							size_t nextOne = part.find("Content-Disposition", pos);
+							// std::cout << "nl: " << newLine << " | " << "next: " << nextOne << std::endl;
+							if (nextOne != std::string::npos) {
+								fileContent += part.substr(newLine + 3, nextOne - newLine - 1);
+							} else {
+								fileContent += part.substr(newLine + 3);
+							}
+							if (part.find("Content-Disposition: form-data; name=\"content\";", nextOne) != std::string::npos)
+								pos = part.find("Content-Type: application/octet-stream", nextOne + 1);
+							else
+								pos = std::string::npos;
+						}
+
+					}
+				}
 			}
-			size_t toDel = sep != std::string::npos ? sep + 1 : body.size();
-			sep = part.find('=');
-			queryparams[part.substr(0, sep)] = part.substr(sep + 1);
-			body.erase(0, toDel);
 		}
-		if (!queryparams.count("name"))
-			queryparams["name"] = "testando";
+		// exit(0);
+		std::cout << "oi\n";
 		char buffer[FILENAME_MAX];
 		getcwd(buffer, FILENAME_MAX);
-		log(std::cout, INFO, "my location", buffer);
-		log(std::cout, INFO, "location", getRelevantRoot() + "/" + queryparams["name"]);
-		std::string fileName = getRelevantRoot() + "/" + queryparams["name"];
-		log(std::cout, INFO, "file name", fileName);
+		// log(std::cout, INFO, "my location", buffer);
+		// log(std::cout, INFO, "location", getRelevantRoot() + "/" + fileName);
+		fileName = getRelevantRoot() + "/" + fileName;
+		// log(std::cout, INFO, "file name", fileName);
 
 		// log(std::cout, INFO, "name", queryparams["name"]);
 		// log(std::cout, INFO, "content", queryparams["content"]);
+			std::cout << body.length() << " | " << fileContent.length() << std::endl;
+			std::cout << fileContent;
 		std::ofstream	outfile(
-			fileName.c_str(), std::ofstream::trunc);
+			fileName.c_str(), std::ofstream::binary | std::ofstream::trunc);
 		if (outfile.fail()) {
 			std::cerr << "Error: Unable to create file." << std::endl;
 		} else {
-			outfile << queryparams["content"];
+			outfile << fileContent;
+			// outfile.write(fileContent.c_str(), fileContent.size());
 			outfile.close();
 		}
+
+		_body = "";
+		_body = "<html><p>Response sent</p></html>";
+		_body_length = _body.size() + 2;
 	}
 	if (isError())
 		searchErrorContent();
@@ -421,8 +488,8 @@ int	HTTPResponse::build() {
 
 	_response_length = _header_length + _body_length;
 
-	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	// std::cout << _response;
+	std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
+	std::cout << _response;
 	return res;
 } 
 
