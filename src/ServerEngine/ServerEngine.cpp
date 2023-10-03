@@ -13,13 +13,26 @@ std::string ServerEngine::possibleDirectives[] = {
 	"error_page",
 	"location",
 	"client_max_body_size",
-	"fastcgi_pass",
+	"return",
 	"autoindex",
 	"http_method",
 };
 
 std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
 	ServerEngine::possibleDirectives + sizeof(ServerEngine::possibleDirectives) / sizeof(std::string));
+
+int supported_sc[] = {
+	200, 201, 202, 204,
+	300, 301, 302, 303, 304,
+	400, 403, 404, 405, 406, 410, 411, 413, 414, 415,
+	500, 501, 502, 504, 505
+};
+
+std::vector<int> ServerEngine::supported_status_codes(supported_sc, supported_sc + sizeof(supported_sc) / sizeof(int));
+
+bool ServerEngine::isSupportedStatusCode(int code) {
+	return std::find(supported_status_codes.begin(), supported_status_codes.end(), code) != supported_status_codes.end();
+}
 
 ServerEngine::ServerEngine(std::list<Node> nodes) {
 	_nodes = nodes;

@@ -21,6 +21,8 @@ class Location
 		std::vector<std::string>				&getIndex() { return _index; }
 		std::vector<std::string>				&getHTTPMethod() { return _http_method; }
 		std::map<int,std::vector<std::string> >	&getErrorPages() { return _error_pages; }
+		std::pair<int,std::string>				&getReturn() { return _return; }
+		bool									getHasReturn() {return _has_return; }
 
 		int setLocation(std::string);
 		int setErrorPages(std::list<Node>::iterator &it);
@@ -29,11 +31,14 @@ class Location
 		int setAutoindex(std::list<Node>::iterator &it);
 		int setHTTPMethod(std::list<Node>::iterator &it);
 		int setClientMaxBodySize(std::list<Node>::iterator &it);
+		int setReturn(std::list<Node>::iterator &it);
 
 	private:
 		static std::string					_possibleDirectives[];
 		std::string 							_location;				// location specified by the location directive
 		std::map<int,std::vector<std::string> >	_error_pages;			// map storing the error codes and their respective error_pages
+		std::pair<int,std::string>				_return;				// stores the code and the related text, if any
+		bool									_has_return;			// flag to signal if a 'return' directive was provided
 		std::vector<std::string>				_index;					// index list according to config_file
 		std::string								_root;					// root of the files as provided by the config_file
 		bool									_autoindex;				// autoindex as per config_file

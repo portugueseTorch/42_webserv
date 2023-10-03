@@ -10,6 +10,7 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_server = "";
 	_content_type = "";
 	_body = "";
+	_new_url = "";
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
@@ -63,6 +64,7 @@ std::string formatTime(const struct tm* timeinfo) {
 }
 
 std::string HTTPResponse::getContentType(std::string uri) {
+	if (uri == "") return "undefined";
 	// Get index of last '.' of uri
 	int lp = uri.find_last_of('.');
 	if (uri[uri.length() - 1] == '/' || lp == -1)
@@ -107,6 +109,17 @@ std::string HTTPResponse::statusCodeToMessage() {
 			return "Accepted";
 		case 204:
 			return "No Content";
+
+		case 300:
+			return "Multiple Choices";
+		case 301:
+			return "Moved Permanently";
+		case 302:
+			return "Found";
+		case 303:
+			return "See Other";
+		case 304:
+			return "Not Modified";
 
 		case 400:
 			return "Bad Request";
@@ -403,6 +416,33 @@ bool HTTPResponse::isAllowedMethod() {
 	return false;
 }
 
+int HTTPResponse::handleReturn() {
+	int status_code = location_block->getReturn().first;
+	std::string msg = location_block->getReturn().second;
+
+	if (status_code >= 300 && status_code <= 305) {
+		_new_url = msg;
+	} else {
+		if (msg != "") {
+			_body += msg + "\r\n";
+			_body_length = _body.length();
+		}
+	}
+	_status_code = status_code;
+	return 0;
+}
+
+int HTTPResponse::buildBody() {
+	if (location_block && location_block->getHasReturn() == true)
+		return handleReturn();
+
+	// if (request->getMethod() == "GET")
+	searchContent();
+	if (isError())
+		searchErrorContent();
+	return 0;
+}
+
 int	HTTPResponse::build() {
 	int res = 0;
 	// Assign the location block for the response
@@ -418,10 +458,9 @@ int	HTTPResponse::build() {
 		_status_code = 413;
 	if (!isAllowedMethod())
 		_status_code = 405;
-	// if (request->getMethod() == "GET")
-	searchContent();
-	if (isError())
-		searchErrorContent();
+	
+	// Build response body
+	buildBody();
 
 	std::stringstream ss;
 	ss << _status_code;
@@ -432,6 +471,11 @@ int	HTTPResponse::build() {
 	_response += "Date: " + _time + "\r\n";
 	_response += "Server: " + _server + "\r\n";
 	// _response += "Last-Modified: " + _last_modified + "\r\n";
+
+	if (location_block && location_block->getHasReturn()) {
+		if (location_block->getReturn().first >= 300 && location_block->getReturn().first <= 305)
+			_response += "Location: " + _new_url + "\r\n";
+	}
 
 	if (!request->isCGI || isError()) {
 		ss << _body_length;

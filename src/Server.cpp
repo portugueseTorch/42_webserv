@@ -491,10 +491,6 @@ int Server::setHTTPMethod(std::list<Node>::iterator &it) {
 			_http_method.push_back("POST");
 		else if (it->_content == "DELETE")
 			_http_method.push_back("DELETE");
-		// else if (it->_content == "HEAD")
-		// 	_http_method.push_back(HEAD);
-		// else if (it->_content == "PUT")
-		// 	_http_method.push_back(PUT);
 		else {
 			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
 			_http_method.clear();
@@ -568,6 +564,9 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		} else if (it->_content == "client_max_body_size") {
 			if (location.setClientMaxBodySize(++it))
 				return 1;
+		} else if (it->_content == "return") {
+			if (location.setReturn(++it))
+				return 1;
 		} else {
 			log(std::cerr, ERROR, "Invalid directive in location block", it->_content);
 			return 1;
@@ -624,8 +623,10 @@ bool Server::validHost(std::string ip) {
  * @return Returns 0 on success, and 1 on failure 
  */
 int Server::handleName(std::list<Node>::iterator &it) {
-	if (!validDirective(it->_content))
-			return 1;
+	if (!validDirective(it->_content)) {
+		log(std::cerr, ERROR, "Unkown directive", it->_content);
+		return 1;
+	}
 
 	if (it->_content == "listen") {
 		if (setListen(++it))
@@ -651,8 +652,10 @@ int Server::handleName(std::list<Node>::iterator &it) {
 	} else if (it->_content == "http_method") {
 		if (setHTTPMethod(++it))
 			return 1;
-	} else
+	} else {
+		log(std::cerr, ERROR, "Invalid directive in server block", it->_content);
 		return 1;
+	}
 	return 0;
 }
 
