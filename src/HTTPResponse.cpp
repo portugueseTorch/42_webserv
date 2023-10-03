@@ -408,9 +408,17 @@ int HTTPResponse::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
-		char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
-		std::vector<std::string> queryAndBody = request->getQueryParams();
 
+		// char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
+		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
+		std::vector<std::string> queryAndBody = request->getQueryParams();
+		std::string uri = request->getRequestURI();
+		uri = uri[0] == '/' ? uri.substr(1) : uri;
+		std::string webservPath = "webservPath=" + uri;
+		// log(std::cerr, INFO, "path", webservPath);
+		std::string webservMethod = "webservMethod=" + request->getMethod();
+		queryAndBody.push_back(webservPath);
+		queryAndBody.push_back(webservMethod);
 		std::stringstream ss(request->getBody());
 		std::vector<std::string> splitBody;
 		std::string buf;
