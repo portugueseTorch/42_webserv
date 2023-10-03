@@ -204,7 +204,7 @@ int HTTPResponse::readContent(std::string file_path) {
 void HTTPResponse::searchContent() {
 	if (isError())
 		return ;
-		std::string uri = request->getRequestURI();
+	std::string uri = request->getRequestURI();
 	std::string root = getRelevantRoot();
 	bool		found = false;
 
@@ -371,6 +371,7 @@ int	HTTPResponse::build() {
 				std::string buf;
 				int	charsToCut = 0;
 
+				std::cout << "boundary is " << boundary << std::endl;
 				sep = body.find(boundary);
 
 				if (sep == 2) {
@@ -399,10 +400,15 @@ int	HTTPResponse::build() {
 						parts.push_back(part);
 						startPos = endPos + boundary.length();
 					}
+					std::string part = body.substr(startPos);
+					if (parts.size())
+						parts.push_back(part);
+
 
 					for (std::vector<std::string>::const_iterator it = parts.begin(); it != parts.end(); ++it) {
 						const std::string& part = *it;
 						
+						// std::cout << "part size: " << part.size() << std::endl;
 						// Process each part here (e.g., extract content, filename, etc.)
 						std::cout << "Part:" << std::endl << part << std::endl << "-------------------" << std::endl;
 
@@ -413,13 +419,21 @@ int	HTTPResponse::build() {
 						while (pos != std::string::npos) {
 							size_t newLine = part.find('\n', pos);
 							size_t nextOne = part.find("Content-Disposition", pos);
-							// std::cout << "nl: " << newLine << " | " << "next: " << nextOne << std::endl;
+							size_t dashAtEnd = part.find_last_of("--");
+							dashAtEnd = dashAtEnd == std::string::npos ? part.size() : dashAtEnd;
+							size_t nameFound = part.find(fileName, pos);
+							// std::cout << "dash found at " << dashAtEnd << std::endl;
 							if (nextOne != std::string::npos) {
-								fileContent += part.substr(newLine + 3, nextOne - newLine - 1);
+								fileContent += part.substr(newLine + 3, nextOne - newLine - 3);
+								std::cout << "Wrote 1:\n" << part.substr(newLine + 3, nextOne - newLine - 3) << std::endl;
 							} else {
-								fileContent += part.substr(newLine + 3);
+								if (nameFound != std::string::npos) {
+									dashAtEnd -= fileName.length();
+								}
+								fileContent += part.substr(newLine + 3, dashAtEnd - newLine - 6);
+								std::cout << "Wrote 2:\n" << part.substr(newLine + 3, dashAtEnd - newLine - 6) << std::endl;
 							}
-							if (part.find("Content-Disposition: form-data; name=\"content\";", nextOne) != std::string::npos)
+							if (nextOne != std::string::npos && part.find("Content-Disposition: form-data; name=\"content\";", nextOne) != std::string::npos)
 								pos = part.find("Content-Type: application/octet-stream", nextOne + 1);
 							else
 								pos = std::string::npos;
@@ -429,8 +443,6 @@ int	HTTPResponse::build() {
 				}
 			}
 		}
-		// exit(0);
-		std::cout << "oi\n";
 		char buffer[FILENAME_MAX];
 		getcwd(buffer, FILENAME_MAX);
 		// log(std::cout, INFO, "my location", buffer);
@@ -441,7 +453,8 @@ int	HTTPResponse::build() {
 		// log(std::cout, INFO, "name", queryparams["name"]);
 		// log(std::cout, INFO, "content", queryparams["content"]);
 			std::cout << body.length() << " | " << fileContent.length() << std::endl;
-			std::cout << fileContent;
+			// std::cout << fileContent << std::endl;
+			// std::cout << "end of file content\n";
 		std::ofstream	outfile(
 			fileName.c_str(), std::ofstream::binary | std::ofstream::trunc);
 		if (outfile.fail()) {
@@ -489,7 +502,7 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	std::cout << _response;
+	// std::cout << _response;
 	return res;
 } 
 

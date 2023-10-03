@@ -19,8 +19,8 @@ const uploadFile = ((event) => {
 
 	console.log(file);
 
-	if (!file.type.startsWith('image/'))
-		return ;
+	// if (!file.type.startsWith('image/'))
+	// 	return ;
 	
 	const reader = new FileReader();
 

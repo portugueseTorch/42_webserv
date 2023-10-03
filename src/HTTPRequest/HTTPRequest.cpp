@@ -83,6 +83,7 @@ void HTTPRequest::process(std::string request) {
 }
 
 bool	HTTPRequest::headersSet() {
+	std::cout << "requestURI " << _requestURI <<std::endl;
 	if (_method.empty())
 		return false;
 	if (_requestURI.empty())
@@ -232,6 +233,7 @@ bool	HTTPRequest::checkRequestLine(std::string & headerLine) {
 bool HTTPRequest::validMethod(std::string & headerLine) {
 	if (alreadyExists(_method))
 		return false;
+	_statusCode = 200;
 
 	if (headerLine.find("GET") == 0 || \
 		headerLine.find("POST") == 0 || \
@@ -293,7 +295,6 @@ bool HTTPRequest::validAbsoluteURI(std::string req) {
 
 bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 	std::string toKeep(headerLine);
-
 	if (alreadyExists(_protocol))
 		return false;
 
