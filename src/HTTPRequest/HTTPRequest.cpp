@@ -204,6 +204,7 @@ bool	HTTPRequest::processHeaderLine(std::string headerLine) {
 			validLine = checkRequestLine(headerLine);
 			break;
 		case CONTENT_LENGTH:
+			addParam(headerLine);
 			validLine = checkContentLength(headerLine.substr(headerLine.find(":") + 1));
 			break;
 		case CONNECTION:
@@ -450,6 +451,9 @@ void HTTPRequest::displayParsedRequest(){
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
+
+	std::cout << std::left << std::setw(25) << "status code:" << _statusCode << std::endl;
+	
 }
 
 bool	HTTPRequest::success() const {

@@ -3,39 +3,58 @@ const uploadFile = ((event) => {
 	
 	const params = [];
 
-	['name', 'content'].forEach((attr) => {
-		const value = document.querySelector(`#file-${attr}`).value;
-		params.push(`${attr}=${value}`);
-	})
+	const file = document.getElementById('file-content').files[0];
 
-	const body = params.join('&');
-	
-	fetch('/resources', {
-		method: 'POST',
-		body: body
-	})
-	.then(response => {
-		if (!response.ok) {
-			throw new Error('Network response was not ok');
+	console.log(file);
+
+	const reader = new FileReader();
+
+	reader.onload = async function () {
+		const binaryData = reader.result;
+
+		const formData = new FormData();
+		formData.append('name', file.name);
+		formData.append('content', new Blob([binaryData]));
+
+		// Convert ArrayBuffer to Uint8Array
+		const uint8Array = new Uint8Array(binaryData);
+
+		// Convert Uint8Array to hexadecimal string
+		const hexString = Array.from(uint8Array).map(byte => byte.toString(16).padStart(2, '0')).join('');
+
+		console.log(hexString);
+		try {
+			const response = await fetch("/cgi-bin/goodTimes.py", {
+				method: 'POST',
+				body: formData
+			});
+
+			if (!response.ok) {
+				throw new Error('Server response was not ok');
+			}
+			
+			const data = await fetch('goodTimes.py', {
+				method: 'GET'
+			});
+			
+			const textData = await data.text();
+			
+			document.body.innerHTML = textData;
+		} catch (error) {
+			console.error('Error:', error);
 		}
-		return fetch('goodTimes.py', {
-            method: 'GET'
-        });
-	})
-	.then(response => response.text())
-	.then(data => {
-		document.body.innerHTML = data;
-	})
-	.catch(error => {
-		console.error('Error:', error);
-	});
+	};
+
+	reader.readAsArrayBuffer(file);
+
+
 });
 
 const deleteFile = ((element) => {
 	const pathAfterComma = element.textContent.split(', ')[1];
 	console.log(pathAfterComma);
 
-	fetch('/resources', {
+	fetch('/cgi-bin/goodTimes.py', {
 		method: 'DELETE',
 		body: pathAfterComma
 	})

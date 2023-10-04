@@ -338,6 +338,7 @@ bool HTTPResponse::isAllowedMethod() {
 int	HTTPResponse::build() {
 	int res = 0;
 	// Assign the location block for the response
+	std::cout << "aqui estamos " << _status_code << std::endl;
 	this->assignLocationBlock();
 
 	// General Headers
@@ -385,7 +386,7 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	// std::cout << _response;
+	std::cout << _response;
 	return res;
 } 
 
@@ -410,7 +411,7 @@ int HTTPResponse::buildCGIResponse() {
 		close(pipe_fd[0]);
 
 		// char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/cgi.py", NULL };
+		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/main.py", NULL };
 		std::vector<std::string> queryAndBody = request->getQueryParams();
 		std::string uri = request->getRequestURI();
 		uri = uri[0] == '/' ? uri.substr(1) : uri;
@@ -419,15 +420,35 @@ int HTTPResponse::buildCGIResponse() {
 		std::string webservMethod = "webservMethod=" + request->getMethod();
 		queryAndBody.push_back(webservPath);
 		queryAndBody.push_back(webservMethod);
-		std::stringstream ss(request->getBody());
+
+		std::string body = request->getBody();
+
+		std::string contentType = request->getAllParams()["content-type"];
+		std::string contentLength = request->getAllParams()["content-length"];
+		if (contentType.size()) {
+			size_t sep;
+			sep = contentType.find("boundary=");
+			std::string boundary = contentType.substr(sep);
+			body = "content=" + body + "&";
+			body.append(boundary + "&");
+			body.append("content-length=" + contentLength);
+		}
+		std::stringstream ss(body);
 		std::vector<std::string> splitBody;
 		std::string buf;
+
+
 		while (std::getline(ss, buf, '&')) {
 			splitBody.push_back(buf);
 		}
 		queryAndBody.insert(queryAndBody.end(), splitBody.begin(), splitBody.end());
 		
 		char **envp = vectToArr(queryAndBody);
+		std::vector<std::string>::iterator it = queryAndBody.begin();
+		log(std::cerr, INFO, "Printing body", "");
+		for (; it != queryAndBody.end(); it++) {
+			std::cerr << *it << std::endl;
+		}
 		execve("/usr/bin/python3", args, envp);
 		//need error handling so request is not left pending
 		delete []envp;
