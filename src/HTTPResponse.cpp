@@ -416,20 +416,20 @@ int HTTPResponse::buildCGIResponse() {
 		std::string uri = request->getRequestURI();
 		uri = uri[0] == '/' ? uri.substr(1) : uri;
 		std::string webservPath = "webservPath=" + uri;
-		// log(std::cerr, INFO, "path", webservPath);
 		std::string webservMethod = "webservMethod=" + request->getMethod();
 		queryAndBody.push_back(webservPath);
 		queryAndBody.push_back(webservMethod);
 
 		std::string body = request->getBody();
+		// log(std::cerr, INFO, "body", body);
 
 		std::string contentType = request->getAllParams()["content-type"];
 		std::string contentLength = request->getAllParams()["content-length"];
-		if (contentType.size()) {
+		if (contentType.size() && contentType.find("boundary=") != std::string::npos) {
 			size_t sep;
 			sep = contentType.find("boundary=");
 			std::string boundary = contentType.substr(sep);
-			body = "content=" + body + "&";
+			body = "content=" + urlEncode(body) + "&";
 			body.append(boundary + "&");
 			body.append("content-length=" + contentLength);
 		}
@@ -443,13 +443,14 @@ int HTTPResponse::buildCGIResponse() {
 		}
 		queryAndBody.insert(queryAndBody.end(), splitBody.begin(), splitBody.end());
 		
-		char **envp = vectToArr(queryAndBody);
-		std::vector<std::string>::iterator it = queryAndBody.begin();
-		log(std::cerr, INFO, "Printing body", "");
-		for (; it != queryAndBody.end(); it++) {
-			std::cerr << *it << std::endl;
-		}
-		execve("/usr/bin/python3", args, envp);
+		unsigned char **envp = vectToArr(queryAndBody);
+		// std::vector<std::string>::iterator it = queryAndBody.begin();
+		// log(std::cerr, INFO, "Printing body", "");
+		// for (; it != queryAndBody.end(); it++) {
+		// 	std::cerr << *it << std::endl;
+		// }
+	std::cerr << "here" << std::endl;
+		execve("/usr/bin/python3", args, (char **)envp);
 		//need error handling so request is not left pending
 		delete []envp;
 	} else {
@@ -461,6 +462,7 @@ int HTTPResponse::buildCGIResponse() {
 		std::stringstream ss;
 
 		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+		// std::cerr << msg << std::endl;
 		while (bytes != 0) {
 			if (bytes == -1) {
 				log(std::cerr, ERROR, "read() call failed", "");
@@ -478,12 +480,32 @@ int HTTPResponse::buildCGIResponse() {
 	return 0;
 }
 
-char**	HTTPResponse::vectToArr(std::vector<std::string> vect) {
-	char **envp = new char*[vect.size() + 1];
+std::string HTTPResponse::urlEncode(const std::string& value) {
+    std::ostringstream escaped;
+    escaped.fill('0');
+    escaped << std::hex;
+
+   for (std::string::const_iterator it = value.begin(); it != value.end(); ++it) {
+		char c = *it;
+        // Keep alphanumeric and other accepted characters intact
+        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+            escaped << c;
+            continue;
+        }
+
+        // Any other characters are percent-encoded
+        escaped << '%' << std::setw(2) << int((unsigned char)c);
+    }
+
+    return escaped.str();
+}
+
+unsigned char**	HTTPResponse::vectToArr(std::vector<std::string> vect) {
+	unsigned char **envp = new unsigned char*[vect.size() + 1];
 	size_t i = 0;
 	for (; i < vect.size(); i++) {
-		envp[i] = new char[vect[i].size() + 1];
-		strcpy(envp[i], vect[i].c_str());
+		envp[i] = new unsigned char[vect[i].size() + 1];
+		strcpy((char *)envp[i], vect[i].c_str());
 	}
 	envp[i] = NULL;
 	return envp;

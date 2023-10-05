@@ -36,8 +36,8 @@ class HTTPResponse
 		void			searchErrorContent();					// searches the appropriate error file, if needed
 		int				readContent(std::string);				// attempts to read the requested file, setting status codes appropriately
 		int				buildCGIResponse();						// builds the CGI response
-		char**			vectToArr(std::vector<std::string> vect);
-
+		unsigned char**			vectToArr(std::vector<std::string> vect);
+		std::string		urlEncode(const std::string& value);
 		std::string		_response;								// response to be sent
 		std::string		_protocol;								// protocol of the request
 		std::string		_time;									// current time formatted for the header

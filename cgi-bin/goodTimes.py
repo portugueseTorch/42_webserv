@@ -1,76 +1,86 @@
 import os
+import sys
 import navbar
 
 from cgi import parse_multipart, parse_header
 from io import BytesIO
 import base64
 from urllib.parse import parse_qs
+from urllib.parse import unquote
 
-
+from email import message_from_bytes
 
 def POST() :
+
     response = '<html>'
-
     content = os.environ.get("content")
-    boundary = os.environ.get("boundary")
-    contentLength = os.environ.get("content-length")
+    content = unquote(content)
+    content_bytes = content.encode('utf-8')
+    contentLength = os.environ.get('content-length')
 
-    # c_type, c_data = parse_header("multipart/form-data; " + boundary)
-    # assert c_type == 'multipart/form-data'
-    # c_data = {'boundary': boundary}
-    # decoded_string = base64.b64decode(content)
-    # c_data['boundary'] = bytes(c_data['boundary'], "utf-8")
-    # c_data['CONTENT-LENGTH'] = int(contentLength)
-    # form_data = parse_multipart(BytesIO(decoded_string), c_data)
+    sys.stderr.write(f'{content}\n\n')
 
-    # length = int(contentLength)
-    # body = content.read(length).decode()
-    # params = parse_qs(content)
+    test = message_from_bytes(content_bytes)
+    response += "test"
 
-    # messagecontent = params["message"][0]
-    # response += messagecontent
-
-    import re, io
-    with io.StringIO(content) as fh:
-        parts = []
-        part_line = "[]"
-        part_fname = ""
-        new_part = None
-        # robj = re.compile('.+name=+')
-
-        while True:
-            line = fh.readline()
-            if not line: break
-            if not new_part:
-                new_part = line[:-1]
-
-            if line.startswith(new_part):
-                if part_line:
-                    parts.append({'filename':part_fname, 'content':''.join(part_line)})
-                    part_line = []
-
-                while line and line != '\n':
-                    # response += line
-                    # _match = robj.match(line)
-                    # response += "\n" + str(_match) + "\n"
-                    part_line += line
-                    # if _match: part_fname = _match.groups()[0]
-                    line = fh.readline()
-            # else:
-            #     part_line.append(line)
+    boundary = "--" + os.environ.get("boundary")
+    
+    sys.stderr.write(f'{boundary}\n')
+    # what = test.get_payload().split(boundary + "\r\n")[1]
+    # sys.stderr.write(f'{what}\n')
+    content = test.get_payload()
+    parts = content.split(boundary + "\r\n")
+    file_name = ""
+    file_content = ""
 
     for part in parts:
-        response += str(part)
+        sys.stderr.write(f'part: {part}')
+        if not part or part.isspace():
+            continue
+        if 'filename=' in part:
+            inContent = False
+            # Extract the file content
+            subparts = part.split('\r')
+            for line in subparts:
+                if line.isspace() and not inContent:
+                    continue
+                if 'Content' in line:
+                    continue
+                else:
+                    if not inContent:
+                        line = line.strip()
+                        inContent = True
+                    file_content += line.replace(boundary, '')
+                    # Check if the string ends with '--'
+                    if file_content.endswith('--'):
+                        # Remove the last two characters (--)
+                        file_content = file_content[:-2]
+        elif 'name="content"; filename' not in part:
+            # Extract the file name
+            subparts = part.split('\n')
+            for line in subparts:
+                if line.isspace():
+                    continue
+                elif 'Content' in line:
+                    continue
+                else:
+                    if not file_name:
+                        file_name = line.strip()
+                        # sys.stderr.write(f'File Name: {file_name}\n')
 
-    # response += c_data['CONTENT-LENGTH']
-    # response += "<br />"
-    # response += str(len(form_data))
-    # response += "<br />"
-    # c_data_list = list(c_data.items())
-    # for image_str in c_data_list:
-    #     response += str(image_str)
-    # response += content
+    # sys.stderr.write(f'File Content: {file_content}\n')
+
+    file_path = os.path.join('./www/resources', file_name)
+
+    with open(file_path, 'w') as file:
+        file.write(file_content)
+
+    # response += f'File Name: {file_name}\n'
+    # response += f'File Content: {file_content}'
+
+    # response += str(test)
     response += "</html>"
+    # sys.stderr.write(f'{response}\n')
 
     return response
 
@@ -99,7 +109,8 @@ def GET() :
                 response += f'<p onclick="deleteFile(this)" style="cursor: pointer">{entry.name}, {entry.path}</p>'
 
     response += '<form onsubmit="uploadFile(event)">'
-    response += '<label for="file-content">File to upload <input type="file" name="file-content" id="file-content" required></label>'
+    response += '<label for="file-content">File to upload <input type="file" name="file-content" \
+            id="file-content" accept=".txt,.css, .scss,.html,.js" required></label>'
     response += '<input id="submit-button" type="submit" value="Upload">'
     response += '</form>'
     response += '</main>'
