@@ -65,7 +65,7 @@ std::string formatTime(const struct tm* timeinfo) {
 std::string HTTPResponse::getContentType(std::string uri) {
 	// Get index of last '.' of uri
 	int lp = uri.find_last_of('.');
-	if (uri[uri.length() - 1] == '/' || lp == -1)
+	if (uri.empty() || uri[uri.length() - 1] == '/' || lp == -1)
 		return "directory";
 
 	// Check the file extension

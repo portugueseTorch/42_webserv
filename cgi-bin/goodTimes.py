@@ -1,40 +1,32 @@
 import os
 import sys
+import html
 import navbar
+import response as fullResponse
+import errorPage
 
-from cgi import parse_multipart, parse_header
-from io import BytesIO
-import base64
-from urllib.parse import parse_qs
 from urllib.parse import unquote
-
 from email import message_from_bytes
 
 def POST() :
-
-    response = '<html>'
     content = os.environ.get("content")
+    if content is None:
+        return 400
     content = unquote(content)
     content_bytes = content.encode('utf-8')
-    contentLength = os.environ.get('content-length')
-
-    sys.stderr.write(f'{content}\n\n')
 
     test = message_from_bytes(content_bytes)
-    response += "test"
 
     boundary = "--" + os.environ.get("boundary")
+    if boundary is None:
+        return 400
     
-    sys.stderr.write(f'{boundary}\n')
-    # what = test.get_payload().split(boundary + "\r\n")[1]
-    # sys.stderr.write(f'{what}\n')
     content = test.get_payload()
     parts = content.split(boundary + "\r\n")
     file_name = ""
     file_content = ""
 
     for part in parts:
-        sys.stderr.write(f'part: {part}')
         if not part or part.isspace():
             continue
         if 'filename=' in part:
@@ -66,72 +58,100 @@ def POST() :
                 else:
                     if not file_name:
                         file_name = line.strip()
-                        # sys.stderr.write(f'File Name: {file_name}\n')
 
-    # sys.stderr.write(f'File Content: {file_content}\n')
-
+    if not file_name:
+        return 400
+    
     file_path = os.path.join('./www/resources', file_name)
 
-    with open(file_path, 'w') as file:
-        file.write(file_content)
+    try:
+        with open(file_path, 'w') as file:
+            file.write(file_content)
+    except FileNotFoundError:
+        return 404
+    except PermissionError:
+        return 403
+    except IsADirectoryError:
+        return 500
+    except OSError:
+        return 500
 
-    # response += f'File Name: {file_name}\n'
-    # response += f'File Content: {file_content}'
+    return 200
 
-    # response += str(test)
-    response += "</html>"
-    # sys.stderr.write(f'{response}\n')
+def GET(fileContent = "No file selected") :
+    response = '<html>\n'
 
-    return response
+    response += '<head>\n'
+    response += '<link type="text/css" rel="stylesheet" href="goodTimes.css" />\n'
+    response += '<link type="text/css" rel="stylesheet" href="style.css" />\n'
+    response += '<meta charset="UTF-8">\n'
+    response += '<title>Good Times</title>\n'
+    response += '</head>\n'
 
-def GET() :
-    response = '<html>'
+    response += '<body>\n'
 
-    response += '<head>'
-    response += '<link type="text/css" rel="stylesheet" href="goodTimes.css" />'
-    response += '<link type="text/css" rel="stylesheet" href="style.css" />'
-    response += '<meta charset="UTF-8">'
-    response += '<title>Good Times</title>'
-    response += '</head>'
-
-    response += '<body>'
-
-    response += '<header>'
-    urls = ['/', '/reviews.py', '/resources']
-    texts = ['Home', 'Reviews', 'About']
+    response += '<header>\n'
+    urls = ['/', '/cgi-bin/main.py', '/resources']
+    texts = ['Home', 'main', 'About']
     response += navbar.text(urls, texts)
-    response += '</header>'
-
-    response += '<main>'
+    response += '</header>\n'
+    response += '<main>\n'
+    response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
+    response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
+    response += '<label for="file-content">Choose a File</label> \
+                <input type="file" name="file-content" id="file-content" accept=".txt,.css, .scss,.html,.js" required>\n'
+    response += '<input class="submit-button" type="submit" value="Upload">\n'
+    response += '</form>\n'
+    response += '<div class="file-list">\n'
+    response += '<h2>Uploaded Files</h2>\n'
+    response += '<ul id="uploaded-files">\n'
     with os.scandir('./www/resources') as entries:
         for entry in entries:
-            if (entry.is_file()):
-                response += f'<p onclick="deleteFile(this)" style="cursor: pointer">{entry.name}, {entry.path}</p>'
+            if entry.is_file():
+                response += f'<li class="uploaded-file" onclick="displayFile(this.querySelector(\'.file-info\'))">\n \
+                    <span class="file-info">{entry.name}</span>\n \
+                          <img class="trash-icon" src="trash.svg" alt="Delete">\n \
+                            </li>'
+    response += '</ul>\n'
+    response += '</div>\n'
 
-    response += '<form onsubmit="uploadFile(event)">'
-    response += '<label for="file-content">File to upload <input type="file" name="file-content" \
-            id="file-content" accept=".txt,.css, .scss,.html,.js" required></label>'
-    response += '<input id="submit-button" type="submit" value="Upload">'
-    response += '</form>'
-    response += '</main>'
-    response += '<script src="/cgi-bin/goodTimes.js"></script>'
-    response += '</body>'
-    response += "</html>"
+    response += '<div class="file-contents">\n'
+    response += '<h2>File Content</h2>\n'
+    # sys.stderr.write(f'file content is: {fileContent}')
+    fileContent = html.escape(fileContent)
+    fileContent = fileContent.replace('\n', '<br />')
+    response += f'<div class="content">{fileContent}</div>\n'
+    response += '</div>\n'
+
+    response += '</main>\n'
+    response += '<script src="/cgi-bin/goodTimes.js"></script>\n'
+    response += '</body>\n'
+    response += "</html>\n"
 
     return response
 
 def response():
 
     response = ""
+    headers = ""
 
     if os.environ.get("webservMethod") == "POST" :
-        response = POST()
-        print('HTTP/1.1 200 OK')
+        status = POST()
+        if status == 200:
+            response = GET()
+            headers = 'HTTP/1.1 200 OK'
+        else:
+            if status == 403:
+                headers = 'HTTP/1.1 403 Forbidden'
+            elif status == 404:
+                headers = 'HTTP/1.1 404 Not Found'
+            elif status == 500:
+                headers = 'HTTP/1.1 500 Internal Server Error'
+            else:
+                headers = 'HTTP/1.1 400 Bad Request'
+            response = errorPage.GET(status)
     else:
         response = GET()
-        print('HTTP/1.1 200 OK')
+        headers = 'HTTP/1.1 200 OK'
     
-    print('Content-type: text/html')
-    print(f'Content-Length: {len(response)}')
-    print('')
-    print(response)
+    fullResponse.display(headers, response)

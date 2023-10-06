@@ -2,13 +2,17 @@ import os
 import fallback
 import test
 import goodTimes
+import displayFile
 
 if __name__ == "__main__" :
 	path = os.environ.get('webservPath')
 
-	if path == "test.py":
-		test.response()
-	elif path == "goodTimes.py":
-		goodTimes.response()
-	else:
-		fallback.response()
+	path_to_function = {
+		"test.py": test.response,
+		"goodTimes.py": goodTimes.response,
+		"displayFile.py": displayFile.response,
+	}
+
+	response_function = path_to_function.get(path, fallback.response)
+
+	response_function()

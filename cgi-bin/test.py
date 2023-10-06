@@ -1,4 +1,5 @@
 import os
+import response as fullResponse
 
 def response() :
 
@@ -9,15 +10,10 @@ def response() :
     for name, value in os.environ.items():
         response += "<p>" + ("{0}: {1}".format(name, value)) + "</p>"
     response += '</body></html>'
+    
+    headers = 'HTTP/1.1 200 OK'
+    fullResponse.display(headers, response)
 
-    if os.environ.get("webservMethod") == "POST" :
-        print('HTTP/1.1 405 Method Not Allowed')
-    else:
-        print('HTTP/1.1 200 OK')
-    print('Content-type: text/html')
-    print(f'Content-Length: {len(response)}')
-    print('')
-    print(response)
 
 if __name__ == "__main__" :
     response()

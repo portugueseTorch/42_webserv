@@ -1,11 +1,24 @@
+const displayFile = ((clickedElement) => {
+	console.log(clickedElement.innerHTML);
+
+	fetch('/cgi-bin/displayFile.py', {
+		method: 'POST',
+		body: 'webservFileName=' + clickedElement.innerHTML
+	})
+	.then(response => response.text())
+	.then(data => {
+		document.body.innerHTML = data;
+	})
+	.catch (error => {
+		console.error('Error:', error);
+	});
+})
+
+
 const uploadFile = ((event) => {
 	event.preventDefault();
 	
-	const params = [];
-
 	const file = document.getElementById('file-content').files[0];
-
-	console.log(file);
 
 	const reader = new FileReader();
 
@@ -22,7 +35,6 @@ const uploadFile = ((event) => {
 		// Convert Uint8Array to hexadecimal string
 		const hexString = Array.from(uint8Array).map(byte => byte.toString(16).padStart(2, '0')).join('');
 
-		console.log(hexString);
 		try {
 			const response = await fetch("/cgi-bin/goodTimes.py", {
 				method: 'POST',
@@ -33,12 +45,8 @@ const uploadFile = ((event) => {
 				throw new Error('Server response was not ok');
 			}
 			
-			const data = await fetch('goodTimes.py', {
-				method: 'GET'
-			});
-			
-			const textData = await data.text();
-			
+			const textData = await response.text();
+
 			document.body.innerHTML = textData;
 		} catch (error) {
 			console.error('Error:', error);
@@ -46,8 +54,6 @@ const uploadFile = ((event) => {
 	};
 
 	reader.readAsArrayBuffer(file);
-
-
 });
 
 const deleteFile = ((element) => {
