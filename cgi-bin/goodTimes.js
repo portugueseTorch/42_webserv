@@ -1,9 +1,28 @@
-const displayFile = ((clickedElement) => {
-	console.log(clickedElement.innerHTML);
+const deleteFile = ((fileName) => {
 
-	fetch('/cgi-bin/displayFile.py', {
-		method: 'POST',
-		body: 'webservFileName=' + clickedElement.innerHTML
+	fetch('/cgi-bin/goodTimes.py', {
+		method: 'DELETE',
+		body: 'webservFileName=' + fileName
+	})
+	.then(response => {
+		if (!response.ok) {
+			throw new Error('Network response was not ok');
+		}
+		return response;
+	})
+	.then(response => response.text())
+	.then(data => {
+		document.body.innerHTML = data;
+	})
+	.catch(error => {
+		console.error('Error:', error);
+	});
+});
+
+const displayFile = ((clickedElement) => {
+
+	fetch('/cgi-bin/displayFile.py?webservFileName=' + encodeURIComponent(clickedElement.innerHTML), {
+		method: 'GET'
 	})
 	.then(response => response.text())
 	.then(data => {
@@ -55,28 +74,3 @@ const uploadFile = ((event) => {
 
 	reader.readAsArrayBuffer(file);
 });
-
-const deleteFile = ((element) => {
-	const pathAfterComma = element.textContent.split(', ')[1];
-	console.log(pathAfterComma);
-
-	fetch('/cgi-bin/goodTimes.py', {
-		method: 'DELETE',
-		body: pathAfterComma
-	})
-	.then(response => {
-		if (!response.ok) {
-			throw new Error('Network response was not ok');
-		}
-		return fetch('goodTimes.py', {
-            method: 'GET'
-        });
-	})
-	.then(response => response.text())
-	.then(data => {
-		document.body.innerHTML = data;
-	})
-	.catch(error => {
-		console.error('Error:', error);
-	});
-})

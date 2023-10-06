@@ -386,7 +386,7 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	std::cout << _response;
+	// std::cout << _response;
 	return res;
 } 
 
@@ -449,26 +449,25 @@ int HTTPResponse::buildCGIResponse() {
 		// for (; it != queryAndBody.end(); it++) {
 		// 	std::cerr << *it << std::endl;
 		// }
-	std::cerr << "here" << std::endl;
 		execve("/usr/bin/python3", args, (char **)envp);
-		//need error handling so request is not left pending
 		delete []envp;
 	} else {
 		close(pipe_fd[1]);
 		wait(NULL);
-		char msg[MAX_LENGTH] = "";
+		unsigned char msg[MAX_LENGTH + 1] = "";
 		if (_body != "")
 			_body.clear();
 		std::stringstream ss;
 
 		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
-		// std::cerr << msg << std::endl;
 		while (bytes != 0) {
 			if (bytes == -1) {
 				log(std::cerr, ERROR, "read() call failed", "");
 				return 1;
 			}
-			_body += msg;
+			std::string toAdd(reinterpret_cast<const char*>(msg), bytes);
+			// std::cerr << toAdd << std::endl;
+			_body += toAdd;
 			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
 

@@ -5,8 +5,31 @@ import navbar
 import response as fullResponse
 import errorPage
 
+
 from urllib.parse import unquote
 from email import message_from_bytes
+
+def DELETE() :
+    fileName = os.environ.get('webservFileName')
+    
+    status = 200
+    if fileName is None:
+        status = 400
+    else:
+        filePath = os.path.join('./www/resources', fileName)
+
+        try:
+            if os.path.exists(filePath):
+                os.remove(filePath)
+            else:
+                status = 404
+        except FileNotFoundError:
+            status = 404
+        except PermissionError:
+            status = 403
+        except OSError:
+            status = 500
+    return status
 
 def POST() :
     content = os.environ.get("content")
@@ -27,22 +50,32 @@ def POST() :
     file_content = ""
 
     for part in parts:
+        # sys.stderr.write(f'part: {part}')
         if not part or part.isspace():
             continue
         if 'filename=' in part:
             inContent = False
             # Extract the file content
             subparts = part.split('\r')
-            for line in subparts:
+            num_lines = len(subparts)
+            for i, line in enumerate(subparts):
+                sys.stderr.write(f'line: {line}')
                 if line.isspace() and not inContent:
                     continue
                 if 'Content' in line:
                     continue
+                if file_name is not None and file_name in line:
+                    sys.stderr.write(f'aqui')
+                    if i + 1 < num_lines:
+                        next_line = subparts[i + 1]
+                        if next_line == "\n":
+                            continue
                 else:
                     if not inContent:
                         line = line.strip()
                         inContent = True
-                    file_content += line.replace(boundary, '')
+                    toAdd = line.replace(boundary, '')
+                    file_content += toAdd
                     # Check if the string ends with '--'
                     if file_content.endswith('--'):
                         # Remove the last two characters (--)
@@ -110,14 +143,14 @@ def GET(fileContent = "No file selected") :
             if entry.is_file():
                 response += f'<li class="uploaded-file" onclick="displayFile(this.querySelector(\'.file-info\'))">\n \
                     <span class="file-info">{entry.name}</span>\n \
-                          <img class="trash-icon" src="trash.svg" alt="Delete">\n \
+                          <img class="trash-icon" src="trash.svg" alt="Delete" \
+                            onclick="deleteFile(this.previousElementSibling.innerText); event.stopPropagation();">\n \
                             </li>'
     response += '</ul>\n'
     response += '</div>\n'
 
     response += '<div class="file-contents">\n'
     response += '<h2>File Content</h2>\n'
-    # sys.stderr.write(f'file content is: {fileContent}')
     fileContent = html.escape(fileContent)
     fileContent = fileContent.replace('\n', '<br />')
     response += f'<div class="content">{fileContent}</div>\n'
@@ -134,9 +167,25 @@ def response():
 
     response = ""
     headers = ""
+    method = os.environ.get("webservMethod")
 
-    if os.environ.get("webservMethod") == "POST" :
+    if method == "POST" :
         status = POST()
+        if status == 200:
+            response = GET()
+            headers = 'HTTP/1.1 200 OK'
+        else:
+            if status == 403:
+                headers = 'HTTP/1.1 403 Forbidden'
+            elif status == 404:
+                headers = 'HTTP/1.1 404 Not Found'
+            elif status == 500:
+                headers = 'HTTP/1.1 500 Internal Server Error'
+            else:
+                headers = 'HTTP/1.1 400 Bad Request'
+            response = errorPage.GET(status)
+    elif method == "DELETE":
+        status = DELETE()
         if status == 200:
             response = GET()
             headers = 'HTTP/1.1 200 OK'
