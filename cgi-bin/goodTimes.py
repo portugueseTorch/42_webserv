@@ -64,12 +64,12 @@ def POST() :
                     continue
                 if 'Content' in line:
                     continue
-                if file_name is not None and file_name in line:
-                    sys.stderr.write(f'aqui')
-                    if i + 1 < num_lines:
-                        next_line = subparts[i + 1]
-                        if next_line == "\n":
-                            continue
+                # if file_name is not None and file_name in line:
+                #     sys.stderr.write(f'aqui')
+                #     if i + 1 < num_lines:
+                #         next_line = subparts[i + 1]
+                #         if next_line == "\n":
+                #             continue
                 else:
                     if not inContent:
                         line = line.strip()
@@ -117,6 +117,7 @@ def GET(fileContent = "No file selected") :
     response += '<head>\n'
     response += '<link type="text/css" rel="stylesheet" href="goodTimes.css" />\n'
     response += '<link type="text/css" rel="stylesheet" href="style.css" />\n'
+    response += '<link type="text/css" rel="stylesheet" href="navbar.css" />\n'
     response += '<meta charset="UTF-8">\n'
     response += '<title>Good Times</title>\n'
     response += '</head>\n'
@@ -124,8 +125,8 @@ def GET(fileContent = "No file selected") :
     response += '<body>\n'
 
     response += '<header>\n'
-    urls = ['/', '/cgi-bin/main.py', '/resources']
-    texts = ['Home', 'main', 'About']
+    urls = ['/', '/cgi-bin/goodTimes.py', '/resources']
+    texts = ['Home', 'Resources', 'About']
     response += navbar.text(urls, texts)
     response += '</header>\n'
     response += '<main>\n'
@@ -141,19 +142,19 @@ def GET(fileContent = "No file selected") :
     with os.scandir('./www/resources') as entries:
         for entry in entries:
             if entry.is_file():
-                response += f'<li class="uploaded-file" onclick="displayFile(this.querySelector(\'.file-info\'))">\n \
+                response += f'<li class="uploaded-file" onclick="displayFile(this.querySelector(\'.file-info\'), this)">\n \
                     <span class="file-info">{entry.name}</span>\n \
                           <img class="trash-icon" src="trash.svg" alt="Delete" \
-                            onclick="deleteFile(this.previousElementSibling.innerText); event.stopPropagation();">\n \
+                            onclick="deleteFile(this.previousElementSibling.innerText, this.parentElement); event.stopPropagation();">\n \
                             </li>'
     response += '</ul>\n'
     response += '</div>\n'
 
     response += '<div class="file-contents">\n'
-    response += '<h2>File Content</h2>\n'
+    response += '<h2 onclick="clearOutput()">File Content</h2>\n'
     fileContent = html.escape(fileContent)
     fileContent = fileContent.replace('\n', '<br />')
-    response += f'<div class="content">{fileContent}</div>\n'
+    response += f'<div class="content" id="file-content-text">{fileContent}</div>\n'
     response += '</div>\n'
 
     response += '</main>\n'

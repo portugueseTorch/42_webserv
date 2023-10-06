@@ -3,54 +3,6 @@ body {
 	color: white;
 }
 
-.navbar {
-	width: 200px;
-	margin: 50px auto 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 10px;
-}
-
-.navbar a {
-	color: white;
-	text-decoration: none;
-}
-
-.navbar a:visited {
-	color: white;
-}
-
-.page-title {
-	text-align: center;
-	margin: 10px auto 20px;
-}
-
-.reviews {
-	width: 70%;
-	margin: 0 auto;
-	text-align: center;
-	/* border: 2px solid blue; */
-	/* border-top: none; */
-}
-
-.person {
-	box-sizing: border-box;
-	display: grid;
-	grid-template-columns: 2fr 2fr 2fr 2fr 1fr;
-	line-height: 1.8rem;
-}
-
-.person:nth-child(odd) {
-	background: rgb(44, 67, 67);
-}
-
-.person:first-of-type {
-	background: blue;
-	line-height: 2.5rem;
-	font-weight: bold;
-}
-
 form {
 	width: max-content;
 	margin: 20px auto;
@@ -59,7 +11,6 @@ form {
 	justify-content: center;
 	align-items: center;
 	row-gap: 5px;
-	/* align-items: center; */
 }
 
 form label {
@@ -71,16 +22,6 @@ form label {
 	/* height: 2rem; */
 }
 
-.toDelete {
-	cursor: pointer;
-	align-self: center;
-	justify-self: center;
-}
-
-#submit-button {
-	width: 50%;
-	cursor: pointer;
-}
 
 .upload-form {
 	margin-bottom: 20px;
@@ -124,9 +65,6 @@ form label {
 	background-color: #eee;
 }
 
-.file-list {
-	margin-bottom: 20px;
-}
 
 .file-list ul {
 	list-style-type: none;
@@ -180,15 +118,16 @@ form label {
 	background-color: #666;
 }
 
-.file-contents {
+.file-contents, .file-list {
 	/* background-color: #555; */
 	/* Darker background */
 	padding: 20px;
+	padding-top: 0;
 	border-radius: 8px;
 	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.file-contents h2 {
+.file-contents h2, .file-list h2 {
 	margin-bottom: 10px;
 	/* Add some space below the heading */
 	/* background-color: #555; */
@@ -199,11 +138,24 @@ form label {
 	/* White text */
 }
 
+.file-contents h2 {
+	cursor: pointer;
+}
+
+.file-contents h2:hover {
+	color: darkgrey;
+}
+
 .file-contents .content {
+	min-height: 100px;
 	background-color: #444;
 	white-space: pre-wrap;
 	color: #fff;
 	word-wrap: break-word;
 	padding: 10px;
 	/* White text */
+}
+
+.file-contents {
+	margin-bottom: 50px;
 }

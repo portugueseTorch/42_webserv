@@ -1,4 +1,19 @@
-const deleteFile = ((fileName) => {
+function clearOutput() {
+	const fileContent = document.getElementById("file-content-text");
+	fileContent.innerHTML = "No file selected";
+	console.log('aqui')
+}
+
+function resetBorders() {
+    const uploadedFiles = document.querySelectorAll('.uploaded-file');
+    uploadedFiles.forEach(file => {
+        file.style.border = '1px solid #ccc';
+    });
+}
+
+const deleteFile = ((fileName, parentElement) => {
+
+	resetBorders();
 
 	fetch('/cgi-bin/goodTimes.py', {
 		method: 'DELETE',
@@ -6,7 +21,7 @@ const deleteFile = ((fileName) => {
 	})
 	.then(response => {
 		if (!response.ok) {
-			throw new Error('Network response was not ok');
+			throw new Error('Check network tab');
 		}
 		return response;
 	})
@@ -15,21 +30,35 @@ const deleteFile = ((fileName) => {
 		document.body.innerHTML = data;
 	})
 	.catch(error => {
-		console.error('Error:', error);
+		console.error(error);
+		parentElement.style.border = '2px solid red';
+		const fileContent = document.getElementById("file-content-text");
+		fileContent.innerHTML = "No file selected";
 	});
 });
 
-const displayFile = ((clickedElement) => {
+const displayFile = ((clickedElement, parentElement) => {
+
+	resetBorders();
 
 	fetch('/cgi-bin/displayFile.py?webservFileName=' + encodeURIComponent(clickedElement.innerHTML), {
 		method: 'GET'
+	})
+	.then(response => {
+		if (!response.ok) {
+			throw new Error('Check network tab');
+		}
+		return response;
 	})
 	.then(response => response.text())
 	.then(data => {
 		document.body.innerHTML = data;
 	})
 	.catch (error => {
-		console.error('Error:', error);
+		console.error(error);
+		parentElement.style.border = '2px solid red';
+		const fileContent = document.getElementById("file-content-text");
+		fileContent.innerHTML = "No file selected";
 	});
 })
 
@@ -61,14 +90,14 @@ const uploadFile = ((event) => {
 			});
 
 			if (!response.ok) {
-				throw new Error('Server response was not ok');
+				throw new Error('Check network tab');
 			}
 			
 			const textData = await response.text();
 
 			document.body.innerHTML = textData;
 		} catch (error) {
-			console.error('Error:', error);
+			console.error(error);
 		}
 	};
 
