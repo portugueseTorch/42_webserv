@@ -124,7 +124,7 @@ void	HTTPRequest::processChunked() {
 		if (buf == "0") {
 			if (_chunkBuf.size())
 				_statusCode = 400;
-			chunkSize = 0;
+						chunkSize = 0;
 			break;
 		}
 
@@ -145,7 +145,7 @@ void	HTTPRequest::processChunked() {
 				_chunkSize = -1;
 				_chunkBuf = "";
 			} else if (static_cast<int>(_chunkBuf.size()) > _chunkSize) {
-				_statusCode = 400;
+								_statusCode = 400;
 			}
 		}
 		/* If chunkSize is greater than 0, this value is assigned to _chunkSize. */
@@ -235,13 +235,14 @@ bool HTTPRequest::validMethod(std::string & headerLine) {
 		return false;
 
 	if (headerLine.find("GET") == 0 || \
+		headerLine.find("HEAD") == 0 || \
 		headerLine.find("POST") == 0 || \
 		headerLine.find("DELETE") == 0) {
 		_method = headerLine.substr(0, headerLine.find(" "));
 		headerLine.erase(0, headerLine.find(" ") + 1);
 		return true;
 	}
-	_statusCode = 400;
+					_statusCode = 400;
 	return false;
 }
 
@@ -260,7 +261,7 @@ bool HTTPRequest::validRequestURI(std::string & headerLine) {
 		headerLine.erase(0, headerLine.find(" ") + 1);
 		return true;
 	}
-	_statusCode = 400;
+					_statusCode = 400;
 	return false;
 }
 
@@ -310,13 +311,13 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 			return true;
 		}
 	}
-	_statusCode = 400;
+					_statusCode = 400;
 	return false;
 }
 
 bool HTTPRequest::checkContentLength(std::string headerLine) {
 	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos || _chunked) {
-		_statusCode = 400;
+						_statusCode = 400;
 		return false;
 	}
 	_contentLength = std::atoi(headerLine.c_str());
@@ -325,7 +326,7 @@ bool HTTPRequest::checkContentLength(std::string headerLine) {
 
 bool HTTPRequest::checkConnection(std::string headerLine) {
 	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
-	if (headerLine != "keep-alive" && headerLine != "closed") {
+	if (headerLine != "keep-alive" && headerLine != "close") {
 		_statusCode = 400;
 		return false;
 	}
@@ -375,6 +376,7 @@ int	HTTPRequest::getLineType(std::string headerLine) {
 	std::string temp(headerLine);
 	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
 	if (temp.find("get") == 0 || \
+		temp.find("head") == 0 || \
 		temp.find("post") == 0 || \
 		temp.find("delete") == 0)
 		return REQUEST_LINE;

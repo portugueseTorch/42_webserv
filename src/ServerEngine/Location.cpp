@@ -13,7 +13,7 @@ std::vector<std::string> Location::directives(Location::_possibleDirectives, \
 	Location::_possibleDirectives + sizeof(Location::_possibleDirectives) / sizeof(std::string));
 
 Location::Location() {
-	std::string method_array[] = { "GET", "POST", "DELETE" };
+	std::string method_array[] = { "GET", "HEAD", "POST", "DELETE" };
 	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
 	_http_method = http_method;
 	_body_size_specified = false;
@@ -147,6 +147,8 @@ int Location::setHTTPMethod(std::list<Node>::iterator &it) {
 	for (; it->_type == Parameter; it++) {
 		if (it->_content == "GET")
 			_http_method.push_back("GET");
+		else if (it->_content == "HEAD")
+			_http_method.push_back("HEAD");
 		else if (it->_content == "POST")
 			_http_method.push_back("POST");
 		else if (it->_content == "DELETE")

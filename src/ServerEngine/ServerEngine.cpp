@@ -388,12 +388,13 @@ int ServerEngine::sendResponse(Client &client) {
 	if (sendRegResponse(client))
 		return 1;
 
-	if (client.request->getKeepAlive())
+	if (client.request->getKeepAlive()) {
 		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+		client.reset();
+	}
 	else
 		closeConnection(client.getClientFD());
 
-	client.reset();
 
 	return 0;
 }
