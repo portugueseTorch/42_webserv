@@ -116,8 +116,8 @@ def GET(fileContent = "No file selected") :
 
     response += '<head>\n'
     response += '<link type="text/css" rel="stylesheet" href="goodTimes.css" />\n'
-    response += '<link type="text/css" rel="stylesheet" href="style.css" />\n'
-    response += '<link type="text/css" rel="stylesheet" href="navbar.css" />\n'
+    response += '<link type="text/css" rel="stylesheet" href="/style.css" />\n'
+    response += '<link type="text/css" rel="stylesheet" href="/resources/navbar.css" />\n'
     response += '<meta charset="UTF-8">\n'
     response += '<title>Good Times</title>\n'
     response += '</head>\n'
@@ -125,15 +125,15 @@ def GET(fileContent = "No file selected") :
     response += '<body>\n'
 
     response += '<header>\n'
-    urls = ['/', '/cgi-bin/goodTimes.py', '/resources']
+    urls = ['/', '/cgi-bin/goodTimes.py', '/about']
     texts = ['Home', 'Resources', 'About']
     response += navbar.text(urls, texts)
     response += '</header>\n'
     response += '<main>\n'
     response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
     response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
-    response += '<label for="file-content">Choose a File</label> \
-                <input type="file" name="file-content" id="file-content" accept=".txt,.css, .scss,.html,.js" required>\n'
+    response += '<label for="file-content">Choose a simple file, text only</label> \
+                <input type="file" name="file-content" id="file-content" accept=".txt,.css,.scss,.html,.js,.svg" required>\n'
     response += '<input class="submit-button" type="submit" value="Upload">\n'
     response += '</form>\n'
     response += '<div class="file-list">\n'
@@ -144,7 +144,7 @@ def GET(fileContent = "No file selected") :
             if entry.is_file():
                 response += f'<li class="uploaded-file" onclick="displayFile(this.querySelector(\'.file-info\'), this)">\n \
                     <span class="file-info">{entry.name}</span>\n \
-                          <img class="trash-icon" src="trash.svg" alt="Delete" \
+                          <img class="trash-icon" src="/resources/trash.svg" alt="Delete" \
                             onclick="deleteFile(this.previousElementSibling.innerText, this.parentElement); event.stopPropagation();">\n \
                             </li>'
     response += '</ul>\n'

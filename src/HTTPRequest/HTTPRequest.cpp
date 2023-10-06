@@ -276,6 +276,9 @@ void HTTPRequest::cleanUpURI(std::string req) {
 		isCGI = true;
 		_requestURI = u.substr(0, u.find('?'));
 		extractQuery(u);
+	} else if (u.find("?") != std::string::npos) {
+		_requestURI = u.substr(0, u.find('?'));
+		extractQuery(u);
 	} else {
 		_requestURI = u;
 	}
@@ -397,11 +400,11 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		size_t sep = buf.find('=');
 		if (sep == std::string::npos) {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			_statusCode = 400;
+			// _statusCode = 400;
 		}
 		param = buf.substr(0, sep);
 		value = buf.substr(sep + 1, buf.size());
-		if (param.size() && value.size())
+		if (param.size())
 			_query.push_back(buf);
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);

@@ -28,6 +28,7 @@ const deleteFile = ((fileName, parentElement) => {
 	.then(response => response.text())
 	.then(data => {
 		document.body.innerHTML = data;
+		window.location.reload();
 	})
 	.catch(error => {
 		console.error(error);
@@ -96,6 +97,7 @@ const uploadFile = ((event) => {
 			const textData = await response.text();
 
 			document.body.innerHTML = textData;
+			window.location.reload();
 		} catch (error) {
 			console.error(error);
 		}
