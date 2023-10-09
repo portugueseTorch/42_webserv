@@ -381,7 +381,11 @@ int	HTTPResponse::build() {
 	if (request->getMethod() == "HEAD")
 		_body_length = 0;
 	if (request->isCGI && !isError()) {
-		res = buildCGIResponse();
+		if (request->getMethod() == "HEAD") {
+			_response += "Content-Length: 0\r\n\r\n";
+		} else {
+			res = buildCGIResponse();
+		}
 	} else if (_body != "" && request->getMethod() != "HEAD")
 		_response += _body + "\r\n";
 

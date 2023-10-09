@@ -59,7 +59,7 @@ def POST() :
         # sys.stderr.write(f'part: {part}')
         if not part or part.isspace():
             continue
-        if 'filename=' in part:
+        if 'name="content"' in part:
             inContent = False
             # Extract the file content
             subparts = part.split('\r')
@@ -86,7 +86,7 @@ def POST() :
                     if file_content.endswith('--'):
                         # Remove the last two characters (--)
                         file_content = file_content[:-2]
-        elif 'name="content"; filename' not in part:
+        elif 'name="content"' not in part:
             # Extract the file name
             subparts = part.split('\n')
             for line in subparts:
