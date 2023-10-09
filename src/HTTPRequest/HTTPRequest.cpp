@@ -204,6 +204,7 @@ bool	HTTPRequest::processHeaderLine(std::string headerLine) {
 			validLine = checkRequestLine(headerLine);
 			break;
 		case CONTENT_LENGTH:
+			addParam(headerLine);
 			validLine = checkContentLength(headerLine.substr(headerLine.find(":") + 1));
 			break;
 		case CONNECTION:
@@ -232,8 +233,9 @@ bool	HTTPRequest::checkRequestLine(std::string & headerLine) {
 bool HTTPRequest::validMethod(std::string & headerLine) {
 	if (alreadyExists(_method))
 		return false;
-
+	
 	if (headerLine.find("GET") == 0 || \
+		headerLine.find("HEAD") == 0 || \
 		headerLine.find("POST") == 0 || \
 		headerLine.find("DELETE") == 0) {
 		_method = headerLine.substr(0, headerLine.find(" "));
@@ -250,7 +252,7 @@ bool HTTPRequest::validRequestURI(std::string & headerLine) {
 
 	if (alreadyExists(_requestURI))
 		return false;
-
+	
 	ss >> word;
 	if (word == "*" || word.find('/') == 0 || validAbsoluteURI(word)) {
 		cleanUpURI(word);
@@ -275,6 +277,9 @@ void HTTPRequest::cleanUpURI(std::string req) {
 		isCGI = true;
 		_requestURI = u.substr(0, u.find('?'));
 		extractQuery(u);
+	} else if (u.find("?") != std::string::npos) {
+		_requestURI = u.substr(0, u.find('?'));
+		extractQuery(u);
 	} else {
 		_requestURI = u;
 	}
@@ -296,7 +301,7 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 
 	if (alreadyExists(_protocol))
 		return false;
-
+	
 	size_t isHTTP = headerLine.find("HTTP/");
 	if (isHTTP == 0) {
 		headerLine.erase(0, 5);
@@ -321,7 +326,7 @@ bool HTTPRequest::checkContentLength(std::string headerLine) {
 
 bool HTTPRequest::checkConnection(std::string headerLine) {
 	headerLine = headerLine.substr(headerLine.find_first_not_of(" \t\v\f") != std::string::npos);
-	if (headerLine != "keep-alive" && headerLine != "closed") {
+	if (headerLine != "keep-alive" && headerLine != "close") {
 		_statusCode = 400;
 		return false;
 	}
@@ -370,9 +375,10 @@ bool HTTPRequest::addParam(std::string headerLine) {
 int	HTTPRequest::getLineType(std::string headerLine) {
 	std::string temp(headerLine);
 	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
-	if (temp.find("get") == 0 || \
-		temp.find("post") == 0 || \
-		temp.find("delete") == 0)
+	if (temp.find("get ") == 0 || \
+		temp.find("head ") == 0 || \
+		temp.find("post ") == 0 || \
+		temp.find("delete ") == 0)
 		return REQUEST_LINE;
 	if (temp.find("content-length:") == 0)
 		return CONTENT_LENGTH;
@@ -396,11 +402,11 @@ void	HTTPRequest::extractQuery(std::string URI) {
 		size_t sep = buf.find('=');
 		if (sep == std::string::npos) {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
-			_statusCode = 400;
+			// _statusCode = 400;
 		}
 		param = buf.substr(0, sep);
 		value = buf.substr(sep + 1, buf.size());
-		if (param.size() && value.size())
+		if (param.size())
 			_query.push_back(buf);
 		else {
 			log(std::cerr, ERROR, "Invalid proxy query", buf);
@@ -450,6 +456,9 @@ void HTTPRequest::displayParsedRequest(){
 	if (_body.size()) {
 		std::cout << "\r\n" << _body << std::endl;
 	}
+
+	std::cout << std::left << std::setw(25) << "status code:" << _statusCode << std::endl;
+	
 }
 
 bool	HTTPRequest::success() const {

@@ -1,3 +1,4 @@
 out.log
 webserv
 obj/
+cgi-bin/__pycache__

@@ -298,6 +298,7 @@ int Client::searchRequestedContent(std::string uri) {
 int Client::buildHTTPResponse() {
 	log(std::cout, INFO, "Building a response", "");
 	response = new HTTPResponse(request, parent_server);
+	// request->displayParsedRequest();
 	response->build();
 
 	return 0;

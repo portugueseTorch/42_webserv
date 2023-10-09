@@ -1,59 +1,35 @@
-body {
-	font-family: Arial, sans-serif;
+html {
 	margin: 0;
 	padding: 0;
-	background-color: #1a1a1a;
+	font-family: Arial, sans-serif;
+	box-sizing: border-box;
+}
+
+body {
+	background-color: black;
 	color: #fff;
 }
 
-header {
-	background-color: #333;
-	padding: 10px;
+.centered {
 	text-align: center;
+	
 }
 
-.navbar {
-	width: 200px;
-	margin: 0 auto;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 10px;
-}
-
-.navbar a {
-	color: white;
-	text-decoration: none;
-}
-
-.navbar a:visited {
-	color: white;
-}
-
-h1 {
-	margin: 0;
-}
-
-main {
-	padding: 20px;
-	text-align: center;
-}
-
-p {
+.centered p {
 	line-height: 1.6;
 }
 
-.cgi {
-	width: 150px;
-	height: 30px;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	margin: 0 auto;
-	border-color: white;
-	padding: 15px;
-	text-align: center;
-	background-color: white;
-	color: black;
-	text-decoration: none;
+.secret-list {
+	list-style: none;
+	text-align: left;
+	max-width: 600px;
+	margin: 40px auto;
+}
+
+.secret-list li::before {
+	content: "\2022";
+	color: #f8e88b;
+	display: inline-block;
+	width: 1em;
+	margin-left: -1em;
 }
