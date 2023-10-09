@@ -1,4 +1,5 @@
 import os
+import stat
 import sys
 import html
 import navbar
@@ -20,6 +21,11 @@ def DELETE() :
 
         try:
             if os.path.exists(filePath):
+                st = os.stat(filePath)
+                perm = st.st_mode
+                if (perm == 33060):
+                    raise PermissionError()
+                sys.stderr.write(f'perm is {perm}\n')
                 os.remove(filePath)
             else:
                 status = 404
@@ -112,6 +118,7 @@ def POST() :
     return 200
 
 def GET(fileContent = "No file selected") :
+    response = '<!DOCTYPE html>\n'
     response = '<html>\n'
 
     response += '<head>\n'

@@ -124,7 +124,7 @@ void	HTTPRequest::processChunked() {
 		if (buf == "0") {
 			if (_chunkBuf.size())
 				_statusCode = 400;
-						chunkSize = 0;
+			chunkSize = 0;
 			break;
 		}
 
@@ -145,7 +145,7 @@ void	HTTPRequest::processChunked() {
 				_chunkSize = -1;
 				_chunkBuf = "";
 			} else if (static_cast<int>(_chunkBuf.size()) > _chunkSize) {
-								_statusCode = 400;
+				_statusCode = 400;
 			}
 		}
 		/* If chunkSize is greater than 0, this value is assigned to _chunkSize. */
@@ -233,7 +233,7 @@ bool	HTTPRequest::checkRequestLine(std::string & headerLine) {
 bool HTTPRequest::validMethod(std::string & headerLine) {
 	if (alreadyExists(_method))
 		return false;
-
+	
 	if (headerLine.find("GET") == 0 || \
 		headerLine.find("HEAD") == 0 || \
 		headerLine.find("POST") == 0 || \
@@ -242,7 +242,7 @@ bool HTTPRequest::validMethod(std::string & headerLine) {
 		headerLine.erase(0, headerLine.find(" ") + 1);
 		return true;
 	}
-					_statusCode = 400;
+	_statusCode = 400;
 	return false;
 }
 
@@ -252,7 +252,7 @@ bool HTTPRequest::validRequestURI(std::string & headerLine) {
 
 	if (alreadyExists(_requestURI))
 		return false;
-
+	
 	ss >> word;
 	if (word == "*" || word.find('/') == 0 || validAbsoluteURI(word)) {
 		cleanUpURI(word);
@@ -261,7 +261,7 @@ bool HTTPRequest::validRequestURI(std::string & headerLine) {
 		headerLine.erase(0, headerLine.find(" ") + 1);
 		return true;
 	}
-					_statusCode = 400;
+	_statusCode = 400;
 	return false;
 }
 
@@ -301,7 +301,7 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 
 	if (alreadyExists(_protocol))
 		return false;
-
+	
 	size_t isHTTP = headerLine.find("HTTP/");
 	if (isHTTP == 0) {
 		headerLine.erase(0, 5);
@@ -311,13 +311,13 @@ bool HTTPRequest::validHTTPVersion(std::string & headerLine) {
 			return true;
 		}
 	}
-					_statusCode = 400;
+	_statusCode = 400;
 	return false;
 }
 
 bool HTTPRequest::checkContentLength(std::string headerLine) {
 	if (headerLine.find_first_not_of("0123456789 \t\v\f") != std::string::npos || _chunked) {
-						_statusCode = 400;
+		_statusCode = 400;
 		return false;
 	}
 	_contentLength = std::atoi(headerLine.c_str());
@@ -375,10 +375,10 @@ bool HTTPRequest::addParam(std::string headerLine) {
 int	HTTPRequest::getLineType(std::string headerLine) {
 	std::string temp(headerLine);
 	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
-	if (temp.find("get") == 0 || \
-		temp.find("head") == 0 || \
-		temp.find("post") == 0 || \
-		temp.find("delete") == 0)
+	if (temp.find("get ") == 0 || \
+		temp.find("head ") == 0 || \
+		temp.find("post ") == 0 || \
+		temp.find("delete ") == 0)
 		return REQUEST_LINE;
 	if (temp.find("content-length:") == 0)
 		return CONTENT_LENGTH;
