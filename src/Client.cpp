@@ -14,6 +14,8 @@ Client::Client() {
 	_file_buff = "";
 	_status_code = 0;
 	_cont_length = 0;
+	_last_exchange = time(NULL);
+	kill = false;
 }
 
 Client::~Client() {
@@ -25,7 +27,7 @@ void Client::reset() {
 	_request_str = "";
 	_file_buff = "";
 	_status_code = 0;
-	// _response = "";
+	_cont_length = 0;
 	location_block = NULL;
 	if (request)
 		delete request;
@@ -290,6 +292,19 @@ int Client::searchRequestedContent(std::string uri) {
 	return 0;
 }
 
+void Client::updateTime() {
+	_last_exchange = time(NULL);
+}
+
+int	Client::sendTimeoutMessage() {
+	std::string msg = "HTTP/1.1 408 Request Timeout\r\n\
+Server: Webserv/42.0\r\nContent-Type: text/plain\r\n\
+Content-Length: 21\r\n\r\n408 Request Timeout\r\n";
+	send(_client_fd, msg.c_str(), msg.length(), 0);
+	std::cout << "Timeout message sent\n" << std::endl;
+	return 0;
+}
+
 /**
  * @brief Builds the HTTP response based off of the attributes
  * populated during parseHTTPRequest() function in the Request
@@ -300,7 +315,7 @@ int Client::searchRequestedContent(std::string uri) {
 int Client::buildHTTPResponse() {
 	log(std::cout, INFO, "Building a response", "");
 	response = new HTTPResponse(request, parent_server);
-	// request->displayParsedRequest();
+	if (kill) response->kill = true;
 	response->build();
 
 	return 0;

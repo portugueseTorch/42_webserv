@@ -10,11 +10,16 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_server = "";
 	_content_type = "";
 	_body = "";
+	_new_url = "";
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
-	_status_code = request->success() ? 200 : request->getStatusCode();
+	if (request)
+		_status_code = request->success() ? 200 : request->getStatusCode();
+	else
+		_status_code = 500;
 	_content_type = "text/plain";
+	kill = false;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -36,11 +41,23 @@ void HTTPResponse::assignLocationBlock() {
 			location_block = &(*it);
 			location_block->displayLocationBlock();
 			return ;
-		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/')) {
+		} else if (it->getIsCGI()) {
+			std::string file_name = uri.substr(uri.find_last_of('/'));
+			std::string file_extension = get_file_extension(file_name);
+			std::cout << file_name  << ", " << file_extension << std::endl;
+			std::cout << "URI inside CGI block is " << uri << std::endl;
+			if (is_valid_filename(file_name) && \
+				get_file_extension(file_name) == get_file_extension(it->getLocation())) {
+				log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
+				location_block = &(*it);
+				location_block->displayLocationBlock();
+				// request->setURI("/" + it->getIndex().at(0));
+				return ;
+			}
+		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/') && !it->getIsCGI()) {
 			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
 			location_block->displayLocationBlock();
-			request->setURI(uri.substr(loc_length));
 			return ;
 		}
 	}
@@ -63,6 +80,7 @@ std::string formatTime(const struct tm* timeinfo) {
 }
 
 std::string HTTPResponse::getContentType(std::string uri) {
+	if (uri == "") return "directory";
 	// Get index of last '.' of uri
 	int lp = uri.find_last_of('.');
 	if (uri.empty() || uri[uri.length() - 1] == '/' || lp == -1)
@@ -108,6 +126,17 @@ std::string HTTPResponse::statusCodeToMessage() {
 		case 204:
 			return "No Content";
 
+		case 300:
+			return "Multiple Choices";
+		case 301:
+			return "Moved Permanently";
+		case 302:
+			return "Found";
+		case 303:
+			return "See Other";
+		case 304:
+			return "Not Modified";
+
 		case 400:
 			return "Bad Request";
 		case 403:
@@ -118,6 +147,8 @@ std::string HTTPResponse::statusCodeToMessage() {
 			return "Method Not Allowed";
 		case 406:
 			return "Not Acceptable";
+		case 408:
+			return "Request Timeout";
 		case 410:
 			return "Gone";
 		case 411:
@@ -201,6 +232,78 @@ int HTTPResponse::readContent(std::string file_path) {
 	return 0;
 }
 
+void HTTPResponse::handle_autoindex() {
+	std::string		root;
+	std::string		dir_name;
+	std::string		full_path;
+	struct dirent	*entry;
+	DIR				*dir;
+
+	if (getRelevantRoot() == "./")
+		root = ".";
+	else
+		root = getRelevantRoot();
+	root = root.substr(1);
+
+	std::string loc_name;
+	if (location_block) loc_name = location_block->getLocation();
+	else loc_name = "";
+
+	if (loc_name != "")
+		dir_name = root + request->getRequestURI().substr(request->getRequestURI().find(loc_name) + loc_name.length());
+	else
+		dir_name = root + request->getRequestURI();
+
+	// std::cout << "Request URI: " << request->getRequestURI() << std::endl;
+	// std::cout << "Relevant dir_name for autoindex: " << dir_name << std::endl;
+	dir = opendir(std::string("." + dir_name).c_str());
+	if (!dir) {
+		_status_code = 500;
+		return ;
+	}
+
+	_body = "<!DOCTYPE html>\n<html>\n<head>\n<title>Directory Listing</title>\n<style>\n\
+body {\nfont-family: Arial, sans-serif;\nmargin: 20px;\nbackground-color: #f5f5f5;\n}\nh1 {\n\
+color: #333;\n}\ntable {\nwidth: 100%;\nborder-collapse: collapse;\nborder: 1px solid #ccc;\n\
+}\n\nth, td {\npadding: 10px;\ntext-align: left;\nborder-bottom: 1px solid #ccc;\n}\nth {\n\
+background-color: #a5c8f2;\n}\na {\ntext-decoration: none;\n}\na:hover {\ntext-decoration: underline;\n\
+}\n</style>\n</head>\n<body>\n<h1>Directory Listing</h1>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n\
+<th>Size</th>\n<th>Last Modified</th>\n</tr>\n</thead>\n<tbody>\n";
+
+	std::vector<std::string> entries;
+	while ((entry = readdir(dir)) != NULL) {
+		std::string to_push;
+		struct stat sb;
+		std::stringstream ss;
+
+		std::cout << "." + dir_name + "/" + entry->d_name << std::endl;
+		if (stat(std::string("." + dir_name + "/" + entry->d_name).c_str(), &sb) == -1) {
+			_status_code = 500;
+			return;
+		}
+
+		ss << ((float) (sb.st_size / 1000));
+		if (request->getRequestURI() != "/")
+			full_path = request->getRequestURI() + "/" + entry->d_name;
+		else
+			full_path = request->getRequestURI() + entry->d_name;
+		std::cout << full_path << std::endl;
+		to_push += "<tr>\n<td><a href=\"" + full_path + "\">" + entry->d_name + "</a></td>\n";
+		to_push += "<td>" + ss.str() + " Kb" + "</td>\n";
+		to_push += "<td>" + formatTime(std::localtime(&sb.st_mtime)) + "</td>\n";
+		entries.push_back(to_push);
+	}
+	
+	std::sort(entries.begin(), entries.end());
+	for (std::vector<std::string>::iterator it = entries.begin(); it != entries.end(); it++)
+		_body += *it;
+	_body += "</tbody>\n<table>\n</body>\n</html>\n";
+	_body_length = _body.length();
+	_status_code = 200;
+	_content_type = "text/html";
+	closedir(dir);
+}
+
 void HTTPResponse::searchContent() {
 	if (isError())
 		return ;
@@ -209,11 +312,20 @@ void HTTPResponse::searchContent() {
 	bool		found = false;
 
 	// If we have a directory, the file path will need to first check for the index file
+	std::cout << "URI is: " << request->getRequestURI() << std::endl;
 	if (getContentType(uri) == "undefined") {
 		_status_code = 415;
 		return ;
 	} else if (getContentType(uri) == "directory") {
 		if (location_block) {
+			if (uri != location_block->getLocation())
+				uri = uri.substr(location_block->getLocation().length());
+			else
+				uri = "";
+			if (location_block->getAutoindex() == true) {
+				handle_autoindex();
+				return ;
+			}
 			std::vector<std::string> &indexes = location_block->getIndex();
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
@@ -234,6 +346,10 @@ void HTTPResponse::searchContent() {
 			}
 		}
 		if (parent_server && !found) {
+			if (parent_server->getAutoindex() == true) {
+				handle_autoindex();
+				return ;
+			}
 			std::vector<std::string> &indexes = parent_server->getIndex();
 			if (!indexes.empty()) {
 				// Iterate over all possible index files
@@ -254,7 +370,9 @@ void HTTPResponse::searchContent() {
 			}
 		}
 	} else {
-		_file_path = root + uri;
+		if (location_block && !location_block->getIsCGI())
+			_file_path = root + uri.substr(uri.find(location_block->getLocation()) + location_block->getLocation().length());
+		else _file_path = root + uri;
 	}
 
 	// Attempt to read the contents of the file
@@ -335,26 +453,61 @@ bool HTTPResponse::isAllowedMethod() {
 	return false;
 }
 
-int	HTTPResponse::build() {
-	int res = 0;
-	// Assign the location block for the response
-	std::cout << "aqui estamos " << _status_code << std::endl;
-	this->assignLocationBlock();
+int HTTPResponse::handleReturn() {
+	int status_code = location_block->getReturn().first;
+	std::string msg = location_block->getReturn().second;
 
-	// General Headers
-	_protocol = request->getProtocol();
-	_time = getTime();
-	_server = "Webserv/42.0";
+	if (status_code >= 300 && status_code <= 305) {
+		_new_url = msg;
+	} else {
+		if (msg != "") {
+			_body += msg + "\r\n";
+			_body_length = _body.length();
+		}
+	}
+	_status_code = status_code;
+	return 0;
+}
 
-	// Content Headers
-	if (!validClientBodySize())
-		_status_code = 413;
-	if (!isAllowedMethod())
-		_status_code = 405;
+int HTTPResponse::buildBody() {
+	if (location_block && location_block->getHasReturn() == true)
+		return handleReturn();
+
 	// if (request->getMethod() == "GET")
 	searchContent();
 	if (isError())
 		searchErrorContent();
+	return 0;
+}
+
+int	HTTPResponse::build() {
+	int res = 0;
+	// Assign the location block for the response
+	if (!kill) {
+		this->assignLocationBlock();
+		if (get_file_extension(request->getRequestURI()) == ".py")
+			request->isCGI = true;
+	}
+
+	// General Headers
+	_protocol = "HTTP/1.1";
+	_time = getTime();
+	_server = "Webserv/42.0";
+
+	// Content Headers
+	if (kill) {
+		_status_code = 408;
+	} else {
+		if (!validClientBodySize())
+			_status_code = 413;
+		if (!isAllowedMethod())
+			_status_code = 405;
+		if (request->getProtocol() != "HTTP/1.1")
+			_status_code = 505;
+		
+		// Build response body
+		buildBody();
+	}
 
 	std::stringstream ss;
 	ss << _status_code;
@@ -364,9 +517,16 @@ int	HTTPResponse::build() {
 
 	_response += "Date: " + _time + "\r\n";
 	_response += "Server: " + _server + "\r\n";
-	// _response += "Last-Modified: " + _last_modified + "\r\n";
+	_response += "Last-Modified: " + _last_modified + "\r\n";
 
-	if (!request->isCGI || isError()) {
+	if (location_block && location_block->getHasReturn()) {
+		if (location_block->getReturn().first >= 300 && location_block->getReturn().first <= 305)
+			_response += "Location: " + _new_url + "\r\n";
+	}
+
+	if (kill) {
+		_response += "Content-Length: 0\r\n";
+	} else if (!request->isCGI || isError()) {
 		ss << _body_length;
 		_response += "Content-Length: " + ss.str() + "\r\n";
 		ss.str("");
@@ -374,19 +534,19 @@ int	HTTPResponse::build() {
 	}
 
 	_response += "Content-Type: " + _content_type + "\r\n";
-	if (!request->isCGI || isError())
+	if ((request && (!request->isCGI || isError())) || kill)
 		_response += "\r\n";
 
 	_header_length = _response.length();
-	if (request->getMethod() == "HEAD")
+	if (request && request->getMethod() == "HEAD")
 		_body_length = 0;
-	if (request->isCGI && !isError()) {
+	if (request && request->isCGI && !isError()) {
 		if (request->getMethod() == "HEAD") {
 			_response += "Content-Length: 0\r\n\r\n";
 		} else {
 			res = buildCGIResponse();
 		}
-	} else if (_body != "" && request->getMethod() != "HEAD")
+	} else if (_body != "" && request && request->getMethod() != "HEAD")
 		_response += _body + "\r\n";
 
 	_response_length = _header_length + _body_length;

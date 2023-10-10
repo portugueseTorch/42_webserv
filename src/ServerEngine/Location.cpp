@@ -19,6 +19,9 @@ Location::Location() {
 	_body_size_specified = false;
 	_client_max_body_size = 1000000;
 	_root = "";
+	_has_return = false;
+	_autoindex = false;
+	_is_cgi = false;
 }
 
 Location::~Location() {}
@@ -56,6 +59,9 @@ void Location::displayLocationBlock() {
 		if (_body_size_specified)
 			std::cout << "\t\tClient max body size: " << getClientMaxBodySize() << std::endl;
 	}
+	std::cout << "\t\tAuntoindex: " << getAutoindex() << std::endl;
+	std::cout << "\t\tReturn: " << getReturn().first << " " << getReturn().second << std::endl;
+	std::cout << "\t\tIs CGI: " << getIsCGI() << std::endl;
 }
 
 /*************************************/
@@ -69,7 +75,8 @@ void Location::displayLocationBlock() {
  * @return 0
  */
 int Location::setLocation(std::string location) {
-	if (location[0] != '/') {
+	std::string file_extension = get_file_extension(location);
+	if (location[0] != '/' && file_extension == "null") {
 		log(std::cerr, ERROR, "Invalid location directive", location);
 		return 1;
 	}
@@ -78,6 +85,8 @@ int Location::setLocation(std::string location) {
 		_location = location.substr(0, location.length() - 1);
 	else
 		_location = location;
+
+	if (file_extension != "null") _is_cgi = true;
 	return 0;
 }
 
@@ -233,6 +242,60 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
 
 	_client_max_body_size = cmbs;
 	_body_size_specified = true;
+	return 0;
+}
+
+/**
+ * @brief Sets the return directive for the Location block by iterating over IT,
+ * storing the result in the [_return] pair
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
+int Location::setReturn(std::list<Node>::iterator &it) {
+	std::vector<std::string> stash;
+	for (; it->_type == Parameter; it++)
+		stash.push_back(it->_content);
+	it--;
+
+	// Check there are either 1 or 2 arguments
+	if (stash.size() != 1 && stash.size() != 2) {
+		log(std::cerr, ERROR, "Invalid number of arguments for", "return");
+		return 1;
+	}
+
+	// Check the first argument is a valid status code
+	std::string first = stash.at(0);
+	for (size_t i = 0; i < first.length(); i++) {
+		if (!isdigit(first[i])) {
+			log(std::cerr, ERROR, "Invalid 'return' status code", first);
+			return 1;
+		}
+	}
+
+	int status_code = std::atoi(first.c_str());
+	if (!ServerEngine::isSupportedStatusCode(status_code)) {
+		log(std::cerr, ERROR, "Invalid 'return' status code", first);
+		return 1;
+	}
+
+	// If status_code is in range 3xx, redirection URL is needed
+	if (status_code >= 300 && status_code <= 305) {
+		if (stash.size() == 2) {
+			_return.first = status_code;
+			_return.second = stash.at(1);
+		} else {
+			log(std::cerr, ERROR, "Missing 'return' URL for status code", first);
+			return 1;
+		}
+	} else {
+		_return.first = status_code;
+		_return.second = stash.size() == 2 ? stash.at(1) : "";
+	}
+
+	_has_return = true;
 	return 0;
 }
 

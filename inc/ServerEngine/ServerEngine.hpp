@@ -40,6 +40,7 @@ class ServerEngine {
 		int		runServers();
 		int		closeConnection(int fd);
 		void	closeAllConnections();
+		void	checkConnectionTimeouts();
 
 		int		sendResponse(Client &client);
 
@@ -47,6 +48,8 @@ class ServerEngine {
 
 		static std::vector<std::string> directives;
 		static std::string possibleDirectives[];
+		static std::vector<int> supported_status_codes;
+		static bool isSupportedStatusCode(int);
 
 	private:
 		Parser 					*originalParser;
