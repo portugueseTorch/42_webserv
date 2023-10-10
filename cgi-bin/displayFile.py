@@ -2,6 +2,7 @@ import os
 import goodTimes
 import response as fullResponse
 import errorPage
+import readFile
 
 def response():
     status = 200
@@ -13,7 +14,7 @@ def response():
         try:
             if os.path.exists(filePath):
                 with open(filePath, 'r') as file:
-                    content = file.read()
+                    content = readFile.text(filePath)
             else:
                 status = 500
         except Exception as e:
