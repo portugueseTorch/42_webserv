@@ -45,19 +45,19 @@ void HTTPResponse::assignLocationBlock() {
 			std::string file_name = uri.substr(uri.find_last_of('/'));
 			std::string file_extension = get_file_extension(file_name);
 			std::cout << file_name  << ", " << file_extension << std::endl;
+			std::cout << "URI inside CGI block is " << uri << std::endl;
 			if (is_valid_filename(file_name) && \
 				get_file_extension(file_name) == get_file_extension(it->getLocation())) {
 				log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 				location_block = &(*it);
 				location_block->displayLocationBlock();
-				request->setURI(file_name);
+				// request->setURI("/" + it->getIndex().at(0));
 				return ;
 			}
 		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/') && !it->getIsCGI()) {
 			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
 			location_block->displayLocationBlock();
-			// request->setURI(uri.substr(loc_length));
 			return ;
 		}
 	}
@@ -483,8 +483,11 @@ int HTTPResponse::buildBody() {
 int	HTTPResponse::build() {
 	int res = 0;
 	// Assign the location block for the response
-	if (!kill)
+	if (!kill) {
 		this->assignLocationBlock();
+		if (get_file_extension(request->getRequestURI()) == ".py")
+			request->isCGI = true;
+	}
 
 	// General Headers
 	_protocol = "HTTP/1.1";
@@ -514,7 +517,7 @@ int	HTTPResponse::build() {
 
 	_response += "Date: " + _time + "\r\n";
 	_response += "Server: " + _server + "\r\n";
-	// _response += "Last-Modified: " + _last_modified + "\r\n";
+	_response += "Last-Modified: " + _last_modified + "\r\n";
 
 	if (location_block && location_block->getHasReturn()) {
 		if (location_block->getReturn().first >= 300 && location_block->getReturn().first <= 305)
@@ -549,7 +552,7 @@ int	HTTPResponse::build() {
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	std::cout << _response;
+	// std::cout << _response;
 	return res;
 } 
 

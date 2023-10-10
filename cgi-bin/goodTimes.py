@@ -122,7 +122,7 @@ def GET(fileContent = "No file selected") :
     response = '<html>\n'
 
     response += '<head>\n'
-    response += '<link type="text/css" rel="stylesheet" href="goodTimes.css" />\n'
+    response += '<link type="text/css" rel="stylesheet" href="/cgi-bin/goodTimes.css" />\n'
     response += '<link type="text/css" rel="stylesheet" href="/style.css" />\n'
     response += '<link type="text/css" rel="stylesheet" href="/resources/navbar.css" />\n'
     response += '<meta charset="UTF-8">\n'

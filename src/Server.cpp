@@ -575,6 +575,10 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		}
 	}
 
+	if (location.getIsCGI() && location.getIndex().empty()) {
+		log(std::cerr, ERROR, "CGI-location must have specified index", location.getLocation());
+		return 1;
+	}
 	it--;
 	_locations.push_back(location);
 	return 0;
