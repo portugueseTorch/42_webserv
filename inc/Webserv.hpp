@@ -1,4 +1,3 @@
-#pragma once
 #ifndef WEBSERV_HPP
 # define WEBSERV_HPP
 
@@ -74,14 +73,27 @@ enum MsgType {
 	ALL,
 };
 
+class ServerEngine;
+
 /****** UTILS.CPP ******/
-int			damerauLevenshteinDistance(std::string input, std::string valid);
-bool		isindent(int i);
-bool		is_file(std::string fname);
-bool		is_valid_filename(std::string file_name);
-bool		file_is_valid(std::string file_path, int permissions);
-void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
-std::string	readConfigurationFile(int argc, char **argv);
-std::string get_file_extension(std::string file_name);
+int						damerauLevenshteinDistance(std::string input, std::string valid);
+bool					isindent(int i);
+bool					is_file(std::string fname);
+bool					is_valid_filename(std::string file_name);
+bool					file_is_valid(std::string file_path, int permissions);
+void					log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
+std::string				readConfigurationFile(int argc, char **argv);
+std::string				get_file_extension(std::string file_name);
+void 					handler(int signal);
+
+template <typename T1, typename T2, typename T3>
+void cleanUp(T1 *content, T2 *engine, T3 *other){
+	if (content)
+		delete content;
+	if (engine)
+		delete engine;
+	if (other)
+		delete other;
+}
 
 #endif

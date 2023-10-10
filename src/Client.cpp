@@ -29,6 +29,8 @@ void Client::reset() {
 	_status_code = 0;
 	_cont_length = 0;
 	location_block = NULL;
+	if (request)
+		delete request;
 	request = NULL;
 	if (response)
 		delete response;
