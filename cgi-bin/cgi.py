@@ -1,7 +1,7 @@
 import os
 import csv
 
-response = '<html><head><link type="text/css" rel="stylesheet" href="/cgi-bin/style.css" /></head><body>'
+response = '<html><head><link type="text/css" rel="stylesheet" href="style.css" /></head><body>'
 response += '<header>'
 response += '<nav class="navbar">'
 response += '<a href="/">Home</a>'

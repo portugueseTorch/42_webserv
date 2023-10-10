@@ -22,7 +22,8 @@ class Location
 		std::vector<std::string>				&getHTTPMethod() { return _http_method; }
 		std::map<int,std::vector<std::string> >	&getErrorPages() { return _error_pages; }
 		std::pair<int,std::string>				&getReturn() { return _return; }
-		bool									getHasReturn() {return _has_return; }
+		bool									getHasReturn() { return _has_return; }
+		bool									getIsCGI() { return _is_cgi; }
 
 		int setLocation(std::string);
 		int setErrorPages(std::list<Node>::iterator &it);
@@ -45,6 +46,7 @@ class Location
 		std::vector<std::string>				_http_method;			// allowed http_Method as per config_file
 		size_t									_client_max_body_size;	// lmax size (in bytes) of the client body according to config_file
 		bool									_body_size_specified;	// flag to signal if a max body size was specified in the confug_file
+		bool									_is_cgi;				// flag to signal if the location block is cgi related
 };
 
 #endif

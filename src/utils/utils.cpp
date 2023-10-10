@@ -143,3 +143,17 @@ bool file_is_valid(std::string file_path, int permissions) {
 bool is_file(std::string fname) {
 	return fname != "." && fname != ".." && (fname[0] != '.' && (fname.find('.') != std::string::npos));
 }
+
+std::string get_file_extension(std::string file_name) {
+	std::string file_extension = "null";
+	size_t pos;
+
+	if ((pos = file_name.find_first_of('.')) == file_name.find_last_of('.') && pos != std::string::npos)
+		file_extension = file_name.substr(file_name.find('.'));
+	return file_extension;
+}
+
+bool is_valid_filename(std::string file_name) {
+	size_t pos = file_name.find('.');
+	return file_name.find_first_of('.') == file_name.find_last_of('.') && pos != std::string::npos;
+}

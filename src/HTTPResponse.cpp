@@ -14,8 +14,12 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	_body_length = 0;
 	_header_length = 0;
 	_response_length = 0;
-	_status_code = request->success() ? 200 : request->getStatusCode();
+	if (request)
+		_status_code = request->success() ? 200 : request->getStatusCode();
+	else
+		_status_code = 500;
 	_content_type = "text/plain";
+	kill = false;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -37,11 +41,23 @@ void HTTPResponse::assignLocationBlock() {
 			location_block = &(*it);
 			location_block->displayLocationBlock();
 			return ;
-		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/')) {
+		} else if (it->getIsCGI()) {
+			std::string file_name = uri.substr(uri.find_last_of('/'));
+			std::string file_extension = get_file_extension(file_name);
+			std::cout << file_name  << ", " << file_extension << std::endl;
+			if (is_valid_filename(file_name) && \
+				get_file_extension(file_name) == get_file_extension(it->getLocation())) {
+				log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
+				location_block = &(*it);
+				location_block->displayLocationBlock();
+				request->setURI(file_name);
+				return ;
+			}
+		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/') && !it->getIsCGI()) {
 			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
 			location_block->displayLocationBlock();
-			request->setURI(uri.substr(loc_length));
+			// request->setURI(uri.substr(loc_length));
 			return ;
 		}
 	}
@@ -64,7 +80,7 @@ std::string formatTime(const struct tm* timeinfo) {
 }
 
 std::string HTTPResponse::getContentType(std::string uri) {
-	if (uri == "") return "undefined";
+	if (uri == "") return "directory";
 	// Get index of last '.' of uri
 	int lp = uri.find_last_of('.');
 	if (uri[uri.length() - 1] == '/' || lp == -1)
@@ -131,6 +147,8 @@ std::string HTTPResponse::statusCodeToMessage() {
 			return "Method Not Allowed";
 		case 406:
 			return "Not Acceptable";
+		case 408:
+			return "Request Timeout";
 		case 410:
 			return "Gone";
 		case 411:
@@ -225,8 +243,19 @@ void HTTPResponse::handle_autoindex() {
 		root = ".";
 	else
 		root = getRelevantRoot();
-	dir_name = root.substr(1, root.length()) + request->getRequestURI();
-	std::cout << "Relevant root for autoindex: " << dir_name << std::endl;
+	root = root.substr(1);
+
+	std::string loc_name;
+	if (location_block) loc_name = location_block->getLocation();
+	else loc_name = "";
+
+	if (loc_name != "")
+		dir_name = root + request->getRequestURI().substr(request->getRequestURI().find(loc_name) + loc_name.length());
+	else
+		dir_name = root + request->getRequestURI();
+
+	// std::cout << "Request URI: " << request->getRequestURI() << std::endl;
+	// std::cout << "Relevant dir_name for autoindex: " << dir_name << std::endl;
 	dir = opendir(std::string("." + dir_name).c_str());
 	if (!dir) {
 		_status_code = 500;
@@ -247,16 +276,17 @@ background-color: #a5c8f2;\n}\na {\ntext-decoration: none;\n}\na:hover {\ntext-d
 		struct stat sb;
 		std::stringstream ss;
 
+		std::cout << "." + dir_name + "/" + entry->d_name << std::endl;
 		if (stat(std::string("." + dir_name + "/" + entry->d_name).c_str(), &sb) == -1) {
 			_status_code = 500;
 			return;
 		}
 
 		ss << ((float) (sb.st_size / 1000));
-		if (dir_name != "/")
-			full_path = dir_name + "/" + entry->d_name;
+		if (request->getRequestURI() != "/")
+			full_path = request->getRequestURI() + "/" + entry->d_name;
 		else
-			full_path = dir_name + entry->d_name;
+			full_path = request->getRequestURI() + entry->d_name;
 		std::cout << full_path << std::endl;
 		to_push += "<tr>\n<td><a href=\"" + full_path + "\">" + entry->d_name + "</a></td>\n";
 		to_push += "<td>" + ss.str() + " Kb" + "</td>\n";
@@ -282,11 +312,16 @@ void HTTPResponse::searchContent() {
 	bool		found = false;
 
 	// If we have a directory, the file path will need to first check for the index file
+	std::cout << "URI is: " << request->getRequestURI() << std::endl;
 	if (getContentType(uri) == "undefined") {
 		_status_code = 415;
 		return ;
 	} else if (getContentType(uri) == "directory") {
 		if (location_block) {
+			if (uri != location_block->getLocation())
+				uri = uri.substr(location_block->getLocation().length());
+			else
+				uri = "";
 			if (location_block->getAutoindex() == true) {
 				handle_autoindex();
 				return ;
@@ -335,7 +370,9 @@ void HTTPResponse::searchContent() {
 			}
 		}
 	} else {
-		_file_path = root + uri;
+		if (location_block && !location_block->getIsCGI())
+			_file_path = root + uri.substr(uri.find(location_block->getLocation()) + location_block->getLocation().length());
+		else _file_path = root + uri;
 	}
 
 	// Attempt to read the contents of the file
@@ -446,21 +483,28 @@ int HTTPResponse::buildBody() {
 int	HTTPResponse::build() {
 	int res = 0;
 	// Assign the location block for the response
-	this->assignLocationBlock();
+	if (!kill)
+		this->assignLocationBlock();
 
 	// General Headers
-	_protocol = request->getProtocol();
+	_protocol = "HTTP/1.1";
 	_time = getTime();
 	_server = "Webserv/42.0";
 
 	// Content Headers
-	if (!validClientBodySize())
-		_status_code = 413;
-	if (!isAllowedMethod())
-		_status_code = 405;
-	
-	// Build response body
-	buildBody();
+	if (kill) {
+		_status_code = 408;
+	} else {
+		if (!validClientBodySize())
+			_status_code = 413;
+		if (!isAllowedMethod())
+			_status_code = 405;
+		if (request->getProtocol() != "HTTP/1.1")
+			_status_code = 505;
+		
+		// Build response body
+		buildBody();
+	}
 
 	std::stringstream ss;
 	ss << _status_code;
@@ -477,7 +521,9 @@ int	HTTPResponse::build() {
 			_response += "Location: " + _new_url + "\r\n";
 	}
 
-	if (!request->isCGI || isError()) {
+	if (kill) {
+		_response += "Content-Length: 0\r\n";
+	} else if (!request->isCGI || isError()) {
 		ss << _body_length;
 		_response += "Content-Length: " + ss.str() + "\r\n";
 		ss.str("");
@@ -485,11 +531,11 @@ int	HTTPResponse::build() {
 	}
 
 	_response += "Content-Type: " + _content_type + "\r\n";
-	if (!request->isCGI || isError())
+	if ((request && (!request->isCGI || isError())) || kill)
 		_response += "\r\n";
 
 	_header_length = _response.length();
-	if (request->isCGI && !isError()) {
+	if (request && (request->isCGI && !isError())) {
 		res = buildCGIResponse();
 	} else if (_body != "")
 		_response += _body + "\r\n";

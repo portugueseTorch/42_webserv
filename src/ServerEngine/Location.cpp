@@ -20,6 +20,8 @@ Location::Location() {
 	_client_max_body_size = 1000000;
 	_root = "";
 	_has_return = false;
+	_autoindex = false;
+	_is_cgi = false;
 }
 
 Location::~Location() {}
@@ -58,8 +60,8 @@ void Location::displayLocationBlock() {
 			std::cout << "\t\tClient max body size: " << getClientMaxBodySize() << std::endl;
 	}
 	std::cout << "\t\tAuntoindex: " << getAutoindex() << std::endl;
-
 	std::cout << "\t\tReturn: " << getReturn().first << " " << getReturn().second << std::endl;
+	std::cout << "\t\tIs CGI: " << getIsCGI() << std::endl;
 }
 
 /*************************************/
@@ -73,7 +75,8 @@ void Location::displayLocationBlock() {
  * @return 0
  */
 int Location::setLocation(std::string location) {
-	if (location[0] != '/') {
+	std::string file_extension = get_file_extension(location);
+	if (location[0] != '/' && file_extension == "null") {
 		log(std::cerr, ERROR, "Invalid location directive", location);
 		return 1;
 	}
@@ -82,6 +85,8 @@ int Location::setLocation(std::string location) {
 		_location = location.substr(0, location.length() - 1);
 	else
 		_location = location;
+
+	if (file_extension != "null") _is_cgi = true;
 	return 0;
 }
 

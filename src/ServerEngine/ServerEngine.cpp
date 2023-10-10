@@ -15,7 +15,7 @@ std::string ServerEngine::possibleDirectives[] = {
 	"client_max_body_size",
 	"return",
 	"autoindex",
-	"http_method",
+	"http_method"
 };
 
 std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
@@ -24,7 +24,7 @@ std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectiv
 int supported_sc[] = {
 	200, 201, 202, 204,
 	300, 301, 302, 303, 304,
-	400, 403, 404, 405, 406, 410, 411, 413, 414, 415,
+	400, 403, 404, 405, 408, 406, 410, 411, 413, 414, 415,
 	500, 501, 502, 504, 505
 };
 
@@ -312,10 +312,11 @@ int ServerEngine::closeConnection(int fd) {
 		log(std::cout, INFO, "Server removed from server map on fd", ss.str());
 	}
 	if (_client_map.find(fd) != _client_map.end()) {
+		// Reset the client
+		_client_map[fd].reset();
 		_client_map.erase(fd);
 		log(std::cout, INFO, "Client removed from client map on fd", ss.str());
 	}
-
 	// Close file descriptor
 	close(fd);
 	return 0;
@@ -349,6 +350,8 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		closeConnection(fd);
 		return 0;
 	}
+
+	client.updateTime();
 
 	if (client.request && client.request->fullyParsed)
 		return 0;
@@ -388,8 +391,7 @@ int ServerEngine::sendRegResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-
-	if (assignServer(client)) {
+	if (!client.kill && assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
@@ -400,10 +402,14 @@ int ServerEngine::sendResponse(Client &client) {
 	if (sendRegResponse(client))
 		return 1;
 
-	if (client.request->getKeepAlive())
+	client.updateTime();
+
+	if (!client.kill && client.request->getKeepAlive())
 		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-	else
+	else {
 		closeConnection(client.getClientFD());
+		return 0;
+	}
 
 	client.reset();
 
@@ -471,6 +477,17 @@ int ServerEngine::setupSets() {
 	return 0;
 }
 
+void ServerEngine::checkConnectionTimeouts() {
+	// std::cout << "Checking for timeouts\n" << std::endl;
+	for (std::map<int,Client>::iterator it = _client_map.begin(); it != _client_map.end(); it++) {
+		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
+			// std::cout << "Preparing to send timeout...\n" << std::endl;
+			modifySet(it->first, READ_SET, MOD_SET);
+			it->second.kill = true;
+		}
+	}
+}
+
 int ServerEngine::runServers() {
 	struct timeval t;
 	fd_set read_cpy;
@@ -520,6 +537,7 @@ int ServerEngine::runServers() {
 			ss.str("");
 			ss.clear();
 		}
+		ServerEngine::checkConnectionTimeouts();
 	}
 	return 0;
 }

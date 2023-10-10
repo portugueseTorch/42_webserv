@@ -29,6 +29,7 @@ void HTTPRequest::process(std::string request) {
 	std::string headerLine;
 	
 	_content += request;
+	// _contentLength = 2000;
 	size_t newLine = _content.find("\r\n");
 
 	while (newLine != std::string::npos) {

@@ -39,6 +39,7 @@ class ServerEngine {
 		bool	isClient(int fd);
 		int		runServers();
 		int		closeConnection(int fd);
+		void	checkConnectionTimeouts();
 
 		int		sendResponse(Client &client);
 
