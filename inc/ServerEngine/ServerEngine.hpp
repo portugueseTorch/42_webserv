@@ -39,6 +39,7 @@ class ServerEngine {
 		bool	isClient(int fd);
 		int		runServers();
 		int		closeConnection(int fd);
+		void	checkConnectionTimeouts();
 
 		int		sendResponse(Client &client);
 
@@ -46,6 +47,8 @@ class ServerEngine {
 
 		static std::vector<std::string> directives;
 		static std::string possibleDirectives[];
+		static std::vector<int> supported_status_codes;
+		static bool isSupportedStatusCode(int);
 
 	private:
 		fd_set					_read_set;		// set of sockets being monitored for read events

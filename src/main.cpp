@@ -34,7 +34,6 @@ int main(int argc, char **argv) {
 			return 1;
 
 		// Run servers
-		engine.displayServers();
 		engine.runServers();
 
 	} catch (std::exception &e) {

@@ -1,0 +1,7 @@
+1 - Allowed methods => DONE
+2 - Limit client body size => DONE
+3 - Define HTTP redirection => DONE
+4 - Check for keep-alive => DONE
+5 - Autoindex => DONE
+6 - Check location block of CGI based on file extension instead of directory =>
+7 - Set Timeout for requests => 
