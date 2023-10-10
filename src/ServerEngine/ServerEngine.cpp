@@ -486,7 +486,7 @@ void ServerEngine::checkConnectionTimeouts() {
 		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
 			std::stringstream ss;
 			ss << it->second.getClientFD();
-			log(std::cout, INFO, "Client time out on fd", ss.str());
+			log(std::cout, INFO, "Client timed out on fd", ss.str());
 			modifySet(it->first, READ_SET, MOD_SET);
 			it->second.kill = true;
 		}
