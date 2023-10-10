@@ -105,7 +105,7 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 			break;
 		
 		case FATAL:
-			stream << RED << "[FATAL]:\t\t" << msg;
+			stream << RED << "[FATAL]:\t" << msg;
 			break;
 
 		case INFO:

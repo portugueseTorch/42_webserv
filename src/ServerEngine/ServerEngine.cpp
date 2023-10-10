@@ -107,9 +107,9 @@ int ServerEngine::setupServers() {
 		if (it->setupServer()) {
 			std::stringstream out;
 			out << it->getServerID();
-			std::string stringID = out.str();
+			// std::string stringID = out.str();
 			
-			std::string err_msg = "Failure setting up server block " + stringID;
+			std::string err_msg = "Failure setting up server block " + out.str();
 			log(std::cerr, ERROR, err_msg, "");
 		} else
 			all_failed = false;
@@ -309,13 +309,13 @@ int ServerEngine::closeConnection(int fd) {
 	// Remove fd from its respective map
 	if (_server_map.find(fd) != _server_map.end()) {
 		_server_map.erase(fd);
-		log(std::cout, INFO, "Server removed from server map on fd", ss.str());
+		log(std::cout, WARNING, "Server removed from server map on fd", ss.str());
 	}
 	if (_client_map.find(fd) != _client_map.end()) {
 		// Reset the client
 		_client_map[fd].reset();
 		_client_map.erase(fd);
-		log(std::cout, INFO, "Client removed from client map on fd", ss.str());
+		log(std::cout, WARNING, "Client removed from client map on fd", ss.str());
 	}
 	// Close file descriptor
 	close(fd);
@@ -378,7 +378,10 @@ int ServerEngine::readHTTPRequest(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendRegResponse(Client &client) {
-	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
+	if (send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0) == -1) {
+		log(std::cerr, ERROR, "send() call failed", "");
+		return 1;
+	}
 	std::cout << "Message Sent!" << std::endl;
 	return 0;
 }
@@ -479,10 +482,11 @@ int ServerEngine::setupSets() {
 }
 
 void ServerEngine::checkConnectionTimeouts() {
-	// std::cout << "Checking for timeouts\n" << std::endl;
 	for (std::map<int,Client>::iterator it = _client_map.begin(); it != _client_map.end(); it++) {
 		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
-			// std::cout << "Preparing to send timeout...\n" << std::endl;
+			std::stringstream ss;
+			ss << it->second.getClientFD();
+			log(std::cout, INFO, "Client time out on fd", ss.str());
 			modifySet(it->first, READ_SET, MOD_SET);
 			it->second.kill = true;
 		}
@@ -524,13 +528,11 @@ int ServerEngine::runServers() {
 				}
 				// If it's a client, accept new connection
 				else if (_client_map.count(fd)) {
-					// log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}
 			} else if (FD_ISSET(fd, &write_cpy)) {
 				if (_client_map.count(fd)) {
-					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (sendResponse(_client_map[fd]))
 						return 1;
 				}

@@ -298,7 +298,10 @@ int	Client::sendTimeoutMessage() {
 	std::string msg = "HTTP/1.1 408 Request Timeout\r\n\
 Server: Webserv/42.0\r\nContent-Type: text/plain\r\n\
 Content-Length: 21\r\n\r\n408 Request Timeout\r\n";
-	send(_client_fd, msg.c_str(), msg.length(), 0);
+	if (send(_client_fd, msg.c_str(), msg.length(), 0) == -1) {
+		log(std::cerr, ERROR, "send() call failed", "");
+		return 1;
+	}
 	std::cout << "Timeout message sent\n" << std::endl;
 	return 0;
 }

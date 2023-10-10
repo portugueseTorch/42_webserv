@@ -577,7 +577,8 @@ int HTTPResponse::buildCGIResponse() {
 		close(pipe_fd[0]);
 
 		// char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
-		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/main.py", NULL };
+		std::string script_name = location_block->getRoot().substr(1) + "/" + location_block->getIndex().at(0);
+		char *args[] = { const_cast<char *>("/usr/bin/python3"), const_cast<char *>(script_name.c_str()), NULL };
 		std::vector<std::string> queryAndBody = request->getQueryParams();
 		std::string uri = request->getRequestURI();
 		uri = uri[0] == '/' ? uri.substr(1) : uri;

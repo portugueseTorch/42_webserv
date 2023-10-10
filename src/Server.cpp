@@ -46,13 +46,13 @@ int Server::setupServer() {
 	}
 
 	// Set socket to be non-blocking
-	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
+	int flags = fcntl(_server_fd, F_GETFL, 0);
 	if (flags == -1) {
 		log(std::cerr, ERROR, "fcntl() call 	engine.displayServers();failed", "");
 		return 1;
 	}
 
-	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
+	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
 		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
@@ -403,7 +403,6 @@ int Server::setIndex(std::list<Node>::iterator &it) {
 		_index.clear();
 		return 1;
 	}
-
 	return 0;
 }
 
