@@ -84,9 +84,6 @@ bool					file_is_valid(std::string file_path, int permissions);
 void					log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
 std::string				readConfigurationFile(int argc, char **argv);
 std::string				get_file_extension(std::string file_name);
-static std::string* 	nonePointer = NULL;
-static std::string*		gContent = NULL;
-static ServerEngine* 	gServer = NULL;
 void 					handler(int signal);
 
 template <typename T1, typename T2, typename T3>

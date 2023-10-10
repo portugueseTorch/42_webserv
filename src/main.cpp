@@ -1,5 +1,9 @@
 #include "Webserv.hpp"
 
+std::string* 	nonePointer = NULL;
+std::string*	gContent = NULL;
+ServerEngine* 	gServer = NULL;
+
 int main(int argc, char **argv) {
 	// Check wrong usage
 	if (argc > 2) {
