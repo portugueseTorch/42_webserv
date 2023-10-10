@@ -21,13 +21,17 @@ std::string ServerEngine::possibleDirectives[] = {
 std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
 	ServerEngine::possibleDirectives + sizeof(ServerEngine::possibleDirectives) / sizeof(std::string));
 
-ServerEngine::ServerEngine(std::list<Node> nodes) {
-	_nodes = nodes;
+ServerEngine::ServerEngine(Parser *parser) {
+	originalParser = parser;
+	_nodes = parser->getNodes();
 	_num_servers = 0;
 	_max_fd = 0;
 }
 
-ServerEngine::~ServerEngine() {}
+ServerEngine::~ServerEngine() {
+	closeAllConnections();
+	delete originalParser;
+}
 
 /**
  * @brief Handles invalid directives
@@ -511,4 +515,16 @@ int ServerEngine::runServers() {
 		}
 	}
 	return 0;
+}
+
+void	ServerEngine::closeAllConnections( void ) {
+
+	if ( _client_map.size()) {
+		std::map<int, Client>::iterator it = _client_map.begin();
+		for (; it != _client_map.end(); it++) {
+			close(it->first);
+			it->second.~Client();
+		}
+	}
+
 }

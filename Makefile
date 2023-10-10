@@ -18,8 +18,8 @@ RESET	=	\033[0m
 
 ####### COMPILER #######
 CC		=	c++
-FLAGS	=	-Wall -Wextra -Werror -std=c++98
-FLAGS	+=	-fsanitize=address -g
+FLAGS	=	-Wall -Wextra -Werror -std=c++98 -g
+# FLAGS	+=	-fsanitize=address -g
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj

@@ -74,11 +74,27 @@ enum MsgType {
 	ALL,
 };
 
+class ServerEngine;
+
 /****** UTILS.CPP ******/
-int			damerauLevenshteinDistance(std::string input, std::string valid);
-bool		isindent(int i);
-bool		file_is_valid(std::string file_path, int permissions);
-void		log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
-std::string	readConfigurationFile(int argc, char **argv);
+int						damerauLevenshteinDistance(std::string input, std::string valid);
+bool					isindent(int i);
+bool					file_is_valid(std::string file_path, int permissions);
+void					log(std::ostream &stream, MsgType type, std::string msg, std::string optional);
+std::string				readConfigurationFile(int argc, char **argv);
+static ServerEngine* 	gServer = NULL;
+static std::string* 	nonePointer = NULL;
+static std::string*		gContent = NULL;
+void 					handler(int signal);
+
+template <typename T1, typename T2, typename T3>
+void cleanUp(T1 *content, T2 *engine, T3 *other){
+	if (content)
+		delete content;
+	if (engine)
+		delete engine;
+	if (other)
+		delete other;
+}
 
 #endif

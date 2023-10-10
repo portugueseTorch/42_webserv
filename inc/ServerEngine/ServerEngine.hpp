@@ -19,7 +19,7 @@ class Client;
 
 class ServerEngine {
 	public:
-		ServerEngine(std::list<Node> nodes);
+		ServerEngine(Parser *parser);
 		~ServerEngine();
 
 		// Take the information from the parser and build the individual servers, adding them to the _servers vector
@@ -39,6 +39,7 @@ class ServerEngine {
 		bool	isClient(int fd);
 		int		runServers();
 		int		closeConnection(int fd);
+		void	closeAllConnections();
 
 		int		sendResponse(Client &client);
 
@@ -48,6 +49,7 @@ class ServerEngine {
 		static std::string possibleDirectives[];
 
 	private:
+		Parser 					*originalParser;
 		fd_set					_read_set;		// set of sockets being monitored for read events
 		fd_set					_write_set;		// set of sockets being monitored for write events
 		int						_max_fd;		// biggest fd being monitored, use for looping after select()

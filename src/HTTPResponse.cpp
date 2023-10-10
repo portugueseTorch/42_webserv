@@ -457,6 +457,7 @@ int HTTPResponse::buildCGIResponse() {
 		// }
 		execve("/usr/bin/python3", args, (char **)envp);
 		delete []envp;
+		exit(0);
 	} else {
 		close(pipe_fd[1]);
 		wait(NULL);
