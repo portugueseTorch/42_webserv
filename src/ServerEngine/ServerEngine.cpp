@@ -333,7 +333,7 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[MAX_LENGTH + 1];
+	unsigned char buf[MAX_LENGTH + 1];
 	int	ret;
 	int	fd = client.getClientFD();
 
@@ -360,8 +360,9 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	ss.clear();
 	ss << client.getClientFD();
 	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	std::cout << buf;
-	client.parseHTTPRequest(buf);
+	std::string toParse(reinterpret_cast<const char*>(buf), ret);
+	// std::cout << toParse << std::endl;
+	client.parseHTTPRequest(toParse);
 	if (client.request->fullyParsed) {
 		// client.request->displayParsedRequest();
 		modifySet(fd, READ_SET, MOD_SET);
@@ -404,14 +405,14 @@ int ServerEngine::sendResponse(Client &client) {
 
 	client.updateTime();
 
-	if (!client.kill && client.request->getKeepAlive())
+	if (!client.kill && client.request->getKeepAlive()) {
 		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-	else {
+		client.reset();
+	} else {
 		closeConnection(client.getClientFD());
 		return 0;
 	}
 
-	client.reset();
 
 	return 0;
 }

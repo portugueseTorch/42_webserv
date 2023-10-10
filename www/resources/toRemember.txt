@@ -1,0 +1,5 @@
+to protect:
+	chflags uchg filename
+
+to unprotect:
+	chflags nouchg filename
