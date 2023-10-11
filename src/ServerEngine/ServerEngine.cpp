@@ -43,7 +43,9 @@ ServerEngine::ServerEngine(Parser *parser) {
 
 ServerEngine::~ServerEngine() {
 	closeAllConnections();
-	delete originalParser;
+	if (originalParser)
+		delete originalParser;
+	originalParser = NULL;
 }
 
 /**

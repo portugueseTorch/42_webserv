@@ -5,3 +5,4 @@
 5 - Autoindex => DONE
 6 - Check location block of CGI based on file extension instead of directory =>
 7 - Set Timeout for requests => 
+8 - Accept request with no explicit port (default port 8080) => IS IT POSSIBLE?

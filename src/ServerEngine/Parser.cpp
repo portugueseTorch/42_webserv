@@ -18,7 +18,9 @@ Parser::Parser(Lexer *lex) {
 
 Parser::~Parser() {
 	_lex.clear();
-	delete originalLexer;
+	if (originalLexer)
+		delete originalLexer;
+	originalLexer = NULL;
 	_nodes.clear();
 }
 

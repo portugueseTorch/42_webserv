@@ -21,6 +21,7 @@ Client::Client() {
 Client::~Client() {
 	if (request)
 		delete request;
+	request = NULL;
 }
 
 void Client::reset() {

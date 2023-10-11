@@ -88,12 +88,18 @@ void 					handler(int signal);
 
 template <typename T1, typename T2, typename T3>
 void cleanUp(T1 *content, T2 *engine, T3 *other){
-	if (content)
+	if (content) {
 		delete content;
-	if (engine)
+		content = NULL;
+	}
+	if (engine) {
 		delete engine;
-	if (other)
+		engine = NULL;
+	}
+	if (other) {
 		delete other;
+		other = NULL;
+	}
 }
 
 #endif
