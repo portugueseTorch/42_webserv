@@ -22,18 +22,17 @@ def DELETE() :
     database = 'www/test.csv'
     try:
         if (os.path.exists(database)):
-            with open(database, "r") as input, open('/tmp/temp', "w", newline='') as output:
+            with open(database, "r") as input, open('temp', "w", newline='') as output:
                 writer = csv.writer(output)
                 for row in csv.reader(input):
                     if len(row) != 4:
                         continue
                     if all(item == row[i] for i, item in enumerate(user)) and not found:
-                    # if row[3] == email and not found:
                         found = True
                         continue
                     writer.writerow(row)
                 output.flush()
-            os.replace('/tmp/temp', database)
+            os.replace('temp', database)
             return 200
         else:
             return 404
