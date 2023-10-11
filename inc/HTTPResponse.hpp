@@ -16,7 +16,7 @@ class HTTPResponse
 		std::string		getResponse() const { return _response; }
 		int				getResponseLength() const { return _response_length; }
 		bool			isError() const { return _status_code >= 400 && _status_code <= 518; }
-		bool			kill;
+		bool			toKill;
 
 		int				build();								// builds the HTTP response
 		int				buildBody();							// builds the body of the HTTP response, if any

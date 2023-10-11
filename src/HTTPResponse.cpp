@@ -19,7 +19,7 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	else
 		_status_code = 500;
 	_content_type = "text/plain";
-	kill = false;
+	toKill = false;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -483,13 +483,23 @@ int HTTPResponse::buildBody() {
 }
 
 int	HTTPResponse::build() {
+	if (toKill) {
+		_response = "HTTP/1.1 408 Request Timeout\r\nServer: Webserv/42.0\r\nContent-Type: text/plain\r\nKeep-Alive: close\r\nContent-Length: 19\r\n\r\n";
+		_body = "408 Request Timeout";
+		_header_length = _response.length();
+		_body_length = _body.length();
+		_response += _body + "\r\n";
+
+		_response_length = _header_length + _body_length;
+		return 0;
+	}
+
 	int res = 0;
 	// Assign the location block for the response
-	if (!kill) {
-		this->assignLocationBlock();
-		if (get_file_extension(request->getRequestURI()) == ".py")
-			request->isCGI = true;
-	}
+	
+	this->assignLocationBlock();
+	if (get_file_extension(request->getRequestURI()) == ".py")
+		request->isCGI = true;
 
 	// General Headers
 	_protocol = "HTTP/1.1";
@@ -497,7 +507,7 @@ int	HTTPResponse::build() {
 	_server = "Webserv/42.0";
 
 	// Content Headers
-	if (kill) {
+	if (toKill) {
 		_status_code = 408;
 	} else {
 		if (!validClientBodySize())
@@ -526,17 +536,15 @@ int	HTTPResponse::build() {
 			_response += "Location: " + _new_url + "\r\n";
 	}
 
-	if (kill) {
-		_response += "Content-Length: 0\r\n";
-	} else if (!request->isCGI || isError()) {
+	if (!toKill && (!request->isCGI || isError())) {
 		ss << _body_length;
 		_response += "Content-Length: " + ss.str() + "\r\n";
 		ss.str("");
 		ss.clear();
+		_response += "Content-Type: " + _content_type + "\r\n";
 	}
 
-	_response += "Content-Type: " + _content_type + "\r\n";
-	if ((request && (!request->isCGI || isError())) || kill)
+	if ((request && (!request->isCGI || isError())) || toKill)
 		_response += "\r\n";
 
 	_header_length = _response.length();
@@ -551,17 +559,32 @@ int	HTTPResponse::build() {
 	} else if (_body != "" && request && request->getMethod() != "HEAD")
 		_response += _body + "\r\n";
 
+	if (res) {
+		_response = "HTTP/1.1 408 Request Timeout\r\nServer: Webserv/42.0\r\nContent-Type: text/plain\r\nKeep-Alive: close\r\nContent-Length: 19\r\n\r\n";
+		_body = "408 Request Timeout";
+		_header_length = _response.length();
+		_body_length = _body.length();
+		_response += _body + "\r\n";
+
+		_response_length = _header_length + _body_length;
+		return 0;
+	}
+
 	_response_length = _header_length + _body_length;
 
 	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
 	// std::cout << _response;
 	return res;
-} 
+}
 
 int HTTPResponse::buildCGIResponse() {
 	int pipe_fd[2];
 	int pid;
 
+	struct timeval timeout = {2, 0};
+	int rc;
+	fd_set set;
+	
 	_response.clear();
 	// Create the pipe
 	if (pipe(pipe_fd) == -1) {
@@ -612,34 +635,41 @@ int HTTPResponse::buildCGIResponse() {
 		queryAndBody.insert(queryAndBody.end(), splitBody.begin(), splitBody.end());
 		
 		unsigned char **envp = vectToArr(queryAndBody);
-		// std::vector<std::string>::iterator it = queryAndBody.begin();
-		// log(std::cerr, INFO, "Printing body", "");
-		// for (; it != queryAndBody.end(); it++) {
-		// 	std::cerr << *it << std::endl;
-		// }
+
 		execve("/usr/bin/python3", args, (char **)envp);
 		delete []envp;
 		exit(0);
 	} else {
+		FD_ZERO(&set);
+		FD_SET(pipe_fd[0], &set);
 		close(pipe_fd[1]);
-		wait(NULL);
-		unsigned char msg[MAX_LENGTH + 1] = "";
-		if (_body != "")
-			_body.clear();
-		std::stringstream ss;
+		rc = select(pipe_fd[0] + 1, &set, NULL, NULL, &timeout);
 
-		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
-		while (bytes != 0) {
-			if (bytes == -1) {
-				log(std::cerr, ERROR, "read() call failed", "");
-				return 1;
+		if (rc == -1) {
+			std::cerr << "ups\n";
+		} else if (rc == 0) {
+			std::cout << "houve um timeout\n";
+			kill(pid, SIGKILL);
+			toKill = true;
+			return 1;
+		} else {
+			wait(NULL);
+			unsigned char msg[MAX_LENGTH + 1] = "";
+			if (_body != "")
+				_body.clear();
+			std::stringstream ss;
+
+			int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+			while (bytes != 0) {
+				if (bytes == -1) {
+					log(std::cerr, ERROR, "read() call failed", "");
+					return 1;
+				}
+				std::string toAdd(reinterpret_cast<const char*>(msg), bytes);
+				_body += toAdd;
+				bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 			}
-			std::string toAdd(reinterpret_cast<const char*>(msg), bytes);
-			// std::cerr << toAdd << std::endl;
-			_body += toAdd;
-			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
-
 		_header_length = _response.size();
 		_body_length = _body.size() + 2;
 		_response += _body + "\r\n";

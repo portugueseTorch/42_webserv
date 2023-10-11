@@ -385,6 +385,8 @@ int ServerEngine::readHTTPRequest(Client &client) {
  */
 int ServerEngine::sendRegResponse(Client &client) {
 	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
+	if (client.response->toKill)
+		client.toKill = true;
 	std::cout << "Message Sent!" << std::endl;
 	return 0;
 }
@@ -398,7 +400,7 @@ int ServerEngine::sendRegResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	if (!client.kill && assignServer(client)) {
+	if (!client.toKill && assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
@@ -411,7 +413,7 @@ int ServerEngine::sendResponse(Client &client) {
 
 	client.updateTime();
 
-	if (!client.kill && client.request->getKeepAlive()) {
+	if (!client.toKill && client.request->getKeepAlive()) {
 		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 		client.reset();
 	} else {
@@ -490,7 +492,7 @@ void ServerEngine::checkConnectionTimeouts() {
 		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
 			// std::cout << "Preparing to send timeout...\n" << std::endl;
 			modifySet(it->first, READ_SET, MOD_SET);
-			it->second.kill = true;
+			it->second.toKill = true;
 		}
 	}
 }

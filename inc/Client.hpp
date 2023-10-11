@@ -17,7 +17,7 @@ class Client
 
 		int					setupClient();
 		void				reset();
-		bool				kill;
+		bool				toKill;
 
 		int					parseHTTPRequest(std::string request_str);
 		int					searchRequestedContent(std::string content);
