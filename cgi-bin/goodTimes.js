@@ -15,7 +15,7 @@ const deleteFile = ((fileName, parentElement) => {
 
 	resetBorders();
 
-	fetch('/cgi-bin/goodTimes.py', {
+	fetch('goodTimes.py', {
 		method: 'DELETE',
 		body: 'webservFileName=' + fileName
 	})
@@ -42,7 +42,7 @@ const displayFile = ((clickedElement, parentElement) => {
 
 	resetBorders();
 
-	fetch('/cgi-bin/displayFile.py?webservFileName=' + encodeURIComponent(clickedElement.innerHTML), {
+	fetch('displayFile.py?webservFileName=' + encodeURIComponent(clickedElement.innerHTML), {
 		method: 'GET'
 	})
 	.then(response => {
@@ -85,7 +85,7 @@ const uploadFile = ((event) => {
 		const hexString = Array.from(uint8Array).map(byte => byte.toString(16).padStart(2, '0')).join('');
 
 		try {
-			const response = await fetch("/cgi-bin/goodTimes.py", {
+			const response = await fetch("goodTimes.py", {
 				method: 'POST',
 				body: formData
 			});
