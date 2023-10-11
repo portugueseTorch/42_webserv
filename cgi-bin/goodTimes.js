@@ -1,7 +1,6 @@
 function clearOutput() {
 	const fileContent = document.getElementById("file-content-text");
 	fileContent.innerHTML = "No file selected";
-	console.log('aqui')
 }
 
 function resetBorders() {

@@ -197,15 +197,18 @@ void HTTPResponse::readFile(std::string file_path, struct stat *s) {
 		return ;
 	}
 
+	if (request->isCGI && !isError())
+		goto closeFile;
+		
 	// Resize the string _body to fit the whole file, and read the content to the body
-	if (request->getMethod() == "GET") {
-		if (_body != "")
-			_body.clear();
-		_body.resize(file_size);
-		file.read(const_cast<char *>(_body.data()), file_size);
-		_body_length = file_size + 2;
-		_last_modified = formatTime(std::localtime(&s->st_mtime));
-	}
+	if (_body != "")
+		_body.clear();
+	_body.resize(file_size);
+	file.read(const_cast<char *>(_body.data()), file_size);
+	_body_length = file_size + 2;
+	_last_modified = formatTime(std::localtime(&s->st_mtime));
+	
+	closeFile:
 	file.close();
 }
 
@@ -402,7 +405,7 @@ void HTTPResponse::searchErrorContent() {
 		std::vector<std::string> &error_pages = parent_server->getErrorPages()[_status_code];
 		// Iterate over all possible error_pages
 		for (std::vector<std::string>::iterator it = error_pages.begin(); it != error_pages.end(); it++) {
-			error_file_path = root + "/" + *it;
+			error_file_path = "." + parent_server->getRoot() + "/" + *it;
 			std::cout << "Trying to assign error_page in server block " << error_file_path << std::endl;
 			if (file_is_valid(error_file_path, F_OK)) {
 				log(std::cout, SUCCESS, "File exists in parent server", error_file_path);
@@ -473,7 +476,6 @@ int HTTPResponse::buildBody() {
 	if (location_block && location_block->getHasReturn() == true)
 		return handleReturn();
 
-	// if (request->getMethod() == "GET")
 	searchContent();
 	if (isError())
 		searchErrorContent();
