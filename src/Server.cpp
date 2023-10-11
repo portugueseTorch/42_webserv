@@ -64,12 +64,10 @@ int Server::setupServer() {
 	memset(_socket_address.sin_zero, 0, sizeof(_socket_address.sin_zero));
 
 	// Bind the socket to the specified port and IP address
-	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
 		log(std::cerr, ERROR, "Unable to bind socket", "");
 		return 1;
 	}
-
 	_is_setup = true;
 	return 0;
 }

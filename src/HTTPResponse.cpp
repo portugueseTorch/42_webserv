@@ -29,7 +29,6 @@ HTTPResponse::~HTTPResponse() {}
 void HTTPResponse::assignLocationBlock() {
 	std::string uri = request->getRequestURI();
 	std::vector<Location> &locations = parent_server->getLocations();
-	std::cout << "Requested URI: " << uri << std::endl;
 
 	// If the parent server has no location blocks, return
 	if (locations.empty()) return;
@@ -37,31 +36,21 @@ void HTTPResponse::assignLocationBlock() {
 	for (std::vector<Location>::iterator it = locations.begin(); it != locations.end(); it++) {
 		int loc_length = it->getLocation().length();
 		if (it->getLocation() == "/") {
-			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
-			location_block->displayLocationBlock();
 			return ;
 		} else if (it->getIsCGI()) {
 			std::string file_name = uri.substr(uri.find_last_of('/'));
 			std::string file_extension = get_file_extension(file_name);
-			std::cout << file_name  << ", " << file_extension << std::endl;
-			std::cout << "URI inside CGI block is " << uri << std::endl;
 			if (is_valid_filename(file_name) && \
 				get_file_extension(file_name) == get_file_extension(it->getLocation())) {
-				log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 				location_block = &(*it);
-				location_block->displayLocationBlock();
-				// request->setURI("/" + it->getIndex().at(0));
 				return ;
 			}
 		} else if (it->getLocation() == uri.substr(0, loc_length) && (uri[loc_length] == '\0' || uri[loc_length] == '/') && !it->getIsCGI()) {
-			log(std::cout, SUCCESS, "Successfully assigned location block to uri", uri);
 			location_block = &(*it);
-			location_block->displayLocationBlock();
 			return ;
 		}
 	}
-	log(std::cout, INFO, "No location block assigned to uri", uri);
 }
 
 std::string HTTPResponse::getTime() {
@@ -212,7 +201,6 @@ void HTTPResponse::readFile(std::string file_path, struct stat *s) {
 int HTTPResponse::readContent(std::string file_path) {
 	// Set the content type
 	_content_type = getContentType(file_path);
-	std::cout << "Trying to read file " << file_path << std::endl;
 
 	// Check if the file exists and we can open it
 	struct stat s;
@@ -254,8 +242,6 @@ void HTTPResponse::handle_autoindex() {
 	else
 		dir_name = root + request->getRequestURI();
 
-	// std::cout << "Request URI: " << request->getRequestURI() << std::endl;
-	// std::cout << "Relevant dir_name for autoindex: " << dir_name << std::endl;
 	dir = opendir(std::string("." + dir_name).c_str());
 	if (!dir) {
 		_status_code = 500;
@@ -276,7 +262,6 @@ background-color: #a5c8f2;\n}\na {\ntext-decoration: none;\n}\na:hover {\ntext-d
 		struct stat sb;
 		std::stringstream ss;
 
-		std::cout << "." + dir_name + "/" + entry->d_name << std::endl;
 		if (stat(std::string("." + dir_name + "/" + entry->d_name).c_str(), &sb) == -1) {
 			_status_code = 500;
 			return;
@@ -287,7 +272,6 @@ background-color: #a5c8f2;\n}\na {\ntext-decoration: none;\n}\na:hover {\ntext-d
 			full_path = request->getRequestURI() + "/" + entry->d_name;
 		else
 			full_path = request->getRequestURI() + entry->d_name;
-		std::cout << full_path << std::endl;
 		to_push += "<tr>\n<td><a href=\"" + full_path + "\">" + entry->d_name + "</a></td>\n";
 		to_push += "<td>" + ss.str() + " Kb" + "</td>\n";
 		to_push += "<td>" + formatTime(std::localtime(&sb.st_mtime)) + "</td>\n";
@@ -312,7 +296,6 @@ void HTTPResponse::searchContent() {
 	bool		found = false;
 
 	// If we have a directory, the file path will need to first check for the index file
-	std::cout << "URI is: " << request->getRequestURI() << std::endl;
 	if (getContentType(uri) == "undefined") {
 		_status_code = 415;
 		return ;
@@ -331,9 +314,7 @@ void HTTPResponse::searchContent() {
 				// Iterate over all possible index files
 				for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); it++) {
 					_file_path = root + uri + "/" + *it;
-					std::cout << "Trying to assign in location block " << _file_path << std::endl;
 					if (file_is_valid(_file_path, F_OK)) {
-						log(std::cout, SUCCESS, "File exists in location block", _file_path);
 						found = true;
 						break;
 					}
@@ -355,9 +336,7 @@ void HTTPResponse::searchContent() {
 				// Iterate over all possible index files
 				for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); it++) {
 					_file_path = root + uri + "/" + *it;
-					std::cout << "Trying to assign in server block " << _file_path << std::endl;
 					if (file_is_valid(_file_path, F_OK)) {
-						log(std::cout, SUCCESS, "File exists in parent server", _file_path);
 						found = true;
 						break;
 					}
@@ -390,9 +369,7 @@ void HTTPResponse::searchErrorContent() {
 		// Iterate over all possible error_pages
 		for (std::vector<std::string>::iterator it = error_pages.begin(); it != error_pages.end(); it++) {
 			error_file_path = root + "/" + *it;
-			std::cout << "Trying to assign error_page in location block " << error_file_path << std::endl;
 			if (file_is_valid(error_file_path, F_OK)) {
-				log(std::cout, SUCCESS, "File exists in location block", error_file_path);
 				found = true;
 				break;
 			}
@@ -403,9 +380,7 @@ void HTTPResponse::searchErrorContent() {
 		// Iterate over all possible error_pages
 		for (std::vector<std::string>::iterator it = error_pages.begin(); it != error_pages.end(); it++) {
 			error_file_path = root + "/" + *it;
-			std::cout << "Trying to assign error_page in server block " << error_file_path << std::endl;
 			if (file_is_valid(error_file_path, F_OK)) {
-				log(std::cout, SUCCESS, "File exists in parent server", error_file_path);
 				found = true;
 				break;
 			}
@@ -445,10 +420,8 @@ bool HTTPResponse::isAllowedMethod() {
 	else if (parent_server)
 		allowed_methods = parent_server->getHTTPMethod();
 	for (std::vector<std::string>::iterator it = allowed_methods.begin(); it != allowed_methods.end(); it++) {
-		if (request->getMethod() == *it) {
-			log(std::cout, INFO, "Method", *it);
+		if (request->getMethod() == *it)
 			return true;
-		}
 	}
 	return false;
 }
