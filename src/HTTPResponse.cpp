@@ -453,14 +453,24 @@ int HTTPResponse::buildBody() {
 	return 0;
 }
 
+int HTTPResponse::buildTimeoutResponse() {
+	_response.clear();
+	_status_code = 408;
+	_response += "HTTP/1.1 408 Request Timeout\r\n";
+	_response += "Server: Webserv/42.0\r\n";
+	_response += "Date: " + getTime() + "\r\n";
+	return 0;
+}
+
 int	HTTPResponse::build() {
 	int res = 0;
 	// Assign the location block for the response
-	if (!kill) {
-		this->assignLocationBlock();
-		if (get_file_extension(request->getRequestURI()) == ".py")
-			request->isCGI = true;
-	}
+	if (kill)
+		return buildTimeoutResponse();
+
+	this->assignLocationBlock();
+	if (get_file_extension(request->getRequestURI()) == ".py")
+		request->isCGI = true;
 
 	// General Headers
 	_protocol = "HTTP/1.1";
@@ -468,19 +478,16 @@ int	HTTPResponse::build() {
 	_server = "Webserv/42.0";
 
 	// Content Headers
-	if (kill) {
-		_status_code = 408;
-	} else {
-		if (!validClientBodySize())
-			_status_code = 413;
-		if (!isAllowedMethod())
-			_status_code = 405;
-		if (request->getProtocol() != "HTTP/1.1")
-			_status_code = 505;
-		
-		// Build response body
-		buildBody();
-	}
+	if (!validClientBodySize())
+		_status_code = 413;
+	if (!isAllowedMethod())
+		_status_code = 405;
+	if (request->getProtocol() != "HTTP/1.1")
+		_status_code = 505;
+	
+	// Build response body
+	buildBody();
+
 
 	std::stringstream ss;
 	ss << _status_code;
@@ -497,9 +504,7 @@ int	HTTPResponse::build() {
 			_response += "Location: " + _new_url + "\r\n";
 	}
 
-	if (kill) {
-		_response += "Content-Length: 0\r\n";
-	} else if (!request->isCGI || isError()) {
+	if (!request->isCGI || isError()) {
 		ss << _body_length;
 		_response += "Content-Length: " + ss.str() + "\r\n";
 		ss.str("");
@@ -524,8 +529,6 @@ int	HTTPResponse::build() {
 
 	_response_length = _header_length + _body_length;
 
-	// std::cout << "Total length of the response is: " << _response_length << " and " << _response.length() << std::endl;
-	// std::cout << _response;
 	return res;
 } 
 
