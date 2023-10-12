@@ -126,7 +126,6 @@ def GET(fileContent = "No file selected") :
     response += '</header>\n'
     response += '<main>\n'
     response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
-    response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
     response += '<label for="file-content">Choose a simple file, text only</label> \
                 <input type="file" name="file-content" id="file-content" accept=".txt,.css,.scss,.html,.js,.svg" required>\n'
     response += '<input class="submit-button" type="submit" value="Upload">\n'

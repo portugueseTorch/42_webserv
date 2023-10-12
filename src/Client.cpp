@@ -114,8 +114,10 @@ Content-Length: 21\r\n\r\n408 Request Timeout\r\n";
  * @return int Returns 0 on success, and 1 on failure
  */
 int Client::buildHTTPResponse() {
-	if (request)
+	if (request) {
 		log(std::cout, INFO, "Requested URI", request->getRequestURI());
+		log(std::cout, INFO, "Method", request->getMethod());
+	}
 	response = new HTTPResponse(request, parent_server);
 	if (toKill) response->toKill = true;
 	response->build();

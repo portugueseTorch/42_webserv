@@ -4,7 +4,6 @@ import response as fullResponse
 import readFile
 import navbar
 import errorPage
-import sys
 from urllib.parse import unquote
 
 def clean_input(input_str):
@@ -52,8 +51,6 @@ def POST() :
     List = [clean_input(item) for item in List]
 
     List = [item.rstrip() for item in List]
-
-    sys.stderr.write(f'{name}, {age}, {location}, {email}')
 
     if name and age and location and email:
         database = 'www/test.csv'

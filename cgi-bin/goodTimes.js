@@ -90,22 +90,23 @@ const uploadFile = ((event) => {
 		// Convert Uint8Array to hexadecimal string
 		const hexString = Array.from(uint8Array).map(byte => byte.toString(16).padStart(2, '0')).join('');
 
-		try {
-			const response = await fetch("goodTimes.py", {
-				method: 'POST',
-				body: formData
-			});
-
+		fetch("goodTimes.py", {
+			method: 'POST',
+			body: formData
+		})
+		.then(response  => {
 			if (!response.ok) {
 				throw new Error('Check network tab');
 			}
-			
-			const textData = await response.text();
-
-			document.body.innerHTML = textData;
-		} catch (error) {
+			return response;
+		})
+		.then(response => response.text())
+		.then(data => {
+			document.body.innerHTML = data;
+		})
+		.catch(error => {
 			console.error(error);
-		}
+		});
 	};
 
 	reader.readAsArrayBuffer(file);
