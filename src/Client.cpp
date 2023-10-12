@@ -12,7 +12,7 @@ Client::Client() {
 	_client_id = num_clients;
 	_status_code = 0;
 	_last_exchange = time(NULL);
-	kill = false;
+	toKill = false;
 }
 
 Client::~Client() {
@@ -116,8 +116,7 @@ Content-Length: 21\r\n\r\n408 Request Timeout\r\n";
 int Client::buildHTTPResponse() {
 	if (request) log(std::cout, INFO, "Requested URI", request->getRequestURI());
 	response = new HTTPResponse(request, parent_server);
-	if (kill)
-		response->kill = true;
+	if (toKill) response->toKill = true;
 	response->build();
 	return 0;
 }

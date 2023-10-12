@@ -359,7 +359,7 @@ int ServerEngine::readHTTPRequest(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	if (!client.kill && assignServer(client)) {
+	if (!client.toKill && assignServer(client)) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
@@ -373,7 +373,7 @@ int ServerEngine::sendResponse(Client &client) {
 
 	client.updateTime();
 
-	if (!client.kill && client.request->getKeepAlive()) {
+	if (!client.toKill && client.request->getKeepAlive()) {
 		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
 		client.reset();
 	} else {
@@ -449,7 +449,7 @@ void ServerEngine::checkConnectionTimeouts() {
 			ss << it->second.getClientFD();
 			log(std::cout, INFO, "Client timed out on fd", ss.str());
 			modifySet(it->first, READ_SET, MOD_SET);
-			it->second.kill = true;
+			it->second.toKill = true;
 		}
 	}
 }

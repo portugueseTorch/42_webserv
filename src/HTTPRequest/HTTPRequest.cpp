@@ -68,9 +68,10 @@ void HTTPRequest::process(std::string request) {
 
 		if (!_contentLength && _body.empty() && !_chunked && headersSet()) {
 			fullyParsed = true;
-		} else if (_finalChunk) {
+		} else if (_finalChunk && headersSet()) {
+			// log(std::cout, SUCCESS, "second", "");
 			fullyParsed = true;
-		} else if (_contentLength && _body.length() >= _contentLength) {
+		} else if (_contentLength && _body.length() >= _contentLength && headersSet()) {
 			_body = _body.length() > _contentLength ? \
 					_body.substr(0, _contentLength): \
 					_body;

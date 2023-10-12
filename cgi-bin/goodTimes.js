@@ -1,7 +1,6 @@
 function clearOutput() {
 	const fileContent = document.getElementById("file-content-text");
 	fileContent.innerHTML = "No file selected";
-	console.log('aqui')
 }
 
 function resetBorders() {
@@ -15,6 +14,13 @@ const deleteFile = ((fileName, parentElement) => {
 
 	resetBorders();
 
+	let loader = document.createElement('p');
+	loader.style.color = "red";
+	loader.style.textAlign = "center";
+	loader.id = "loader";
+	loader.textContent = "Loading...";
+	let main = document.querySelector('main');
+	main.insertBefore(loader, main.childNodes[4]);
 	fetch('goodTimes.py', {
 		method: 'DELETE',
 		body: 'webservFileName=' + fileName
@@ -28,9 +34,9 @@ const deleteFile = ((fileName, parentElement) => {
 	.then(response => response.text())
 	.then(data => {
 		document.body.innerHTML = data;
-		// window.location.reload();
 	})
 	.catch(error => {
+		loader.remove();
 		console.error(error);
 		parentElement.style.border = '2px solid red';
 		const fileContent = document.getElementById("file-content-text");
@@ -97,7 +103,6 @@ const uploadFile = ((event) => {
 			const textData = await response.text();
 
 			document.body.innerHTML = textData;
-			// window.location.reload();
 		} catch (error) {
 			console.error(error);
 		}

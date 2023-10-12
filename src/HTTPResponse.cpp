@@ -19,7 +19,7 @@ HTTPResponse::HTTPResponse(HTTPRequest *request, Server *parent_server) {
 	else
 		_status_code = 500;
 	_content_type = "text/plain";
-	kill = false;
+	toKill = false;
 }
 
 HTTPResponse::~HTTPResponse() {}
@@ -186,15 +186,18 @@ void HTTPResponse::readFile(std::string file_path, struct stat *s) {
 		return ;
 	}
 
+	if (request->isCGI && !isError())
+		goto closeFile;
+		
 	// Resize the string _body to fit the whole file, and read the content to the body
-	if (request->getMethod() == "GET") {
-		if (_body != "")
-			_body.clear();
-		_body.resize(file_size);
-		file.read(const_cast<char *>(_body.data()), file_size);
-		_body_length = file_size + 2;
-		_last_modified = formatTime(std::localtime(&s->st_mtime));
-	}
+	if (_body != "")
+		_body.clear();
+	_body.resize(file_size);
+	file.read(const_cast<char *>(_body.data()), file_size);
+	_body_length = file_size + 2;
+	_last_modified = formatTime(std::localtime(&s->st_mtime));
+	
+	closeFile:
 	file.close();
 }
 
@@ -379,7 +382,7 @@ void HTTPResponse::searchErrorContent() {
 		std::vector<std::string> &error_pages = parent_server->getErrorPages()[_status_code];
 		// Iterate over all possible error_pages
 		for (std::vector<std::string>::iterator it = error_pages.begin(); it != error_pages.end(); it++) {
-			error_file_path = root + "/" + *it;
+			error_file_path = "." + parent_server->getRoot() + "/" + *it;
 			if (file_is_valid(error_file_path, F_OK)) {
 				found = true;
 				break;
@@ -446,7 +449,6 @@ int HTTPResponse::buildBody() {
 	if (location_block && location_block->getHasReturn() == true)
 		return handleReturn();
 
-	// if (request->getMethod() == "GET")
 	searchContent();
 	if (isError())
 		searchErrorContent();
@@ -454,18 +456,21 @@ int HTTPResponse::buildBody() {
 }
 
 int HTTPResponse::buildTimeoutResponse() {
-	_response.clear();
-	_status_code = 408;
-	_response += "HTTP/1.1 408 Request Timeout\r\n";
-	_response += "Server: Webserv/42.0\r\n";
-	_response += "Date: " + getTime() + "\r\n";
+	_response = "HTTP/1.1 408 Request Timeout\r\nServer: Webserv/42.0\r\nContent-Type: text/plain\r\nKeep-Alive: close\r\nContent-Length: 19\r\n\r\n";
+	_body = "408 Request Timeout";
+	_header_length = _response.length();
+	_body_length = _body.length();
+	_response += _body + "\r\n";
+
+	_response_length = _header_length + _body_length;
 	return 0;
 }
 
 int	HTTPResponse::build() {
+
 	int res = 0;
 	// Assign the location block for the response
-	if (kill)
+	if (toKill)
 		return buildTimeoutResponse();
 
 	this->assignLocationBlock();
@@ -509,10 +514,10 @@ int	HTTPResponse::build() {
 		_response += "Content-Length: " + ss.str() + "\r\n";
 		ss.str("");
 		ss.clear();
+		_response += "Content-Type: " + _content_type + "\r\n";
 	}
 
-	_response += "Content-Type: " + _content_type + "\r\n";
-	if ((request && (!request->isCGI || isError())) || kill)
+	if ((request && (!request->isCGI || isError())) || toKill)
 		_response += "\r\n";
 
 	_header_length = _response.length();
@@ -527,15 +532,30 @@ int	HTTPResponse::build() {
 	} else if (_body != "" && request && request->getMethod() != "HEAD")
 		_response += _body + "\r\n";
 
+	if (res) {
+		_response = "HTTP/1.1 408 Request Timeout\r\nServer: Webserv/42.0\r\nContent-Type: text/plain\r\nKeep-Alive: close\r\nContent-Length: 19\r\n\r\n";
+		_body = "408 Request Timeout";
+		_header_length = _response.length();
+		_body_length = _body.length();
+		_response += _body + "\r\n";
+
+		_response_length = _header_length + _body_length;
+		return 0;
+	}
+
 	_response_length = _header_length + _body_length;
 
 	return res;
-} 
+}
 
 int HTTPResponse::buildCGIResponse() {
 	int pipe_fd[2];
 	int pid;
 
+	struct timeval timeout = {2, 0};
+	int rc;
+	fd_set set;
+	
 	_response.clear();
 	// Create the pipe
 	if (pipe(pipe_fd) == -1) {
@@ -551,6 +571,7 @@ int HTTPResponse::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
+		close(pipe_fd[1]);
 
 		// char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
 		std::string script_name = location_block->getRoot().substr(1) + "/" + location_block->getIndex().at(0);
@@ -587,38 +608,46 @@ int HTTPResponse::buildCGIResponse() {
 		queryAndBody.insert(queryAndBody.end(), splitBody.begin(), splitBody.end());
 		
 		unsigned char **envp = vectToArr(queryAndBody);
-		// std::vector<std::string>::iterator it = queryAndBody.begin();
-		// log(std::cerr, INFO, "Printing body", "");
-		// for (; it != queryAndBody.end(); it++) {
-		// 	std::cerr << *it << std::endl;
-		// }
+
 		execve("/usr/bin/python3", args, (char **)envp);
 		delete []envp;
 		exit(0);
 	} else {
+		FD_ZERO(&set);
+		FD_SET(pipe_fd[0], &set);
 		close(pipe_fd[1]);
-		wait(NULL);
-		unsigned char msg[MAX_LENGTH + 1] = "";
-		if (_body != "")
-			_body.clear();
-		std::stringstream ss;
+		rc = select(pipe_fd[0] + 1, &set, NULL, NULL, &timeout);
 
-		int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
-		while (bytes != 0) {
-			if (bytes == -1) {
-				log(std::cerr, ERROR, "read() call failed", "");
-				return 1;
+		if (rc == -1) {
+			std::cerr << "ups\n";
+		} else if (rc == 0) {
+			kill(pid, SIGKILL);
+			toKill = true;
+			close(pipe_fd[0]);
+			return 1;
+		} else {
+			wait(NULL);
+			unsigned char msg[MAX_LENGTH + 1] = "";
+			if (_body != "")
+				_body.clear();
+			std::stringstream ss;
+
+			int bytes = read(pipe_fd[0], msg, MAX_LENGTH);
+			while (bytes != 0) {
+				if (bytes == -1) {
+					log(std::cerr, ERROR, "read() call failed", "");
+					return 1;
+				}
+				std::string toAdd(reinterpret_cast<const char*>(msg), bytes);
+				_body += toAdd;
+				bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 			}
-			std::string toAdd(reinterpret_cast<const char*>(msg), bytes);
-			// std::cerr << toAdd << std::endl;
-			_body += toAdd;
-			bytes = read(pipe_fd[0], msg, MAX_LENGTH);
 		}
-
 		_header_length = _response.size();
 		_body_length = _body.size() + 2;
 		_response += _body + "\r\n";
 		_response_length = _header_length + _body_length;
+		close(pipe_fd[0]);
 	}
 	return 0;
 }

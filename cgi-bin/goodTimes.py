@@ -1,7 +1,5 @@
 import os
-import stat
 import readFile
-import sys
 import html
 import navbar
 import response as fullResponse
@@ -26,7 +24,6 @@ def DELETE() :
                 perm = st.st_mode
                 if (perm == 33060):
                     raise PermissionError()
-                sys.stderr.write(f'perm is {perm}\n')
                 os.remove(filePath)
             else:
                 status = 404
@@ -57,26 +54,17 @@ def POST() :
     file_content = ""
 
     for part in parts:
-        # sys.stderr.write(f'part: {part}')
         if not part or part.isspace():
             continue
         if 'name="content"' in part:
             inContent = False
             # Extract the file content
             subparts = part.split('\r')
-            num_lines = len(subparts)
-            for i, line in enumerate(subparts):
-                sys.stderr.write(f'line: {line}')
+            for line in subparts:
                 if line.isspace() and not inContent:
                     continue
                 if 'Content' in line:
                     continue
-                # if file_name is not None and file_name in line:
-                #     sys.stderr.write(f'aqui')
-                #     if i + 1 < num_lines:
-                #         next_line = subparts[i + 1]
-                #         if next_line == "\n":
-                #             continue
                 else:
                     if not inContent:
                         line = line.strip()
@@ -157,7 +145,7 @@ def GET(fileContent = "No file selected") :
     response += '</ul>\n'
     response += '</div>\n'
 
-    response += '<div class="file-contents">\n'
+    response += '<div class="file-contents" id="file-content">\n'
     response += '<h2 onclick="clearOutput()">File Content</h2>\n'
     fileContent = html.escape(fileContent)
     fileContent = fileContent.replace('\n', '<br />')
