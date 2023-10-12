@@ -1,6 +1,6 @@
 import os
 import fallback
-import test
+import users
 import goodTimes
 import displayFile
 
@@ -8,7 +8,7 @@ if __name__ == "__main__" :
 	path = os.environ.get('webservPath')
 
 	path_to_function = {
-		"test.py": test.response,
+		"users.py": users.response,
 		"goodTimes.py": goodTimes.response,
 		"displayFile.py": displayFile.response,
 	}

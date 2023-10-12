@@ -19,7 +19,7 @@ RESET	=	\033[0m
 ####### COMPILER #######
 CC		=	c++
 FLAGS	=	-Wall -Wextra -Werror -std=c++98 -g
-# FLAGS	+=	-fsanitize=address -g
+FLAGS	+=	-fsanitize=address -g
 
 ####### DIRECTORIES #######
 OBJ_DIR	=	./obj
@@ -43,7 +43,7 @@ debug: $(NAME)
 
 $(NAME): $(OBJ)
 	@printf "$(BLUE)[Compiling]     "$(NAME)"$(RESET)\n"
-	@$(CC) $(OBJ) $(FLAGS) -o $(NAME)
+	@$(CC) $(OBJ) $(FLAGS) -I$(INC_DIR) -o $(NAME)
 	@printf "$(GREEN_B)[$(NAME) ready to use]\n$(RESET)"
 
 $(OBJ_DIR)/%.o: src/%.cpp | $(OBJ_DIR)

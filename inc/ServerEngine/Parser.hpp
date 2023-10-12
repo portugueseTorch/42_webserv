@@ -39,7 +39,7 @@ class Node {
 
 class Parser {
 	public:
-		Parser(std::list<Tok> lex);
+		Parser(Lexer *lex);
 		~Parser();
 
 		int parse();
@@ -47,6 +47,7 @@ class Parser {
 		const std::list<Node> &getNodes() const;
 
 	private:
+		Lexer *originalLexer;
 		std::list<Node> _nodes;
 		std::list<Tok>::iterator it;
 		std::list<Tok> _lex;

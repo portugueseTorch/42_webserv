@@ -1,0 +1,82 @@
+.center {
+	text-align: center;
+	margin-block: 20px;
+}
+
+ul {
+	list-style: none;
+	padding: 0;
+	margin: 0 auto;
+	display: block;
+	width: fit-content;
+}
+
+li {
+	display: flex;
+	align-items: center;
+	margin-bottom: 10px;
+}
+
+.mail-icon {
+	margin-left: 10px;
+	margin-top: 4px;
+}
+
+.form-container {
+	display: flex;
+	justify-content: space-around;
+	align-items: flex-start;
+	margin-bottom: 20px;
+	max-width: 800px;
+	margin: auto;
+}
+
+.form {
+	flex: 1;
+	max-width: 300px;
+	font-family: Arial, sans-serif;
+}
+
+.add-container form {
+	min-width: 210px;
+}
+
+.form label {
+	display: block;
+}
+
+.form input,
+.form select {
+	width: calc(100% - 16px);
+	padding: 8px;
+	margin-bottom: 5px;
+	box-sizing: border-box;
+	font-family: inherit;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+.form select {
+	background-color: #fff;
+	margin-bottom: 20px;
+	margin-top: 14px;
+}
+
+.submit-button {
+	padding: 10px 20px;
+	background-color: #4CAF50;
+	border: none;
+	color: white;
+	cursor: pointer;
+	font-size: 16px;
+}
+
+.submit-button:hover {
+	background-color: #45a049;
+}
+
+.delete-container form {
+	width: 210px;
+	font-family: Arial, sans-serif;
+}
+

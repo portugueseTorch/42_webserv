@@ -1,35 +1,60 @@
 #include "Webserv.hpp"
 
+std::string* 	nonePointer = NULL;
+std::string*	gContent = NULL;
+ServerEngine* 	gServer = NULL;
+
 int main(int argc, char **argv) {
 	if (argc > 2) {
 		std::cout << "Error: Usage: ./webserv [config_file_path]" << std::endl;
 		return 1;
 	}
 
-	try {
-		std::string content = readConfigurationFile(argc, argv);
+	gContent = new std::string(readConfigurationFile(argc, argv));
+	if (!gContent)
+		return 1;
 
-		Lexer lex;
-		if (lex.tokenize(content))
-			return 1;
-
-		Parser parser(lex.getTokens());
-		if (parser.parse())
-			return 1;
-
-		ServerEngine engine(parser.getNodes());
-		if (engine.configureServers())
-			return 1;
-
-		if (engine.setupServers())
-			return 1;
-
-		engine.runServers();
-
-	} catch (std::exception &e) {
-		std::cerr << e.what() << std::endl;
+	// Lex config file
+	Lexer *lex = new Lexer;
+	if (lex->tokenize(*gContent)) {
+		cleanUp(gContent, gServer, lex);
 		return 1;
 	}
 
+	// Build pseudo-AST
+	Parser *parser = new Parser(lex);
+	if (parser->parse()) {
+		cleanUp(gContent, gServer, parser);
+		return 1;
+	}
+
+	// Configure the servers with the information from the parser
+	ServerEngine *engine = new ServerEngine(parser);
+	gServer = engine;
+
+	if (engine->configureServers()) {
+		cleanUp(gContent, gServer, nonePointer);
+		return 1;
+	}
+
+	// Boot servers
+	if (engine->setupServers()) {
+		cleanUp(gContent, gServer, nonePointer);
+		return 1;
+	}
+
+	signal(SIGINT, handler);
+
+	engine->runServers();
+
+	// delete content and engine;
+	cleanUp(gContent, gServer, nonePointer);
+
 	return 0;
+}
+
+void handler(int signal) {
+	std::cerr << std::endl;
+	cleanUp(gContent, gServer, nonePointer);
+	exit(signal);
 }

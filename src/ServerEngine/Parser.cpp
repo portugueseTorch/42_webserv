@@ -10,13 +10,17 @@ void Node::display() {
 
 //////////////////////////////////////////////////
 
-Parser::Parser(std::list<Tok> lex) {
-	_lex = lex;
+Parser::Parser(Lexer *lex) {
+	originalLexer = lex;
+	_lex = lex->getTokens();
 	this->it = _lex.begin();
 }
 
 Parser::~Parser() {
 	_lex.clear();
+	if (originalLexer)
+		delete originalLexer;
+	originalLexer = NULL;
 	_nodes.clear();
 }
 

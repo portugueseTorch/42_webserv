@@ -1,5 +1,6 @@
 import os
 import stat
+import readFile
 import sys
 import html
 import navbar
@@ -119,22 +120,21 @@ def POST() :
 
 def GET(fileContent = "No file selected") :
     response = '<!DOCTYPE html>\n'
-    response = '<html>\n'
-
+    
+    response += '<html>\n'
     response += '<head>\n'
-    response += '<link type="text/css" rel="stylesheet" href="/cgi-bin/goodTimes.css" />\n'
     response += '<link type="text/css" rel="stylesheet" href="/style.css" />\n'
     response += '<link type="text/css" rel="stylesheet" href="/resources/navbar.css" />\n'
+    response += '<style>\n'
+    response += readFile.text('cgi-bin/goodTimes.css')
+    response += '\n</style>'
     response += '<meta charset="UTF-8">\n'
-    response += '<title>Good Times</title>\n'
+    response += '<title>Resources</title>\n'
     response += '</head>\n'
 
     response += '<body>\n'
-
     response += '<header>\n'
-    urls = ['/', '/cgi-bin/goodTimes.py', '/about']
-    texts = ['Home', 'Resources', 'About']
-    response += navbar.text(urls, texts)
+    response += navbar.text()
     response += '</header>\n'
     response += '<main>\n'
     response += '<form class="upload-form" onsubmit="uploadFile(event)">\n'
@@ -165,7 +165,9 @@ def GET(fileContent = "No file selected") :
     response += '</div>\n'
 
     response += '</main>\n'
-    response += '<script src="/cgi-bin/goodTimes.js"></script>\n'
+    response += '<script>\n'
+    response += readFile.text('cgi-bin/goodTimes.js')
+    response += '\n</script>\n'
     response += '</body>\n'
     response += "</html>\n"
 
