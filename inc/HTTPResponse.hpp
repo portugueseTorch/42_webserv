@@ -20,6 +20,7 @@ class HTTPResponse
 
 		int				build();								// builds the HTTP response
 		int				buildBody();							// builds the body of the HTTP response, if any
+		int				buildTimeoutResponse();					// builds the timeout response
 
 		Server			*parent_server;							// parent server of the client
 		Location		*location_block;						// location block of the client

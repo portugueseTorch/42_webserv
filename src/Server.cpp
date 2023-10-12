@@ -46,13 +46,13 @@ int Server::setupServer() {
 	}
 
 	// Set socket to be non-blocking
-	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
+	int flags = fcntl(_server_fd, F_GETFL, 0);
 	if (flags == -1) {
 		log(std::cerr, ERROR, "fcntl() call 	engine.displayServers();failed", "");
 		return 1;
 	}
 
-	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
+	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
 		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
@@ -64,12 +64,10 @@ int Server::setupServer() {
 	memset(_socket_address.sin_zero, 0, sizeof(_socket_address.sin_zero));
 
 	// Bind the socket to the specified port and IP address
-	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
 		log(std::cerr, ERROR, "Unable to bind socket", "");
 		return 1;
 	}
-
 	_is_setup = true;
 	return 0;
 }
@@ -403,7 +401,6 @@ int Server::setIndex(std::list<Node>::iterator &it) {
 		_index.clear();
 		return 1;
 	}
-
 	return 0;
 }
 

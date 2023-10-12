@@ -113,9 +113,8 @@ int ServerEngine::setupServers() {
 		if (it->setupServer()) {
 			std::stringstream out;
 			out << it->getServerID();
-			std::string stringID = out.str();
 			
-			std::string err_msg = "Failure setting up server block " + stringID;
+			std::string err_msg = "Failure setting up server block " + out.str();
 			log(std::cerr, ERROR, err_msg, "");
 		} else
 			all_failed = false;
@@ -205,7 +204,6 @@ int ServerEngine::assignServer(Client &client) {
 	bool exact_match_found = false;
 	std::vector<Server*> possible_servers;
 	std::vector<Server*> backup_servers;
-	// std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
 
 	/**
 	 * First check for the Port and IP Address of the request against each of the server block.
@@ -229,43 +227,27 @@ int ServerEngine::assignServer(Client &client) {
 		//	If only one was find, assign it to the client and go to location assignment
 		if (possible_servers.size() == 1) {
 			client.parent_server = possible_servers[0];
-			goto display_info;
+			return 0;
 		}
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = possible_servers.begin(); it != possible_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto display_info;
+				return 0;
 			}
 		}
 	} else {
 		// If no appropriate server was found, the default server will handle the request
 		if (backup_servers.size() == 0)
-			goto display_info;
+			return 0;
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = backup_servers.begin(); it != backup_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto display_info;
+				return 0;
 			}
 		}
 	}
-
-	display_info:
-		std::stringstream ss;
-		std::string clientStringID;
-		std::string parentStringID;
-
-		ss << client.getClientID();
-		clientStringID = ss.str();
-		// std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
-		ss.str("");
-		ss.clear();
-		ss << client.parent_server->getServerID();
-		parentStringID = ss.str();
-		// log(std::cout, SUCCESS, client_id_string, parentStringID);
-		// client.parent_server->displayServer();
-
 	return 0;
 }
 
@@ -302,7 +284,6 @@ int ServerEngine::acceptNewConnection(Server &server) {
 }
 
 int ServerEngine::closeConnection(int fd) {
-	//Store fd as stringstream
 	std::stringstream ss;
 	ss << fd;
 
@@ -315,13 +296,13 @@ int ServerEngine::closeConnection(int fd) {
 	// Remove fd from its respective map
 	if (_server_map.find(fd) != _server_map.end()) {
 		_server_map.erase(fd);
-		log(std::cout, INFO, "Server removed from server map on fd", ss.str());
+		log(std::cout, WARNING, "Server removed from server map on fd", ss.str());
 	}
 	if (_client_map.find(fd) != _client_map.end()) {
 		// Reset the client
 		_client_map[fd].reset();
 		_client_map.erase(fd);
-		log(std::cout, INFO, "Client removed from client map on fd", ss.str());
+		log(std::cout, WARNING, "Client removed from client map on fd", ss.str());
 	}
 	// Close file descriptor
 	close(fd);
@@ -362,32 +343,10 @@ int ServerEngine::readHTTPRequest(Client &client) {
 	if (client.request && client.request->fullyParsed)
 		return 0;
 
-	ss.str("");
-	ss.clear();
-	ss << client.getClientFD();
-	// log(std::cout, SUCCESS, "Message received on client socket", ss.str());
 	std::string toParse(reinterpret_cast<const char*>(buf), ret);
-	// std::cout << toParse << std::endl;
 	client.parseHTTPRequest(toParse);
-	if (client.request->fullyParsed) {
-		// client.request->displayParsedRequest();
+	if (client.request->fullyParsed)
 		modifySet(fd, READ_SET, MOD_SET);
-	}
-	return 0;
-}
-
-/**
- * @brief sends the regular HTML response to a regular HTML request
- * from CLIENT
- * 
- * @param client Client to which the request reffers
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendRegResponse(Client &client) {
-	send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0);
-	if (client.response->toKill)
-		client.toKill = true;
-	std::cout << "Message Sent!" << std::endl;
 	return 0;
 }
 
@@ -404,12 +363,13 @@ int ServerEngine::sendResponse(Client &client) {
 		log(std::cerr, ERROR, "Failure assigning server", "");
 		return 1;
 	}
-	// Attempt to build a response
 	if (client.buildHTTPResponse())
 		return 1;
 
-	if (sendRegResponse(client))
+	if (send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0) == -1) {
+		log(std::cerr, ERROR, "send() call failed", "");
 		return 1;
+	}
 
 	client.updateTime();
 
@@ -418,9 +378,7 @@ int ServerEngine::sendResponse(Client &client) {
 		client.reset();
 	} else {
 		closeConnection(client.getClientFD());
-		return 0;
 	}
-
 
 	return 0;
 }
@@ -452,7 +410,6 @@ void ServerEngine::modifySet(int fd, int set, int op) {
 
 int ServerEngine::setupSets() {
 	std::map<int,Server*> assigned_servers;
-	// Initialize sets
 	FD_ZERO(&_read_set);
 	FD_ZERO(&_write_set);
 
@@ -479,7 +436,6 @@ int ServerEngine::setupSets() {
 		log(std::cout, INFO, first_part, ss.str());
 		_server_map[it->getServerFD()] = *it;
 
-		// Add server fd to the set of read fd
 		modifySet(it->getServerFD(), READ_SET, ADD_SET);
 	}
 
@@ -487,10 +443,11 @@ int ServerEngine::setupSets() {
 }
 
 void ServerEngine::checkConnectionTimeouts() {
-	// std::cout << "Checking for timeouts\n" << std::endl;
 	for (std::map<int,Client>::iterator it = _client_map.begin(); it != _client_map.end(); it++) {
 		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
-			// std::cout << "Preparing to send timeout...\n" << std::endl;
+			std::stringstream ss;
+			ss << it->second.getClientFD();
+			log(std::cout, INFO, "Client timed out on fd", ss.str());
 			modifySet(it->first, READ_SET, MOD_SET);
 			it->second.toKill = true;
 		}
@@ -532,13 +489,11 @@ int ServerEngine::runServers() {
 				}
 				// If it's a client, accept new connection
 				else if (_client_map.count(fd)) {
-					// log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}
 			} else if (FD_ISSET(fd, &write_cpy)) {
 				if (_client_map.count(fd)) {
-					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (sendResponse(_client_map[fd]))
 						return 1;
 				}
