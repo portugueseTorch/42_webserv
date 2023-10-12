@@ -61,7 +61,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 	if (argc != 2) {
 		file_name = "conf/default.conf";
 		log(std::cerr, WARNING, "No config_file provided", "");
-		log(std::cerr, INFO, "Assuming default config_file...", "");
+		log(std::cerr, INFO, "Assuming default config_file", "");
 	} else
 		file_name = argv[1];
 
@@ -69,7 +69,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 	if (!in_file.is_open()) {
 		if (file_name != "conf/default.conf") {
 			log(std::cerr, ERROR, "Unable to open file", file_name);
-			log(std::cerr, WARNING, "Assuming default config_file...", "");
+			log(std::cerr, WARNING, "Assuming default config_file", "");
 		}
 		in_file.open("conf/default.conf");
 		if (!in_file.is_open()) {
@@ -105,7 +105,7 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 			break;
 		
 		case FATAL:
-			stream << RED << "[FATAL]:\t\t" << msg;
+			stream << RED << "[FATAL]:\t" << msg;
 			break;
 
 		case INFO:

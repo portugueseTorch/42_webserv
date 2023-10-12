@@ -66,9 +66,6 @@ class ServerEngine {
 
 		// Functions
 		void	handleInvalidInput(std::list<Node>::iterator &it);
-
-		int		sendErrResponse(Client &client);
-		int 	sendRegResponse(Client &client);
 };
 
 #endif
