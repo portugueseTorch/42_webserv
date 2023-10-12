@@ -232,16 +232,15 @@ bool HTTPRequest::validMethod(std::string & headerLine) {
 	if (alreadyExists(_method))
 		return false;
 	
+	_method = headerLine.substr(0, headerLine.find(" "));
+	headerLine.erase(0, headerLine.find(" ") + 1);
 	if (headerLine.find("GET") == 0 || \
 		headerLine.find("HEAD") == 0 || \
 		headerLine.find("POST") == 0 || \
 		headerLine.find("DELETE") == 0) {
-		_method = headerLine.substr(0, headerLine.find(" "));
-		headerLine.erase(0, headerLine.find(" ") + 1);
-		return true;
+		_statusCode = 200;
 	}
-	_statusCode = 400;
-	return false;
+	return true;
 }
 
 bool HTTPRequest::validRequestURI(std::string & headerLine) {
@@ -373,10 +372,7 @@ bool HTTPRequest::addParam(std::string headerLine) {
 int	HTTPRequest::getLineType(std::string headerLine) {
 	std::string temp(headerLine);
 	std::transform(temp.begin(), temp.end(), temp.begin(), ::tolower);
-	if (temp.find("get ") == 0 || \
-		temp.find("head ") == 0 || \
-		temp.find("post ") == 0 || \
-		temp.find("delete ") == 0)
+	if (_method.empty())
 		return REQUEST_LINE;
 	if (temp.find("content-length:") == 0)
 		return CONTENT_LENGTH;
