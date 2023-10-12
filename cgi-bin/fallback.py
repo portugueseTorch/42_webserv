@@ -1,4 +1,3 @@
-import os
 import response as fullResponse
 import readFile
 import navbar

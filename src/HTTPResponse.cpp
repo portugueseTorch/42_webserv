@@ -532,16 +532,8 @@ int	HTTPResponse::build() {
 	} else if (_body != "" && request && request->getMethod() != "HEAD")
 		_response += _body + "\r\n";
 
-	if (res) {
-		_response = "HTTP/1.1 408 Request Timeout\r\nServer: Webserv/42.0\r\nContent-Type: text/plain\r\nKeep-Alive: close\r\nContent-Length: 19\r\n\r\n";
-		_body = "408 Request Timeout";
-		_header_length = _response.length();
-		_body_length = _body.length();
-		_response += _body + "\r\n";
-
-		_response_length = _header_length + _body_length;
-		return 0;
-	}
+	if (res)
+		return buildTimeoutResponse();
 
 	_response_length = _header_length + _body_length;
 
