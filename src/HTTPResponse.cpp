@@ -600,6 +600,7 @@ int HTTPResponse::buildCGIResponse() {
 	if (pid == 0) {
 		dup2(pipe_fd[1], STDOUT_FILENO);
 		close(pipe_fd[0]);
+		close(pipe_fd[1]);
 
 		// char *args[] = { (char *)"/usr/bin/python3", strdup(_file_path.c_str()), NULL };
 		char *args[] = { (char *)"/usr/bin/python3", (char *)"cgi-bin/main.py", NULL };
@@ -651,6 +652,7 @@ int HTTPResponse::buildCGIResponse() {
 			std::cout << "houve um timeout\n";
 			kill(pid, SIGKILL);
 			toKill = true;
+			close(pipe_fd[0]);
 			return 1;
 		} else {
 			wait(NULL);
@@ -674,6 +676,7 @@ int HTTPResponse::buildCGIResponse() {
 		_body_length = _body.size() + 2;
 		_response += _body + "\r\n";
 		_response_length = _header_length + _body_length;
+		close(pipe_fd[0]);
 	}
 	return 0;
 }
