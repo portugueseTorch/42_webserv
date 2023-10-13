@@ -80,6 +80,15 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	}
 }
 
+bool	different_server_names(std::vector<std::string> &s1, std::vector<std::string> &s2) {
+	if (s1.empty() && s2.empty()) return false;
+
+	size_t i = 0, j = 0;
+	for (; i < s1.size() && j < s2.size(); i++, j++)
+		if (s1.at(i) == s2.at(j)) return false;
+	return true;
+}
+
 /**
  * @brief Configures the server blocks according to the config_file by iterating
  * over the node list [_nodes] created by the parser
@@ -96,6 +105,18 @@ int ServerEngine::configureServers() {
 			_num_servers++;
 			if (it == _nodes.end())
 				break;
+		}
+	}
+
+	// Check if any server_blocks have the same listen directive + server_name directive
+	for (size_t i = 0; i < _servers.size(); i++) {
+		for (size_t j = i + 1; j < _servers.size(); j++) {
+			if (_servers[i].getPort() == _servers[j].getPort() && \
+				_servers[i].getIPAddress() == _servers[j].getIPAddress() && \
+				!different_server_names(_servers[i].getServerNames(), _servers[j].getServerNames())) {
+					log(std::cerr, ERROR, "Server blocks with the same listen and server_name detected", "");
+					return 1;
+				}
 		}
 	}
 	return 0;
@@ -178,6 +199,10 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 			it--;
 			break;
 		}
+	}
+	if (!new_server.listenSpecified()) {
+		log(std::cerr, ERROR, "listen directive not specified", "");
+		return 1;
 	}
 	_servers.push_back(new_server);
 	return 0;
