@@ -25,6 +25,7 @@ class Server {
 		std::string								getRoot() { return _root; }
 		bool									getAutoindex() { return _autoindex; }
 		bool									clientBodySizeSet() { return _body_size_specified; }
+		bool									listenSpecified() { return _listen_specified; }
 		std::vector<std::string>				&getIndex() { return _index; }
 		std::vector<std::string>				&getServerNames() { return _server_names; }
 		std::vector<std::string>				&getHTTPMethod() { return _http_method; }
@@ -52,6 +53,7 @@ class Server {
 		static int num_servers;
 
 	private:
+		bool									_listen_specified;		// flag to check if listen directive was specified
 		int										_server_id;				// ID of the server for management purposes
 		int										_server_fd;				// file descriptor of the server socket
 		struct sockaddr_in						_socket_address;		// struct containing the address info of the server_socket

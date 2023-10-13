@@ -16,6 +16,7 @@ Server::Server() {
 	std::string method_array[] = { "GET", "HEAD", "POST", "DELETE" };
 	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
 	_http_method = http_method;
+	_listen_specified = false;
 }
 
 Server::~Server() {
@@ -232,6 +233,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 		_ip_address = inet_addr(split[0].c_str());
 		_port = htons(port);
 		it--;
+		_listen_specified = true;
 		return 0;
 	}
 	log(std::cerr, ERROR, "Invalid listen directive", param);
