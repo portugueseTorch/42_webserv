@@ -5,6 +5,7 @@ import readFile
 import navbar
 import errorPage
 from urllib.parse import unquote
+import redirect
 
 def clean_input(input_str):
     return unquote(input_str).replace('+', ' ')
@@ -167,8 +168,7 @@ def response():
     if method == "POST" :
         status = POST()
         if status == 200:
-            response = GET()
-            headers = 'HTTP/1.1 200 OK'
+            headers = redirect.main('/users.py')
         else:
             if status == 403:
                 headers = 'HTTP/1.1 403 Forbidden'
@@ -182,8 +182,7 @@ def response():
     elif method == "DELETE":
         status = DELETE()
         if status == 200:
-            response = GET()
-            headers = 'HTTP/1.1 200 OK'
+            headers = redirect.main('/users.py')
         else:
             if status == 403:
                 headers = 'HTTP/1.1 403 Forbidden'

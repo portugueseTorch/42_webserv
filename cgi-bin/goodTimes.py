@@ -4,7 +4,7 @@ import html
 import navbar
 import response as fullResponse
 import errorPage
-
+import redirect
 
 from urllib.parse import unquote
 from email import message_from_bytes
@@ -169,8 +169,7 @@ def response():
     if method == "POST" :
         status = POST()
         if status == 200:
-            response = GET()
-            headers = 'HTTP/1.1 200 OK'
+            headers = redirect.main('/goodTimes.py')
         else:
             if status == 403:
                 headers = 'HTTP/1.1 403 Forbidden'
@@ -184,8 +183,7 @@ def response():
     elif method == "DELETE":
         status = DELETE()
         if status == 200:
-            response = GET()
-            headers = 'HTTP/1.1 200 OK'
+            headers = redirect.main('/goodTimes.py')
         else:
             if status == 403:
                 headers = 'HTTP/1.1 403 Forbidden'
