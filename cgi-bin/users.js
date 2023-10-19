@@ -3,17 +3,13 @@ const deleteUser = ((event, userToDel) => {
 
 	fetch('users.py', {
         method: 'DELETE',
-        body: "user=" + userToDel
+        body: "user=" + userToDel,
+		redirect: 'manual'
     })
 	.then(response => {
-		if (!response.ok){
-            throw new Error('Network response was not ok');
-        }
-		return response;
-	})
-	.then(response => response.text())
-    .then(data => {
-		document.body.innerHTML = data;
+		if (response.type === 'opaqueredirect')
+			window.location.href = response.url
+		else if (!response.ok) throw new Error('Check network tab')
 	})
     .catch(error => {
         console.error('Error:', error);

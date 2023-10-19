@@ -23,12 +23,13 @@ const deleteFile = ((fileName, parentElement) => {
 	main.insertBefore(loader, main.childNodes[4]);
 	fetch('goodTimes.py', {
 		method: 'DELETE',
-		body: 'webservFileName=' + fileName
+		body: 'webservFileName=' + fileName,
+		redirect: 'manual'
 	})
 	.then(response => {
-		if (!response.ok) {
-			throw new Error('Check network tab');
-		}
+		if (response.type === 'opaqueredirect')
+			window.location.href = response.url
+		else if (!response.ok) throw new Error('Check network tab')
 		return response;
 	})
 	.then(response => response.text())
@@ -92,13 +93,14 @@ const uploadFile = ((event) => {
 
 		fetch("goodTimes.py", {
 			method: 'POST',
-			body: formData
+			body: formData,
+			redirect: 'manual'
 		})
 		.then(response  => {
-			if (!response.ok) {
-				throw new Error('Check network tab');
-			}
-			return response;
+			if (response.type === 'opaqueredirect')
+				window.location.href = response.url
+			else if (!response.ok) throw new Error('Check network tab')
+			return response
 		})
 		.then(response => response.text())
 		.then(data => {
