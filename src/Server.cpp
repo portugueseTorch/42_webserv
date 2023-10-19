@@ -8,10 +8,15 @@ Server::Server() {
 	_ip_address = inet_addr("0.0.0.0");
 	_server_fd = -1;
 	_client_max_body_size = 1000000;
+	_body_size_specified = false;
 	_autoindex = false;
 	_server_id = num_servers;
 	_is_setup = false;
 	_root = "";
+	std::string method_array[] = { "GET", "HEAD", "POST", "DELETE" };
+	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
+	_http_method = http_method;
+	_listen_specified = false;
 }
 
 Server::~Server() {
@@ -42,13 +47,13 @@ int Server::setupServer() {
 	}
 
 	// Set socket to be non-blocking
-	int flags = fcntl(_server_fd, F_GETFL, 0);	// get current flags
+	int flags = fcntl(_server_fd, F_GETFL, 0);
 	if (flags == -1) {
-		log(std::cerr, ERROR, "fcntl() call failed", "");
+		log(std::cerr, ERROR, "fcntl() call 	engine.displayServers();failed", "");
 		return 1;
 	}
 
-	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {	// add O_NONBLOCK to previous flags, and set them
+	if (fcntl(_server_fd, F_SETFL, flags | O_NONBLOCK) == -1) {
 		log(std::cerr, ERROR, "fcntl() call failed", "");
 		return 1;
 	}
@@ -60,12 +65,10 @@ int Server::setupServer() {
 	memset(_socket_address.sin_zero, 0, sizeof(_socket_address.sin_zero));
 
 	// Bind the socket to the specified port and IP address
-	std::cout << "Binding server on port " << _port << " at IP " << _ip_address << std::endl;
 	if (bind(_server_fd, (const sockaddr *) &_socket_address, sizeof(_socket_address)) == -1) {
 		log(std::cerr, ERROR, "Unable to bind socket", "");
 		return 1;
 	}
-
 	_is_setup = true;
 	return 0;
 }
@@ -95,7 +98,8 @@ void Server::displayServer() {
 			std::cout << "]\n";
 		}
 
-		std::cout << "\tClient max body size: " << getClientMaxBodySize() << std::endl;
+		if (_body_size_specified)
+			std::cout << "\tClient max body size: " << getClientMaxBodySize() << std::endl;
 
 		std::cout << "\tIndex: [ ";
 		std::vector<std::string> index = getIndex();
@@ -106,9 +110,9 @@ void Server::displayServer() {
 		std::cout << "\tRoot: " << getRoot() << "\n";
 		std::cout << "\tAutoindex: " << getAutoindex() << "\n";
 
-		std::cout << "\tHTTP Method: ";
-		std::vector<int> http_Method = getHTTPMethod();
-		for (std::vector<int>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
+		std::cout << "\tHTTP Methods: ";
+		std::vector<std::string> http_Method = getHTTPMethod();
+		for (std::vector<std::string>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
 			std::cout << *i << " ";
 		std::cout << std::endl;
 
@@ -229,6 +233,7 @@ int Server::setListen(std::list<Node>::iterator &it) {
 		_ip_address = inet_addr(split[0].c_str());
 		_port = htons(port);
 		it--;
+		_listen_specified = true;
 		return 0;
 	}
 	log(std::cerr, ERROR, "Invalid listen directive", param);
@@ -369,6 +374,7 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
 		cmbs *= 1000000000;
 
 	_client_max_body_size = cmbs;
+	_body_size_specified = true;
 	return 0;
 }
 
@@ -382,8 +388,13 @@ int Server::setClientMaxBodySize(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setIndex(std::list<Node>::iterator &it) {
-	for (; it->_type == Parameter; it++)
+	for (; it->_type == Parameter; it++) {
+		if (it->_content.find('/') != std::string::npos) {
+			log(std::cerr, ERROR, "Invalid index directive", it->_content);
+			return 1;
+		}
 		_index.push_back(it->_content);
+	}
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
@@ -392,7 +403,6 @@ int Server::setIndex(std::list<Node>::iterator &it) {
 		_index.clear();
 		return 1;
 	}
-
 	return 0;
 }
 
@@ -452,7 +462,12 @@ int Server::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
-	_root = stash.back();
+
+	std::string root = stash.back();
+	if (root != "/" && root[root.length()] == '/')
+		_root = root.substr(0, root.length() - 1);
+	else
+		_root = root;
 	return 0;
 }
 
@@ -466,17 +481,17 @@ int Server::setRoot(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Server::setHTTPMethod(std::list<Node>::iterator &it) {
+	_http_method.clear();
+
 	for (; it->_type == Parameter; it++) {
 		if (it->_content == "GET")
-			_http_method.push_back(GET);
-		else if (it->_content == "POST")
-			_http_method.push_back(POST);
-		else if (it->_content == "DELETE")
-			_http_method.push_back(DELETE);
+			_http_method.push_back("GET");
 		else if (it->_content == "HEAD")
-			_http_method.push_back(HEAD);
-		else if (it->_content == "PUT")
-			_http_method.push_back(PUT);
+			_http_method.push_back("HEAD");
+		else if (it->_content == "POST")
+			_http_method.push_back("POST");
+		else if (it->_content == "DELETE")
+			_http_method.push_back("DELETE");
 		else {
 			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
 			_http_method.clear();
@@ -521,7 +536,8 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 	}
 	
 	// Add the location being evaluated
-	location.setLocation(split[1]);
+	if (location.setLocation(split[1]))
+		return 1;
 
 	it++;
 	it++;
@@ -543,11 +559,25 @@ int Server::setLocationBlock(std::list<Node>::iterator &it) {
 		} else if (it->_content == "autoindex") {
 			if (location.setAutoindex(++it))
 				return 1;
+		} else if (it->_content == "http_method") {
+			if (location.setHTTPMethod(++it))
+				return 1;
+		} else if (it->_content == "client_max_body_size") {
+			if (location.setClientMaxBodySize(++it))
+				return 1;
+		} else if (it->_content == "return") {
+			if (location.setReturn(++it))
+				return 1;
 		} else {
+			log(std::cerr, ERROR, "Invalid directive in location block", it->_content);
 			return 1;
 		}
 	}
 
+	if (location.getIsCGI() && location.getIndex().empty()) {
+		log(std::cerr, ERROR, "CGI-location must have specified index", location.getLocation());
+		return 1;
+	}
 	it--;
 	_locations.push_back(location);
 	return 0;
@@ -598,8 +628,10 @@ bool Server::validHost(std::string ip) {
  * @return Returns 0 on success, and 1 on failure 
  */
 int Server::handleName(std::list<Node>::iterator &it) {
-	if (!validDirective(it->_content))
-			return 1;
+	if (!validDirective(it->_content)) {
+		log(std::cerr, ERROR, "Unkown directive", it->_content);
+		return 1;
+	}
 
 	if (it->_content == "listen") {
 		if (setListen(++it))
@@ -625,8 +657,10 @@ int Server::handleName(std::list<Node>::iterator &it) {
 	} else if (it->_content == "http_method") {
 		if (setHTTPMethod(++it))
 			return 1;
-	} else
+	} else {
+		log(std::cerr, ERROR, "Invalid directive in server block", it->_content);
 		return 1;
+	}
 	return 0;
 }
 

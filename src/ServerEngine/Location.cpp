@@ -12,7 +12,17 @@ std::string	Location::_possibleDirectives[] = {
 std::vector<std::string> Location::directives(Location::_possibleDirectives, \
 	Location::_possibleDirectives + sizeof(Location::_possibleDirectives) / sizeof(std::string));
 
-Location::Location() {}
+Location::Location() {
+	std::string method_array[] = { "GET", "HEAD", "POST", "DELETE" };
+	std::vector<std::string> http_method(method_array, method_array + sizeof(method_array) / sizeof(std::string));
+	_http_method = http_method;
+	_body_size_specified = false;
+	_client_max_body_size = 1000000;
+	_root = "";
+	_has_return = false;
+	_autoindex = false;
+	_is_cgi = false;
+}
 
 Location::~Location() {}
 
@@ -38,6 +48,20 @@ void Location::displayLocationBlock() {
 			std::cout << "]\n";
 		}
 	}
+	{
+		std::cout << "\t\tHTTP Methods: ";
+		std::vector<std::string> http_Method = getHTTPMethod();
+		for (std::vector<std::string>::iterator i = http_Method.begin(); i != http_Method.end(); i++)
+			std::cout << *i << " ";
+		std::cout << std::endl;
+	}
+	{
+		if (_body_size_specified)
+			std::cout << "\t\tClient max body size: " << getClientMaxBodySize() << std::endl;
+	}
+	std::cout << "\t\tAuntoindex: " << getAutoindex() << std::endl;
+	std::cout << "\t\tReturn: " << getReturn().first << " " << getReturn().second << std::endl;
+	std::cout << "\t\tIs CGI: " << getIsCGI() << std::endl;
 }
 
 /*************************************/
@@ -51,7 +75,18 @@ void Location::displayLocationBlock() {
  * @return 0
  */
 int Location::setLocation(std::string location) {
-	_location = location;
+	std::string file_extension = get_file_extension(location);
+	if (location[0] != '/' && file_extension == "null") {
+		log(std::cerr, ERROR, "Invalid location directive", location);
+		return 1;
+	}
+
+	if (location != "/" && location[location.length() - 1] == '/')
+		_location = location.substr(0, location.length() - 1);
+	else
+		_location = location;
+
+	if (file_extension != "null") _is_cgi = true;
 	return 0;
 }
 
@@ -104,6 +139,45 @@ int Location::setErrorPages(std::list<Node>::iterator &it) {
 	}
 	return 0;
 }
+
+/**
+ * @brief Sets the HTTP Method allowed for the location block by iterating
+ * over IT, storing the result in [_http_method] as a vector of strings
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
+int Location::setHTTPMethod(std::list<Node>::iterator &it) {
+	// Clear default allowed methods
+	_http_method.clear();
+
+	for (; it->_type == Parameter; it++) {
+		if (it->_content == "GET")
+			_http_method.push_back("GET");
+		else if (it->_content == "HEAD")
+			_http_method.push_back("HEAD");
+		else if (it->_content == "POST")
+			_http_method.push_back("POST");
+		else if (it->_content == "DELETE")
+			_http_method.push_back("DELETE");
+		else {
+			log(std::cerr, ERROR, "Invalid argument for http_method", it->_content);
+			_http_method.clear();
+			return 1;
+		}
+	}
+	it--;
+
+	// Check valid number of parameters
+	if (_http_method.empty()) {
+		log(std::cerr, ERROR, "Too few arguments for", "http_method");
+		return 1;
+	}
+	return 0;
+}
+
 
 /**
  * @brief Sets the client_max_body_size by iterating over IT, storing 
@@ -167,6 +241,61 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
 		cmbs *= 1000000000;
 
 	_client_max_body_size = cmbs;
+	_body_size_specified = true;
+	return 0;
+}
+
+/**
+ * @brief Sets the return directive for the Location block by iterating over IT,
+ * storing the result in the [_return] pair
+ * 
+ * @note IT GETS ITERATED WITHIN THIS FUNCTION
+ * 
+ * @param it Reference to an iterator for the list of nodes built by the parser
+ * @return Returns 0 on success, 1 if any invalid parameter is found
+ */
+int Location::setReturn(std::list<Node>::iterator &it) {
+	std::vector<std::string> stash;
+	for (; it->_type == Parameter; it++)
+		stash.push_back(it->_content);
+	it--;
+
+	// Check there are either 1 or 2 arguments
+	if (stash.size() != 1 && stash.size() != 2) {
+		log(std::cerr, ERROR, "Invalid number of arguments for", "return");
+		return 1;
+	}
+
+	// Check the first argument is a valid status code
+	std::string first = stash.at(0);
+	for (size_t i = 0; i < first.length(); i++) {
+		if (!isdigit(first[i])) {
+			log(std::cerr, ERROR, "Invalid 'return' status code", first);
+			return 1;
+		}
+	}
+
+	int status_code = std::atoi(first.c_str());
+	if (!ServerEngine::isSupportedStatusCode(status_code)) {
+		log(std::cerr, ERROR, "Invalid 'return' status code", first);
+		return 1;
+	}
+
+	// If status_code is in range 3xx, redirection URL is needed
+	if (status_code >= 300 && status_code <= 305) {
+		if (stash.size() == 2) {
+			_return.first = status_code;
+			_return.second = stash.at(1);
+		} else {
+			log(std::cerr, ERROR, "Missing 'return' URL for status code", first);
+			return 1;
+		}
+	} else {
+		_return.first = status_code;
+		_return.second = stash.size() == 2 ? stash.at(1) : "";
+	}
+
+	_has_return = true;
 	return 0;
 }
 
@@ -180,8 +309,13 @@ int Location::setClientMaxBodySize(std::list<Node>::iterator &it) {
  * @return Returns 0 on success, 1 if any invalid parameter is found
  */
 int Location::setIndex(std::list<Node>::iterator &it) {
-	for (; it->_type == Parameter; it++)
+	for (; it->_type == Parameter; it++) {
+		if (it->_content.find('/') != std::string::npos) {
+			log(std::cerr, ERROR, "Invalid index directive", it->_content);
+			return 1;
+		}
 		_index.push_back(it->_content);
+	}
 	it--;
 
 	// Check there is only 1 argument specified for client_max_body_size
@@ -250,6 +384,11 @@ int Location::setRoot(std::list<Node>::iterator &it) {
 		log(std::cerr, ERROR, "Invalid root directive: must start with '/'", stash.back());
 		return 1;
 	}
-	_root = stash.back();
+
+	std::string root = stash.back();
+	if (root != "/" && root[root.length()] == '/')
+		_root = root.substr(0, root.length() - 1);
+	else
+		_root = root;
 	return 0;
 }

@@ -61,7 +61,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 	if (argc != 2) {
 		file_name = "conf/default.conf";
 		log(std::cerr, WARNING, "No config_file provided", "");
-		log(std::cerr, INFO, "Assuming default config_file...", "");
+		log(std::cerr, INFO, "Assuming default config_file", "");
 	} else
 		file_name = argv[1];
 
@@ -69,7 +69,7 @@ std::string readConfigurationFile(int argc, char **argv) {
 	if (!in_file.is_open()) {
 		if (file_name != "conf/default.conf") {
 			log(std::cerr, ERROR, "Unable to open file", file_name);
-			log(std::cerr, WARNING, "Assuming default config_file...", "");
+			log(std::cerr, WARNING, "Assuming default config_file", "");
 		}
 		in_file.open("conf/default.conf");
 		if (!in_file.is_open()) {
@@ -105,7 +105,7 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 			break;
 		
 		case FATAL:
-			stream << RED << "[FATAL]:\t\t" << msg;
+			stream << RED << "[FATAL]:\t" << msg;
 			break;
 
 		case INFO:
@@ -127,4 +127,33 @@ void log(std::ostream &stream, MsgType type, std::string msg, std::string option
 	if (optional != "")
 		stream << ": \'" << optional << "\'";
 	stream << RESET << std::endl;
+}
+
+bool file_is_valid(std::string file_path, int permissions) {
+	struct stat s;
+
+	// Check if the file exists
+	if (stat(file_path.c_str(), &s) != 0)
+		return false;
+
+	// Check if the file has the specified permissions
+	return (access(file_path.c_str(), permissions) == 0);
+}
+
+bool is_file(std::string fname) {
+	return fname != "." && fname != ".." && (fname[0] != '.' && (fname.find('.') != std::string::npos));
+}
+
+std::string get_file_extension(std::string file_name) {
+	std::string file_extension = "null";
+	size_t pos;
+
+	if ((pos = file_name.find_first_of('.')) == file_name.find_last_of('.') && pos != std::string::npos)
+		file_extension = file_name.substr(file_name.find('.'));
+	return file_extension;
+}
+
+bool is_valid_filename(std::string file_name) {
+	size_t pos = file_name.find('.');
+	return file_name.find_first_of('.') == file_name.find_last_of('.') && pos != std::string::npos;
 }

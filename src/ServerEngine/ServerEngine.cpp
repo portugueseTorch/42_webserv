@@ -1,7 +1,7 @@
 #include "ServerEngine/ServerEngine.hpp"
 #include <cstdlib>
 #include <netinet/in.h>
-#include <sys/epoll.h>
+// #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -13,21 +13,40 @@ std::string ServerEngine::possibleDirectives[] = {
 	"error_page",
 	"location",
 	"client_max_body_size",
-	"fastcgi_pass",
+	"return",
 	"autoindex",
-	"http_method",
+	"http_method"
 };
 
 std::vector<std::string> ServerEngine::directives(ServerEngine::possibleDirectives, \
 	ServerEngine::possibleDirectives + sizeof(ServerEngine::possibleDirectives) / sizeof(std::string));
 
-ServerEngine::ServerEngine(std::list<Node> nodes) {
-	_nodes = nodes;
+int supported_sc[] = {
+	200, 201, 202, 204,
+	300, 301, 302, 303, 304,
+	400, 403, 404, 405, 408, 406, 410, 411, 413, 414, 415,
+	500, 501, 502, 504, 505
+};
+
+std::vector<int> ServerEngine::supported_status_codes(supported_sc, supported_sc + sizeof(supported_sc) / sizeof(int));
+
+bool ServerEngine::isSupportedStatusCode(int code) {
+	return std::find(supported_status_codes.begin(), supported_status_codes.end(), code) != supported_status_codes.end();
+}
+
+ServerEngine::ServerEngine(Parser *parser) {
+	originalParser = parser;
+	_nodes = parser->getNodes();
 	_num_servers = 0;
 	_max_fd = 0;
 }
 
-ServerEngine::~ServerEngine() {}
+ServerEngine::~ServerEngine() {
+	closeAllConnections();
+	if (originalParser)
+		delete originalParser;
+	originalParser = NULL;
+}
 
 /**
  * @brief Handles invalid directives
@@ -61,6 +80,15 @@ void ServerEngine::handleInvalidInput(std::list<Node>::iterator &it) {
 	}
 }
 
+bool	different_server_names(std::vector<std::string> &s1, std::vector<std::string> &s2) {
+	if (s1.empty() && s2.empty()) return false;
+
+	size_t i = 0, j = 0;
+	for (; i < s1.size() && j < s2.size(); i++, j++)
+		if (s1.at(i) == s2.at(j)) return false;
+	return true;
+}
+
 /**
  * @brief Configures the server blocks according to the config_file by iterating
  * over the node list [_nodes] created by the parser
@@ -79,6 +107,18 @@ int ServerEngine::configureServers() {
 				break;
 		}
 	}
+
+	// Check if any server_blocks have the same listen directive + server_name directive
+	for (size_t i = 0; i < _servers.size(); i++) {
+		for (size_t j = i + 1; j < _servers.size(); j++) {
+			if (_servers[i].getPort() == _servers[j].getPort() && \
+				_servers[i].getIPAddress() == _servers[j].getIPAddress() && \
+				!different_server_names(_servers[i].getServerNames(), _servers[j].getServerNames())) {
+					log(std::cerr, ERROR, "Server blocks with the same listen and server_name detected", "");
+					return 1;
+				}
+		}
+	}
 	return 0;
 }
 
@@ -94,9 +134,8 @@ int ServerEngine::setupServers() {
 		if (it->setupServer()) {
 			std::stringstream out;
 			out << it->getServerID();
-			std::string stringID = out.str();
 			
-			std::string err_msg = "Failure setting up server block " + stringID;
+			std::string err_msg = "Failure setting up server block " + out.str();
 			log(std::cerr, ERROR, err_msg, "");
 		} else
 			all_failed = false;
@@ -161,6 +200,10 @@ int ServerEngine::configureServer(std::list<Node>::iterator &it) {
 			break;
 		}
 	}
+	if (!new_server.listenSpecified()) {
+		log(std::cerr, ERROR, "listen directive not specified", "");
+		return 1;
+	}
 	_servers.push_back(new_server);
 	return 0;
 }
@@ -177,8 +220,7 @@ bool ServerEngine::isServer(int fd) {
 }
 
 /**
- * @brief Assigns the client to the appropriate server and location block
- * if applicable
+ * @brief Assigns the client to the appropriate server
  * 
  * @param client Client to Assign 
  * @return int Returns 0 on success, and 1 on failure
@@ -210,60 +252,27 @@ int ServerEngine::assignServer(Client &client) {
 		//	If only one was find, assign it to the client and go to location assignment
 		if (possible_servers.size() == 1) {
 			client.parent_server = possible_servers[0];
-			goto location_assignment;
+			return 0;
 		}
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = possible_servers.begin(); it != possible_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto location_assignment;
+				return 0;
 			}
 		}
 	} else {
 		// If no appropriate server was found, the default server will handle the request
 		if (backup_servers.size() == 0)
-			goto location_assignment;
+			return 0;
 		// If multiple were found, try to get an exact match for the server_name directive
 		for (std::vector<Server*>::iterator it = backup_servers.begin(); it != backup_servers.end(); it++) {
 			if (std::find((*it)->getServerNames().begin(), (*it)->getServerNames().end(), client.request->getServerName()) != (*it)->getServerNames().end()) {
 				client.parent_server = *it;
-				goto location_assignment;
+				return 0;
 			}
 		}
 	}
-
-	location_assignment:
-		std::stringstream ss;
-		std::string clientStringID;
-		std::string parentStringID;
-
-		ss << client.getClientID();
-		clientStringID = ss.str();
-		std::string client_id_string = "Client '" + clientStringID + "' assigned to server with ID";
-		ss.str("");
-ss.clear();;
-		ss << client.parent_server->getServerID();
-		parentStringID = ss.str();
-		log(std::cout, SUCCESS, client_id_string, parentStringID);
-		client.parent_server->displayServer();
-
-		std::cout << "\n" << "Trying to assign URI: " << client.request->getRequestURI() << std::endl;
-		// Iterate over all location blocks from the parent server. If a Location is found that matches URI, assign it
-		for (std::vector<Location>::iterator it = client.parent_server->getLocations().begin(); it != client.parent_server->getLocations().end(); it++) {
-			if (it->getLocation() == client.request->getRequestURI()) {
-				client.location_block = &(*it);
-				break ;
-			}
-		}
-
-		if (client.location_block) {
-			client_id_string = "Client '" + clientStringID + "' assigned to location block";
-			log(std::cout, SUCCESS, client_id_string, "");
-			client.location_block->displayLocationBlock();
-		} else {
-			log(std::cout, INFO, client_id_string, "NONE");
-		}
-
 	return 0;
 }
 
@@ -300,7 +309,6 @@ int ServerEngine::acceptNewConnection(Server &server) {
 }
 
 int ServerEngine::closeConnection(int fd) {
-	//Store fd as stringstream
 	std::stringstream ss;
 	ss << fd;
 
@@ -313,13 +321,14 @@ int ServerEngine::closeConnection(int fd) {
 	// Remove fd from its respective map
 	if (_server_map.find(fd) != _server_map.end()) {
 		_server_map.erase(fd);
-		log(std::cout, INFO, "Server removed from server map on fd", ss.str());
+		log(std::cout, WARNING, "Server removed from server map on fd", ss.str());
 	}
 	if (_client_map.find(fd) != _client_map.end()) {
+		// Reset the client
+		_client_map[fd].reset();
 		_client_map.erase(fd);
-		log(std::cout, INFO, "Client removed from client map on fd", ss.str());
+		log(std::cout, WARNING, "Client removed from client map on fd", ss.str());
 	}
-
 	// Close file descriptor
 	close(fd);
 	return 0;
@@ -336,12 +345,13 @@ int ServerEngine::closeConnection(int fd) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::readHTTPRequest(Client &client) {
-	char buf[MAX_LENGTH];
+	unsigned char buf[MAX_LENGTH + 1];
 	int	ret;
 	int	fd = client.getClientFD();
+
 	std::stringstream ss;
 	ss << fd;
-
+	memset(buf, 0, MAX_LENGTH + 1);
 	ret = read(fd, buf, MAX_LENGTH);
 	if (ret == -1) {
 		log(std::cout, ERROR, "read() call failed", "");
@@ -353,82 +363,15 @@ int ServerEngine::readHTTPRequest(Client &client) {
 		return 0;
 	}
 
-	// Update the client fd from reading to writing
-	modifySet(fd, READ_SET, MOD_SET);
+	client.updateTime();
 
-	ss.str("");
-	ss.clear();;
-	ss << client.getClientFD();
-	log(std::cout, SUCCESS, "Message received on client socket", ss.str());
-	std::cout << buf << std::endl;
+	if (client.request && client.request->fullyParsed)
+		return 0;
 
-	// Parse HTTP Request
-	client.parseHTTPRequest(buf);
-	// if (client.request->getQueryParams().size()) {
-	// 	sendCGIResponse(client);
-	// 	return 0;
-	// }
-	// Assign the server according to the parsed request
-	if (assignServer(client)) {
-		log(std::cerr, ERROR, "Failure assigning server", "");
-		return 1;
-	}
-
-	return 0;
-}
-
-/**
- * @brief sends the regular HTML response to a regular HTML request
- * from CLIENT
- * 
- * @param client Client to which the request reffers
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendRegResponse(Client &client) {
-	std::string response = client.getResponse();
-	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
-	if (ret != static_cast<ssize_t>(response.length())) {
-		if (ret == static_cast<ssize_t>(-1)) {
-			log(std::cerr, ERROR, "send() call failed", "");
-			// TODO: consider removing from the set and from the map
-			return 1;
-		} else
-			log(std::cout, WARNING, "Unable to send the full data", "");
-	}
-
-	// Modify fd to monitor read events instead of write
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-
-	// Reset Client
-	client.reset();
-
-	return 0;
-}
-
-/**
- * @brief Builds an error response and sends it back to the client
- * 
- * @param client Client to whom the response will be sent
- * @return int Returns 0 on success, and 1 on failure
- */
-int ServerEngine::sendErrResponse(Client &client) {
-	std::string response = client.getResponse();
-	ssize_t ret = write(client.getClientFD(), response.c_str(), response.length());
-	if (ret != static_cast<ssize_t>(response.length())) {
-		if (ret == static_cast<ssize_t>(-1)) {
-			log(std::cerr, ERROR, "send() call failed", "");
-			// TODO: consider removing from the set and from the map
-			return 1;
-		} else
-			log(std::cout, WARNING, "Unable to send the full data", "");
-	}
-
-	// Modify fd to monitor read events instead of write
-	modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
-
-	// Reset Client
-	client.reset();
-
+	std::string toParse(reinterpret_cast<const char*>(buf), ret);
+	client.parseHTTPRequest(toParse);
+	if (client.request->fullyParsed)
+		modifySet(fd, READ_SET, MOD_SET);
 	return 0;
 }
 
@@ -441,19 +384,27 @@ int ServerEngine::sendErrResponse(Client &client) {
  * @return int Returns 0 on success, and 1 on failure
  */
 int ServerEngine::sendResponse(Client &client) {
-	// Attempt to build a response
+	if (!client.toKill && assignServer(client)) {
+		log(std::cerr, ERROR, "Failure assigning server", "");
+		return 1;
+	}
 	if (client.buildHTTPResponse())
 		return 1;
 
-	// If it's an error, call sendErrResponse()
-	if (client.getIsError()) {
-		if (sendErrResponse(client))
-			return 1;
-		return 0;
+	if (send(client.getClientFD(), client.response->getResponse().c_str(), client.response->getResponseLength(), 0) == -1) {
+		log(std::cerr, ERROR, "send() call failed", "");
+		return 1;
 	}
 
-	if (sendRegResponse(client))
-		return 1;
+	client.updateTime();
+
+	if (!client.toKill && client.request->getKeepAlive()) {
+		modifySet(client.getClientFD(), WRITE_SET, MOD_SET);
+		client.reset();
+	} else {
+		closeConnection(client.getClientFD());
+	}
+
 	return 0;
 }
 
@@ -484,7 +435,6 @@ void ServerEngine::modifySet(int fd, int set, int op) {
 
 int ServerEngine::setupSets() {
 	std::map<int,Server*> assigned_servers;
-	// Initialize sets
 	FD_ZERO(&_read_set);
 	FD_ZERO(&_write_set);
 
@@ -506,16 +456,27 @@ int ServerEngine::setupSets() {
 
 		std::string first_part = "Server " + ss.str() + " is listening on port";
 		ss.str("");
-ss.clear();;
+		ss.clear();
 		ss << ntohs(it->getPort());
 		log(std::cout, INFO, first_part, ss.str());
 		_server_map[it->getServerFD()] = *it;
 
-		// Add server fd to the set of read fd
 		modifySet(it->getServerFD(), READ_SET, ADD_SET);
 	}
 
 	return 0;
+}
+
+void ServerEngine::checkConnectionTimeouts() {
+	for (std::map<int,Client>::iterator it = _client_map.begin(); it != _client_map.end(); it++) {
+		if (time(NULL) - it->second.getLastExchange() >= CONNECTION_TIMEOUT) {
+			std::stringstream ss;
+			ss << it->second.getClientFD();
+			log(std::cout, INFO, "Client timed out on fd", ss.str());
+			modifySet(it->first, READ_SET, MOD_SET);
+			it->second.toKill = true;
+		}
+	}
 }
 
 int ServerEngine::runServers() {
@@ -547,14 +508,12 @@ int ServerEngine::runServers() {
 			if (FD_ISSET(fd, &read_cpy)) {
 				// If it's a server, accept new connection
 				if (_server_map.count(fd)) {
-
 					log(std::cout, INFO, "Incoming connection coming through fd", ss.str());
 					if (acceptNewConnection(_server_map[fd]))
 						return 1;
 				}
 				// If it's a client, accept new connection
 				else if (_client_map.count(fd)) {
-					log(std::cout, INFO, "Change of status in fd", ss.str());
 					if (readHTTPRequest(_client_map[fd]))
 						return 1;
 				}
@@ -565,8 +524,21 @@ int ServerEngine::runServers() {
 				}
 			}
 			ss.str("");
-ss.clear();;
+			ss.clear();
 		}
+		ServerEngine::checkConnectionTimeouts();
 	}
 	return 0;
+}
+
+void	ServerEngine::closeAllConnections( void ) {
+
+	if ( _client_map.size()) {
+		std::map<int, Client>::iterator it = _client_map.begin();
+		for (; it != _client_map.end(); it++) {
+			close(it->first);
+			it->second.~Client();
+		}
+	}
+
 }

@@ -7,57 +7,40 @@
 
 class Server;
 class HTTPRequest;
+class HTTPResponse;
 
 class Client
 {
 	public:
 		Client();
 		~Client();
-
 		int					setupClient();
 		void				reset();
+		bool				toKill;
 
 		int					parseHTTPRequest(std::string request_str);
-		int					searchRequestedContent(std::string content);
 		int					buildHTTPResponse();
-		int					buildCGIResponse();
-		std::string			statusCodeToMessage(int status_code);
-		std::string			getContentType(std::string uri);
-
-		// Getters
+		int					sendTimeoutMessage();
 		int					getClientFD() const { return _client_fd; }
 		int					getClientID() const { return _client_id; }
 		int					getStatusCode() const { return _status_code; }
 		bool				getIsError() const { return _status_code >= 400 && _status_code <= 511; }
-		std::string			getResponse() const { return _response; }
-
-		// Setters
+		time_t				getLastExchange() const { return _last_exchange; }
 		void				setClientFD(int client_fd);
-		void				setRequest(std::string request_str);
 		void				setStatusCode(int status_code);
+		void				updateTime();
 
 		Server				*parent_server;		// server who is serving the current client
 		Location			*location_block;	// location block that will handle the request - NULL if
 		HTTPRequest			*request;			// object to be populated during the parseHTTPRequest()
-
-		static int			num_clients;	// number of clients
-	
+		HTTPResponse		*response;			// response object
+		static int			num_clients;		// number of clients
 
 	private:
-		int					_client_id;		// ID of the client
-		int					_client_fd;		// file descriptor of the client socket
-		std::string			_request_str;	// request received from the client server
-		std::string			_uri;			// requested content after changes
-
-		int					_status_code;	// status code associated with the request
-
-		int					_cont_length;	// length of the requested content
-		std::string			_file_buff;		// buffer to where the file will be read
-		std::string			_file_type;		// type of the requested file
-		std::string			_response;		// response to be sent
-
-		char				**vectToArr(std::vector<std::string> vect);
-
+		int					_client_id;			// ID of the client
+		int					_client_fd;			// file descriptor of the client socket
+		int					_status_code;		// status code associated with the request
+		time_t				_last_exchange;		// time of the last exchange (either received or sent)
 };
 
 #endif

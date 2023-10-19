@@ -24,10 +24,12 @@ class Server {
 		size_t									getClientMaxBodySize() { return _client_max_body_size; }
 		std::string								getRoot() { return _root; }
 		bool									getAutoindex() { return _autoindex; }
+		bool									clientBodySizeSet() { return _body_size_specified; }
+		bool									listenSpecified() { return _listen_specified; }
 		std::vector<std::string>				&getIndex() { return _index; }
 		std::vector<std::string>				&getServerNames() { return _server_names; }
+		std::vector<std::string>				&getHTTPMethod() { return _http_method; }
 		std::map<int,std::vector<std::string> >	&getErrorPages() { return _error_pages; }
-		std::vector<int>						&getHTTPMethod() { return _http_method; }
 		std::vector<Location>					&getLocations() { return _locations; }
 
 		// Setters
@@ -51,6 +53,7 @@ class Server {
 		static int num_servers;
 
 	private:
+		bool									_listen_specified;		// flag to check if listen directive was specified
 		int										_server_id;				// ID of the server for management purposes
 		int										_server_fd;				// file descriptor of the server socket
 		struct sockaddr_in						_socket_address;		// struct containing the address info of the server_socket
@@ -61,10 +64,11 @@ class Server {
 		std::vector<std::string>				_server_names;			// server_names specified in the config_file. If this vector is empty, it means this is the default server block
 		std::map<int,std::vector<std::string> >	_error_pages;			// map storing the error codes and their respective error_pages
 		size_t									_client_max_body_size;	// lmax size (in bytes) of the client body according to config_file
+		bool									_body_size_specified;	// flag to signal if a max body size was specified in the confug_file
 		std::vector<std::string>				_index;					// index list according to config_file
 		bool									_autoindex;				// autoindex as set by the config_file
 		std::string								_root;					// root of the files as provided by the config_file
-		std::vector<int>						_http_method;			// allowed http_Method as per config_file
+		std::vector<std::string>				_http_method;			// allowed http_Method as per config_file
 		std::vector<Location>					_locations;				// vector of locaitons block as specified by the config_file
 };
 
