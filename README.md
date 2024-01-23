@@ -1,0 +1,4 @@
+- **Description**: Basic web server implementation.
+- **Language**: C++
+- **Team**: Developed by [portugueseTorch](https://github.com/portugueseTorch) and [tmanso9](https://github.com/tmanso9)
+- **How to run**: run make to compile, run executable as ./webserv &lt;conf file path&gt;
